@@ -3,7 +3,7 @@
 A standalone tool. It takes the headset's Bluetooth stream and outputs one record of attention
 metrics per second: mental effort, engagement, alpha (relaxation / eyes closed), blink rate, and
 signal quality, calibrated to the wearer. It makes no decisions and knows nothing about any
-application; what a metric *means* for a given use is the consumer's business.
+application; what a metric *means* for a given use is the consumer's business. :)
 
 **Status (Sat 19 Sep):** built and validated on the real headset. Every go/no-go check below has
 passed on a team member's head.
