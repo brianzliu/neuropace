@@ -66,7 +66,7 @@ def test_three_straight_hits_stop_and_first_question_credits_catchup_form(tmp_pa
     st = eng.start()
     card = st["card"]
     assert card["kind"] == "question" and len(card["question"]["options"]) == 4
-    for i in range(3):
+    for _ in range(3):
         r = eng.answer(card["id"], _correct_choice(db, card))
         assert r["outcome"] == "hit" and r["credited_form"] == "analogy"
         card = r["next"]
