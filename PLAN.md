@@ -1,4 +1,4 @@
-# REFLOW — plan
+# NEUROSPACE — plan
 **HackMIT 2026 · Education · NeuroSky MindWave Mobile 2 + Arduino UNO R4 · Sat 19 Sep 2026**
 
 This file consolidates every planning document written for this project into one place. It
@@ -6,6 +6,9 @@ replaces `REFLOW HackMIT2026 Education Plan.md` and `REFLOW-2.md` as the thing t
 kept in git history, not deleted, since they're the dated record of how the idea got here.
 
 ## 0. How this plan evolved, and what to read
+
+**Current product name: Neurospace.** Reflow is the historical name used in earlier parts
+and internal package/command identifiers. The app and hosted deployment use Neurospace.
 
 The idea went through three passes, each written as a fresh, honest evaluation of the one before
 it rather than a patch. Read them in order if you want the reasoning; read the Quick reference
@@ -35,9 +38,23 @@ below if you just want where things stand right now.
 physical "I'm stuck" button, EEG timing, and a teacher/whiteboard-facing webcam with microphone.
 Timestamped board images and the teacher's audio transcript supply context for a multimodal LLM
 explanation when the learner presses the button. This restores the camera as **lesson content
-capture**, not learner face/gaze analysis. See II.2.1 and II.4. This is planned work, not a claim
-that the current implementation already captures or understands whiteboards. The existing frozen
-`docs/PRD.md` and `docs/TDD.md` must be revised before implementing this extension.
+capture**, not learner face/gaze analysis. See II.2.1 and II.4. A bounded camera-buffer and multimodal-request prototype now exists, but live capture and
+model grounding still require end-to-end verification. It is not a verified classroom system. The workspace extension is recorded in `docs/PRD.md` and `docs/TDD.md`; earlier frozen
+requirements remain the baseline wherever the addendum does not override them.
+
+**Hardware correction and workspace revision, 19 Sep:** The user has an **Arduino UNO Q 4 GB**
+and **NeuroSky MindWave Mobile 2 Brainwave Starter Kit**. The physical button is not built yet;
+a large 3D-printed press surface will actuate a momentary switch. The earlier UNO R4 descriptions
+remain historical. The current target connects the headset to the Q's Linux Bluetooth stack,
+reads the switch on its MCU, and relays both to the laptop over BLE. A prototype is in
+`firmware/uno_q_relay/`; board compilation, pairing, throughput, and physical wiring remain
+unverified. Direct laptop EEG remains an explicit fallback, not the target architecture.
+
+The app now separates a learner-owned review dashboard from `/session/new` and the live session
+window. The dashboard prioritizes saved concepts, optionally summarizes/reorders them with the
+configured LLM, lists recent sessions on the side, and accepts pasted or uploaded PDF/TXT/Markdown
+syllabi. Learners review extracted topics before saving; curriculum completion is self-reported,
+separate from concepts cleared by check questions. No teacher view is added.
 
 **Current authoritative direction:** Part II's architecture (lecture capture → gap notes →
 adaptive review) with Part III's additions layered on top (content-based risk flagging as a third
@@ -586,11 +603,13 @@ picks topics to re-show from pre-authored content [V10]; Wang et al. detect conf
 offline [V14]; AXIS picks explanations from ratings, no sensing [V17]. Reflow: passive lapse
 capture in live lectures → generated gap notes → re-teaching verified by recall.
 
-### II.2.1. Button-triggered explanations from voice and whiteboard (planned)
+### II.2.1. Button-triggered explanations from voice and whiteboard (prototype)
 
-**Input and ownership.** The Arduino UNO R4 handles the dedicated physical button. The laptop
-receives button events over USB, consumes the existing MindWave pipeline, and captures webcam
-frames and microphone audio. The camera faces the teaching area, not the learner. A webcam's
+**Input and ownership.** The current target is Arduino UNO Q 4 GB. Its MCU reads the button,
+and its Linux side runs the unchanged MindWave pipeline from a Bluetooth-paired headset and
+relays feature frames and button events over BLE. The laptop captures webcam frames and
+microphone audio. The prototype and bring-up gates are documented in `firmware/uno_q_relay/README.md`.
+Direct laptop EEG and the older USB totem remain explicit fallback routes. The camera faces the teaching area, not the learner. A webcam's
 built-in microphone can capture the teacher's voice; use a separate microphone if speech is not
 clear enough. Audio transcription and image capture are separate streams synchronized to one
 session clock. The Arduino does not process audio, images, or LLM requests.
@@ -659,16 +678,16 @@ This reuses the exact feature math already built in `mindwave/features.py` (Part
 to implement here beyond the 15 s windowing against a per-learner 3-minute baseline instead of a
 calibration task.
 
-## II.4. The totem (UNO R4)
+## II.4. Physical input hub (UNO Q 4 GB; earlier UNO R4 route retained)
 
 The primary manual input is a **dedicated momentary pushbutton labelled "I'm stuck"**, connected
-to an appropriate UNO R4 digital input and ground with a pull-up configuration. Confirm the exact
-board and wiring before implementation. Firmware debounces the switch and emits one USB serial
-`tap` event per press to the laptop. A capacitive foil/heart pad is an optional alternative, not a
+to an appropriate UNO Q MCU digital input and ground with a pull-up configuration. Confirm the exact
+board and wiring before implementation. Firmware debounces the switch and emits one button count increment per press; the Q Linux relay forwards each increment as a BLE
+`tap` event to the laptop. A capacitive foil/heart pad is an optional alternative, not a
 required part. Both request the same catch-up and save the same kind of flagged moment.
 
-The headset connects to the laptop through the existing MindWave pipeline, independently of the
-button. The webcam and microphone also connect to the laptop. Hardware failure must not stop
+The target pairs the headset to the UNO Q Linux side and runs the existing MindWave pipeline
+there. The current direct-laptop connection is retained for bring-up and fallback. The webcam and microphone also connect to the laptop. Hardware failure must not stop
 capture: retain the on-screen/keyboard input, explicitly labelled simulated, and label simulated
 EEG separately. Default acknowledgement and catch-up output are private; do not expose learner
 struggles through desk LEDs. The original board/sponsor discussion remains in Part I §8.

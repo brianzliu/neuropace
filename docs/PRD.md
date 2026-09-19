@@ -1,4 +1,4 @@
-# Reflow: Product Requirements Document
+# Neurospace: Product Requirements Document
 
 **Event:** HackMIT 2026, Education track. Sat 19 Sep 2026.
 **Source spec:** `~/Downloads/REFLOW-3.md` (the only spec this document derives from; earlier iterations are superseded).
@@ -53,7 +53,9 @@ Stages A to D of the spec's build order. Each stage is a complete demo on its ow
 - A teacher dashboard with per-student data. Only the anonymous loss map is shared.
 - Multi-channel EEG, workload/overload states, glasses, thermal printers.
 - Comparing question-first review against re-reading (restudy wins at short delays; not measurable tonight).
-- Accounts, auth, cloud deployment. Everything runs on one laptop.
+- Cloud accounts and cloud backend deployment. Capture, storage, and hardware connections run
+  on one laptop. The React interface may be hosted on Vercel and connect directly to the local
+  service using an explicit origin allowlist and a per-process pairing code.
 
 ## 6. Functional requirements
 
@@ -203,3 +205,33 @@ Four numbers, each with an interval:
 3. Real-forehead performance of the focus index on the team's headset (the hour-1 gate).
 4. Deepgram and OpenAI booth requirements beyond the PDF text.
 5. Which OpenAI model id is available on the event credits (`reflow doctor` lists them).
+
+## 12. Workspace and UNO Q extension, 19 Sep 2026
+
+User-directed amendment to v1.0. Earlier requirements remain in force except the hardware and
+navigation changes below. This extension is a prototype, with hardware verification outstanding.
+
+- **FR-D1:** `/` is the selected learner's dashboard: unresolved concepts first, recent sessions
+  in a side column, and curriculum coverage below. It never pools individual learners' notes.
+- **FR-D2:** The configured LLM may summarize saved notes and propose a review order. Unknown or
+  repeated gap IDs invalidate the suggestion. Missing model access uses deterministic ordering.
+  Suggestions cannot modify review outcomes or curriculum completion.
+- **FR-D3:** Paste a syllabus or upload PDF/TXT/Markdown, limited to 2 MB and 30 PDF pages. Preview
+  and edit extracted topics before saving. Scanned PDFs without text require pasted text.
+  Topic checkboxes track self-reported coverage, not demonstrated mastery.
+- **FR-D4:** New session opens a dedicated studio window with a same-tab popup-blocked fallback.
+  Session setup, device detection, live capture, and review are separate views.
+- **FR-H1:** Current target hardware is UNO Q 4 GB and MindWave Mobile 2. A planned large printed
+  press surface actuates a momentary switch. The Q MCU debounces it; Q Linux runs the existing
+  EEG pipeline and relays feature frames and button events to the laptop over BLE. This is an
+  experimental transport until tested on the board. Direct laptop EEG remains available.
+- **FR-C1:** Live sessions offer explicit camera start/stop with capture disclosure. JPEG frames
+  are sampled every 2 s, capped at 45 frames/90 s in server memory, and cleared at stop/end.
+  No continuous video file is recorded. Microphone transcription remains separately enabled.
+- **FR-C2:** An allowed button catch-up may asynchronously request an explanation from recent
+  transcript and at most four preceding board frames. Never override randomized withholding.
+  Keep the immediate transcript catch-up; offer the board explanation separately, without
+  replacing text mid-reading. Label generation failure as offline and board not interpreted.
+- **FR-C3:** Board explanations are model output with supplied frame timestamps, not validated
+  image understanding. Full classroom video recording, durable board-image notes, automatic
+  syllabus mastery inference, and production BLE access controls are not implemented.

@@ -19,6 +19,7 @@ data/uploads/
 # node
 node_modules/
 frontend/dist/
+.vercel/
 # arduino
 firmware/**/build/
 # os

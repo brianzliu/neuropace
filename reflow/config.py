@@ -39,6 +39,8 @@ class Settings:
     data_dir: Path = field(default_factory=lambda: Path("data"))
     host: str = "127.0.0.1"
     port: int = 8765
+    # Exact hosted UI origins only. A per-process pairing code is required remotely.
+    ui_origins: tuple[str, ...] = ("https://neurospace-hackmit.vercel.app",)
 
     deepgram_api_key: str | None = None
     deepgram_model: str = "nova-3"
@@ -139,6 +141,9 @@ def load_settings(env_file: str | os.PathLike | None = None) -> Settings:
     s.data_dir = Path(_env("REFLOW_DATA_DIR", "data") or "data")
     s.host = _env("REFLOW_HOST", s.host) or s.host
     s.port = _env_int("REFLOW_PORT", s.port)
+    origins = _env("REFLOW_UI_ORIGINS")
+    if origins is not None:
+        s.ui_origins = tuple(o.strip().rstrip("/") for o in origins.split(",") if o.strip())
     s.deepgram_api_key = _env("DEEPGRAM_API_KEY")
     s.deepgram_model = _env("REFLOW_DEEPGRAM_MODEL", s.deepgram_model) or s.deepgram_model
     s.openai_api_key = _env("OPENAI_API_KEY")

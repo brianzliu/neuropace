@@ -15,7 +15,7 @@ HackMIT 2026 · Education track · NeuroSky MindWave Mobile 2 + Arduino UNO Q 4 
 ## What it does
 
 1. **In the lecture.** Headset on, totem on the desk. Deepgram transcribes with word timestamps. Focus drops (relative to your own first 3 minutes) and pad taps mark spans with an 8 s lead-in.
-2. **Live catch-up.** Every 20 s Reflow writes a rolling one-line recap in four forms. **Tap the pad** and the recap for the span you missed appears in under a second: *"You missed: … Now: …"*, one glance, then it fades. An **EEG flag** only offers one: the totem pulses and a "catch-up ready" chip appears.
+2. **Live catch-up.** Every 20 s Neurospace writes a rolling one-line recap in four forms. **Tap the pad** and the recap for the span you missed appears in under a second: *"You missed: … Now: …"*, one glance, then it fades. An **EEG flag** only offers one: the totem pulses and a "catch-up ready" chip appears.
 3. **Gap notes.** When the lecture ends you get notes for your flagged spans only: what was said, the key term, how it connects to what you did hear. Grounded in the transcript.
 4. **Adaptive review.** One card per gap, check question first. Miss it, or lose focus, and the same idea is re-taught in another form: plain, key term, analogy, or a sketch that dissolves into an animated diagram. Stop after three straight hits.
 5. **Your tally.** Which form rescued which misses, scored by quiz answers only. It picks the form of your next live catch-up. New learners start from the average across learners.
@@ -95,20 +95,20 @@ Two copies of the evaluation toolkit exist on purpose: the root `reflow_eval.py`
 | `monitor.py` | matplotlib macosx backend: `uv run --group monitor python monitor.py --fake` | matplotlib TkAgg; same command |
 | Status | this build was developed and verified here (tests, smoke, browser) | code reviewed for Windows paths, COM naming, console encoding and event loop; not yet executed on a Windows machine |
 
-`uv run reflow doctor` prints the platform and every serial port with its hardware id, which is the first thing to check when a device is not picked up.
+`uv run neurospace doctor` prints the platform and every serial port with its hardware id, which is the first thing to check when a device is not picked up.
 
 ## Commands
 
 | Command | Purpose |
 |---|---|
-| `uv run reflow serve` | API + built frontend on one port |
-| `uv run reflow doctor` | keys, Deepgram, OpenAI model (lists alternatives if the configured one is missing), ports, build |
-| `uv run reflow ingest-lecture --title T --file lecture.m4a --meta study/meta.json` | transcribe a recorded lecture with Deepgram and register segments/quiz |
-| `uv run reflow ingest-script script.json` | register a scripted lecture (words or plain text) |
-| `uv run reflow replay SESSION_ID --speed 4` | print a session's event log at speed |
-| `uv run reflow study-analyze --lecture LEC_ID` | the four study numbers with intervals |
-| `uv run reflow sim selftest|bandit|lossmap` | the spec's simulations |
-| `uv run reflow kaggle-check EEG_data.csv` | hour-0 feature check on the Wang et al. confusion data |
+| `uv run neurospace serve` | API + built frontend on one port |
+| `uv run neurospace doctor` | keys, Deepgram, OpenAI model (lists alternatives if the configured one is missing), ports, build |
+| `uv run neurospace ingest-lecture --title T --file lecture.m4a --meta study/meta.json` | transcribe a recorded lecture with Deepgram and register segments/quiz |
+| `uv run neurospace ingest-script script.json` | register a scripted lecture (words or plain text) |
+| `uv run neurospace replay SESSION_ID --speed 4` | print a session's event log at speed |
+| `uv run neurospace study-analyze --lecture LEC_ID` | the four study numbers with intervals |
+| `uv run neurospace sim selftest|bandit|lossmap` | the spec's simulations |
+| `uv run neurospace kaggle-check EEG_data.csv` | hour-0 feature check on the Wang et al. confusion data |
 | `uv run pytest -q` | the test suite (no network, no hardware, about 15 s) |
 | `uv run python scripts/smoke_e2e.py` | end-to-end against a running server, prints tap-to-catch-up latency |
 
@@ -129,7 +129,7 @@ docs/          PRD, TDD, demo runbook
 
 - **Deepgram:** live streaming transcription (`reflow/transcribe/deepgram_live.py`) and prerecorded transcription for recorded lectures. Both are in the product path.
 - **OpenAI:** rolling recaps, gap notes, check questions, re-teach forms and diagram scene graphs as strict JSON-schema structured outputs (`reflow/llm/`). The Codex story for the demo is recorded in the runbook.
-- **Long Lake:** pitch framing only. No prompt box. Reflow notices for you.
+- **Long Lake:** pitch framing only. No prompt box. Neurospace notices for you.
 
 ## Honesty rules baked in
 

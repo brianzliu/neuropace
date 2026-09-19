@@ -1,4 +1,4 @@
-# Reflow: Technical Design Document
+# Neurospace: Technical Design Document
 
 **Companion to:** `docs/PRD.md` (requirement IDs FR-*, NFR-*, P* are referenced below).
 **Status:** v1.0, frozen for the build. Anything not written here is an implementation detail; anything written here is a contract that tests enforce.
@@ -60,6 +60,18 @@ scripts/smoke_e2e.py         end-to-end check with everything simulated
 ```
 
 ## 2. Architecture
+
+**Hosted interface extension, 19 Sep 2026:** Vercel serves only `frontend/`. Browser API,
+WebSocket, board upload, and media requests connect directly to `http://127.0.0.1:8765`.
+The local interface retains same-origin requests; `VITE_BACKEND_URL` overrides the hosted
+backend address at build time. `REFLOW_UI_ORIGINS` accepts a comma-separated list of exact
+trusted website origins, defaulting to `https://neurospace-hackmit.vercel.app`.
+Cross-origin requests require a per-process pairing code printed by `uv run neurospace serve`.
+The browser retains it in session storage, sends it in `X-Reflow-Token` for HTTP requests,
+and in the query string for WebSockets and media elements. CLI access logs are disabled to
+avoid logging those query strings. Restarting the backend requires pairing again.
+The hosted connection screen checks access before mounting the session UI. Browser local
+network permissions apply; no Vercel function or public tunnel proxies the local backend.
 
 ```
  browser mic ──PCM16──► WS /ws/session/{id} ──► DeepgramLive ──words──►┐
@@ -407,3 +419,36 @@ reflow kaggle-check PATH/EEG_data.csv          hour-0 feature check on Wang et a
 | `tally_enough_attempts` | 12 | tally |
 | `review_stop_streak` | 3 | review |
 | `lossmap_bin_seconds` / `lossmap_window_bins` | 10 / 4 | lossmap |
+
+## 12. Workspace extension implementation, 19 Sep 2026
+
+This addendum overrides the original home-screen and current hardware-target descriptions.
+
+- `Home.tsx` reads `/api/learners/{id}/dashboard`. Its backend joins only that learner's sessions
+  and unresolved gaps; optional `organize=true` uses the cached structured-output client.
+  `curricula` stores learner-keyed topic JSON. PUT replaces that learner's curriculum.
+- `/api/learners/{id}/syllabus/parse` accepts multipart file/text. pypdf extracts text from PDFs;
+  the model extracts topics when available, otherwise lines are returned for manual editing.
+  Parsing never persists or marks topics complete. No authentication is added to this local demo.
+- `/session/new` owns setup; `/live/{id}` owns capture. The dashboard opens a named browser
+  window and refreshes when focused again. The browser may choose a tab instead of a window.
+- `/api/devices/status` polls local port discovery without provider calls. `/api/devices/uno-q`
+  scans the Reflow BLE service through optional `bleak`. A `uno-q:<address>` headset setting
+  replaces both runtime input adapters with one `UnoQRelay`; it reconnects and reassembles
+  bounded newline-delimited packets, rejects duplicate sequences/nonfinite features, and marks
+  EEG stale after 3 s. The Q uses the unchanged `mindwave.Pipeline`, not eSense decisions.
+- `firmware/uno_q_relay/` contains an uncompiled MCU sketch and a Linux Bless/RouterBridge
+  prototype. Its BLE pairing, permissions, security policy, notification throughput, and App Lab
+  runtime must be validated on UNO Q. No hardware-ready claim follows from offline tests.
+- `LiveCapture.tsx` sends capped JPEG data URLs to `/api/sessions/{id}/board`. `BoardCapture`
+  timestamps receipt using the session clock, buffers 45 frames, and prunes frames older than
+  90 s during session ticks. Stop/unmount issues DELETE; session end also clears memory.
+  Receipt timestamps approximate capture time; network delay is not yet compensated.
+- Button-triggered multimodal calls run separately from immediate catch-ups, at most one at a
+  time. Inputs are the preceding 60 s of transcript and up to four sampled frames. Additional
+  presses still save flags, but do not start another model call while one is pending. The result
+  is a `board_explanation` event. Logs retain generated text and source frame IDs/times, never
+  image payloads. Selected images are ephemeral and are not yet rendered in durable gap notes.
+- Camera requests are opt-in. Audio starts separately through the existing Deepgram path. Closing
+  the browser stops its media capture, but does not automatically end the server's sensor session;
+  users must end it explicitly, including from a reopened live window.

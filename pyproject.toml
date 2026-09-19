@@ -17,10 +17,17 @@ dependencies = [
   "python-dotenv>=1.0",
   "python-multipart>=0.0.9",
   "scipy>=1.12",
+  "pypdf>=5",
 ]
 
 [project.scripts]
 reflow = "reflow.cli:main"
+neurospace = "reflow.cli:main"
+
+[project.optional-dependencies]
+bluetooth = [
+    "bleak>=1.0",
+]
 
 [dependency-groups]
 monitor = ["matplotlib>=3.8"]

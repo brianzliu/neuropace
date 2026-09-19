@@ -13,6 +13,8 @@ from ..config import FORMS
 from ..ids import new_id
 
 SCHEMA = """
+CREATE TABLE IF NOT EXISTS curricula(
+  learner_id TEXT PRIMARY KEY, content_json TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS learners(
   id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at REAL NOT NULL,
   baseline_mu REAL, baseline_sigma REAL, baseline_at REAL);
@@ -91,6 +93,17 @@ class DB:
             return
         with self.lock:
             self.conn.executemany(sql, rows)
+
+    def get_curriculum(self, learner_id: str) -> dict:
+        row = self._one("SELECT content_json FROM curricula WHERE learner_id=?", (learner_id,))
+        return _uj(row["content_json"]) if row else {"title": "My curriculum", "topics": []}
+
+    def set_curriculum(self, learner_id: str, content: dict) -> None:
+        self._x(
+            "INSERT INTO curricula(learner_id,content_json) VALUES(?,?) "
+            "ON CONFLICT(learner_id) DO UPDATE SET content_json=excluded.content_json",
+            (learner_id, _j(content)),
+        )
 
     # ---- learners ----
     def create_learner(self, name: str) -> dict:

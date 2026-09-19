@@ -18,7 +18,7 @@ def cmd_serve(args: argparse.Namespace) -> int:
     s = load_settings()
     host = args.host or s.host
     port = args.port or s.port
-    print(f"Reflow on http://{host}:{port}  (data: {s.data_dir.resolve()})")
+    print(f"Neurospace on http://{host}:{port}  (data: {s.data_dir.resolve()})")
     if args.reload:
         uvicorn.run(
             "reflow.api.app:create_app", factory=True, host=host, port=port, reload=True, log_level="info"
@@ -26,7 +26,10 @@ def cmd_serve(args: argparse.Namespace) -> int:
     else:
         from .api.app import create_app
 
-        uvicorn.run(create_app(s), host=host, port=port, log_level="info")
+        app = create_app(s)
+        print(f"Hosted UI pairing code: {app.state.pairing_token}", flush=True)
+        print(f"Allowed websites: {', '.join(s.ui_origins)}", flush=True)
+        uvicorn.run(app, host=host, port=port, log_level="info", access_log=False)
     return 0
 
 
@@ -205,7 +208,7 @@ def cmd_kaggle(args: argparse.Namespace) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
-        prog="reflow", description="Reflow: catch-ups, gap notes and adaptive review for lectures."
+        prog="neurospace", description="Neurospace: catch-ups, gap notes and adaptive review for lectures."
     )
     sub = p.add_subparsers(dest="cmd", required=True)
     sp = sub.add_parser("serve", help="start the API and the built frontend")

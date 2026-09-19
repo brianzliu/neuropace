@@ -30,6 +30,7 @@ from ..transcribe.deepgram_live import DeepgramLive
 from ..transcribe.scripted import ScriptedTranscript
 from ..transcribe.transcript import Transcript, Word
 from . import tally as tallymod
+from .board import BoardCapture
 from .recaps import Recap, RecapRing, RecapScheduler
 from .spans import eeg_span, merge_into_gaps, snap_end, tap_span
 
@@ -70,6 +71,7 @@ class SessionRuntime:
         self.rng = np.random.default_rng(self.seed)
         self.clock = LiveClock() if self.mode == "live" else MediaClock()
         self.transcript = Transcript()
+        self.board = BoardCapture(self)
         stored = None
         if session.get("baseline") and session["baseline"].get("stored"):
             stored = (session["baseline"]["mu"], session["baseline"]["sigma"])
@@ -99,6 +101,12 @@ class SessionRuntime:
         self.totem = make_totem(
             totem_port, self._on_totem_tap, exclude_port=getattr(self.headset, "port", None)
         )
+        if headset_port and headset_port.startswith("uno-q:"):
+            from ..totem.uno_q import UnoQRelay
+
+            relay = UnoQRelay(headset_port.split(":", 1)[1], self._on_totem_tap, self._on_frame)
+            self.headset = relay.headset
+            self.totem = relay
         self.transcriber: Any = None
         self.audio_sample_rate = 16000
         self._last_tick_t = -1.0
@@ -471,6 +479,7 @@ class SessionRuntime:
             f["linked_eeg"] = linked["id"]
             self.broadcast({"type": "flag_open", "flag": self._flag_public(f)})
         self._offer_catchup(f, t, auto_show=True, reason="tap")
+        self.board.on_tap(f)
         return f
 
     def force_flag(self) -> dict:
@@ -523,6 +532,7 @@ class SessionRuntime:
         if self.status != "running":
             return {}
         t = self.clock.now() if t is None else t
+        self.board.prune(t)
         paused = self.clock.paused
         if self.mode == "recorded":
             self._reveal_recorded_words(t)
@@ -566,6 +576,7 @@ class SessionRuntime:
 
     # ------------------------------------------------------------------ end of lecture
     async def end(self) -> list[dict]:
+        await self.board.stop()
         if self.status != "running":
             return self.db.get_gaps(self.id)
         self.status = "ending"
@@ -656,6 +667,7 @@ class SessionRuntime:
 
     async def abort(self) -> None:
         """Stop without building gaps (server shutdown)."""
+        await self.board.stop()
         if self.status == "running":
             self.status = "ended"
             if self._tick_task:

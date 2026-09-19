@@ -14,6 +14,7 @@ interface Props {
   onOpenChip: () => void;
   cycleToken: number;
   freezeCatchup?: boolean;
+  capture?: ReactNode;
   controls?: ReactNode;
   above?: ReactNode;
   stripExtra?: ReactNode;
@@ -43,6 +44,7 @@ export default function LiveStage(props: Props) {
           policy={state.hello?.policy ?? null}
           extra={stripExtra}
         />
+        {props.capture}
         <FocusTrace focus={state.focus} flags={flags} now={state.t} enterZ={cfg?.drop_enter_z ?? -1} exitZ={cfg?.drop_exit_z ?? -0.5} />
         <RecapPanel recap={latestRecap} bestForm={state.bestForm} />
         {state.withheld > 0 ? <div className="withheld">withheld (study): {state.withheld}</div> : null}

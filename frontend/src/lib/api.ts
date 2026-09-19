@@ -1,10 +1,11 @@
+import { backendFetch } from "./backend";
 import type {
   Doctor, EventsResponse, LectureFull, Learner, LossMap, NotesResponse, QuizGet, QuizResult, ReviewAnswer,
   ReviewNext, ReviewStart, SessionPublic, TallySummary, GapPublic,
 } from "./types";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...init });
+  const res = await backendFetch(path, { headers: { "Content-Type": "application/json" }, ...init });
   if (!res.ok) {
     let detail = res.statusText;
     try {
@@ -36,6 +37,8 @@ export interface SessionCreate {
 }
 
 export const api = {
+  dashboard: (id: string, organize = false) => get<import("./dashboardTypes").Dashboard>(`/api/learners/${id}/dashboard?organize=${organize}`),
+  saveCurriculum: (id: string, body: import("./dashboardTypes").Curriculum) => request<import("./dashboardTypes").Curriculum>(`/api/learners/${id}/curriculum`, { method: "PUT", body: JSON.stringify(body) }),
   health: () => get<{ ok: boolean; version: string }>("/api/health"),
   doctor: () => get<Doctor>("/api/doctor"),
   learners: () => get<{ learners: Learner[] }>("/api/learners"),

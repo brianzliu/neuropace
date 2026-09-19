@@ -224,7 +224,10 @@ export interface SessionEndedMsg {
   blinks: number;
 }
 
+export interface BoardExplanation { type: "board_explanation"; status: "pending" | "ready"; flag_id: string; text: string; source: "pending" | "llm" | "offline"; frames: {id: string; t: number}[]; t?: number }
+
 export type ServerMsg =
+  | BoardExplanation
   | HelloMsg
   | ({ type: "words"; words: Word[]; final: boolean; t: number })
   | FocusMsg

@@ -5,26 +5,29 @@ from __future__ import annotations
 import contextlib
 import json
 import logging
+import secrets
 from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.cors import CORSMiddleware
 
 from .. import __version__
 from ..config import Settings, load_settings
 from ..llm.client import LLMClient
 from ..store.db import DB
 from . import routes, ws
+from .local_bridge import LocalBridgeGuard
 
 log = logging.getLogger(__name__)
 ROOT = Path(__file__).resolve().parents[2]
 FRONTEND_DIST = ROOT / "frontend" / "dist"
 DEMO_SCRIPT = ROOT / "data" / "lectures" / "demo" / "script.json"
 
-NO_BUILD_HTML = """<!doctype html><meta charset=utf-8><title>Reflow</title>
+NO_BUILD_HTML = """<!doctype html><meta charset=utf-8><title>Neurospace</title>
 <body style="font-family:system-ui;padding:2rem;background:#0f1115;color:#e6e6e6">
-<h1>Reflow API is running</h1><p>The frontend is not built yet. Run:</p>
+<h1>Neurospace API is running</h1><p>The frontend is not built yet. Run:</p>
 <pre>cd frontend && pnpm install && pnpm build</pre><p>then reload. API docs: <a href="/docs" style="color:#8ab4f8">/docs</a></p></body>"""
 
 
@@ -64,7 +67,16 @@ def create_app(
             with contextlib.suppress(Exception):
                 await rt.abort()
 
-    app = FastAPI(title="Reflow", version=__version__, lifespan=lifespan)
+    app = FastAPI(title="Neurospace", version=__version__, lifespan=lifespan)
+    app.state.pairing_token = secrets.token_urlsafe(24)
+    app.add_middleware(LocalBridgeGuard, origins=s.ui_origins, token=app.state.pairing_token)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=list(s.ui_origins),
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type", "X-Reflow-Token", "Range"],
+        expose_headers=["Content-Range", "Accept-Ranges"],
+    )
     app.state.settings = s
     app.state.db = db
     app.state.llm = llm
@@ -72,6 +84,10 @@ def create_app(
     app.state.reviews = {}
     app.include_router(routes.router, prefix="/api")
     app.include_router(ws.router)
+
+    @app.get("/api/bridge/check")
+    def bridge_check():
+        return {"ok": True}
 
     @app.get("/media/{lecture_id}")
     def media(lecture_id: str):
