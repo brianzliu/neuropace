@@ -1,0 +1,4337 @@
+{
+ "id": "lec_demo0001",
+ "title": "How GPS finds you",
+ "wpm": 150.0,
+ "keyterms": [
+  "trilateration",
+  "pseudorange",
+  "ionospheric delay",
+  "Kalman filter",
+  "dilution of precision",
+  "clock bias",
+  "time dilation"
+ ],
+ "segments": [
+  {
+   "id": "seg1",
+   "title": "Satellites that broadcast the time",
+   "t_start": 0.0,
+   "t_end": 62.66,
+   "planted_bad": false
+  },
+  {
+   "id": "seg2",
+   "title": "Turning a delay into a distance",
+   "t_start": 62.66,
+   "t_end": 139.29,
+   "planted_bad": false
+  },
+  {
+   "id": "seg3",
+   "title": "Error sources (deliberately dense)",
+   "t_start": 139.29,
+   "t_end": 216.2,
+   "planted_bad": true
+  },
+  {
+   "id": "seg4",
+   "title": "Why you need a fourth satellite",
+   "t_start": 216.2,
+   "t_end": 287.45,
+   "planted_bad": false
+  },
+  {
+   "id": "seg5",
+   "title": "Relativity and everyday use",
+   "t_start": 287.45,
+   "t_end": 359.76,
+   "planted_bad": false
+  }
+ ],
+ "quiz": [
+  {
+   "id": "q01",
+   "segment": "seg1",
+   "question": "What does a GPS satellite broadcast?",
+   "options": [
+    "The time and its own position",
+    "Your phone's position",
+    "A map of the area",
+    "Weather data"
+   ],
+   "correct_index": 0,
+   "t_start": 0.0,
+   "t_end": 19.2,
+   "anchor": "broadcasts the current time"
+  },
+  {
+   "id": "q02",
+   "segment": "seg1",
+   "question": "What kind of clock does a GPS satellite carry?",
+   "options": [
+    "An atomic clock",
+    "A quartz clock",
+    "A pendulum clock",
+    "No clock; it uses the phone's"
+   ],
+   "correct_index": 0,
+   "t_start": 30.18,
+   "t_end": 49.06,
+   "anchor": "atomic clock"
+  },
+  {
+   "id": "q03",
+   "segment": "seg1",
+   "question": "From any point on Earth, about how many GPS satellites are usually visible?",
+   "options": [
+    "At least six",
+    "Exactly one",
+    "About thirty",
+    "None during the day"
+   ],
+   "correct_index": 0,
+   "t_start": 25.03,
+   "t_end": 44.19,
+   "anchor": "at least six"
+  },
+  {
+   "id": "q04",
+   "segment": "seg2",
+   "question": "How does the phone turn a signal delay into a distance?",
+   "options": [
+    "Multiplies the delay by the speed of light",
+    "Divides the delay by the satellite's altitude",
+    "Looks the delay up in a table",
+    "Adds the delays from all satellites"
+   ],
+   "correct_index": 0,
+   "t_start": 75.72,
+   "t_end": 95.02,
+   "anchor": "Multiply that delay"
+  },
+  {
+   "id": "q05",
+   "segment": "seg2",
+   "question": "In the example, a seventy millisecond delay corresponds to what distance?",
+   "options": [
+    "Twenty one thousand kilometers",
+    "Seventy kilometers",
+    "Three hundred kilometers",
+    "Two hundred ten kilometers"
+   ],
+   "correct_index": 0,
+   "t_start": 94.92,
+   "t_end": 114.76,
+   "anchor": "twenty one thousand kilometers"
+  },
+  {
+   "id": "q06",
+   "segment": "seg2",
+   "question": "Three distances narrow your position to two points. What happens to one of them?",
+   "options": [
+    "It is thrown away because it is out in space",
+    "It is averaged with the other",
+    "It is stored for later",
+    "It becomes the altitude"
+   ],
+   "correct_index": 0,
+   "t_start": 122.63,
+   "t_end": 141.63,
+   "anchor": "called trilateration"
+  },
+  {
+   "id": "q07",
+   "segment": "seg3",
+   "question": "According to the lecture, the ionospheric delay is proportional to what?",
+   "options": [
+    "Total electron content divided by frequency squared",
+    "The satellite's altitude",
+    "The receiver's speed",
+    "The number of satellites"
+   ],
+   "correct_index": 0,
+   "t_start": 135.4,
+   "t_end": 155.24,
+   "anchor": "ionospheric delay is dispersive"
+  },
+  {
+   "id": "q08",
+   "segment": "seg3",
+   "question": "What does a single-frequency receiver rely on to correct the ionosphere?",
+   "options": [
+    "The Klobuchar model broadcast in the navigation message",
+    "An ionosphere-free linear combination",
+    "A second antenna",
+    "The Kalman gain"
+   ],
+   "correct_index": 0,
+   "t_start": 149.16,
+   "t_end": 168.08,
+   "anchor": "Klobuchar model"
+  },
+  {
+   "id": "q09",
+   "segment": "seg3",
+   "question": "In the filter described, the Kalman gain is derived from which two quantities?",
+   "options": [
+    "The a priori covariance and the measurement noise covariance",
+    "The satellite position and the time",
+    "The pseudorange and the multipath",
+    "The tropospheric and ionospheric delays"
+   ],
+   "correct_index": 0,
+   "t_start": 187.04,
+   "t_end": 205.9,
+   "anchor": "Kalman gain"
+  },
+  {
+   "id": "q10",
+   "segment": "seg4",
+   "question": "A clock error of one microsecond causes roughly how much distance error?",
+   "options": [
+    "Three hundred meters",
+    "Three meters",
+    "Thirty kilometers",
+    "One kilometer"
+   ],
+   "correct_index": 0,
+   "t_start": 221.82,
+   "t_end": 242.42,
+   "anchor": "three hundred meters of distance error"
+  },
+  {
+   "id": "q11",
+   "segment": "seg4",
+   "question": "Why does the phone need a fourth satellite?",
+   "options": [
+    "To solve for its own clock error as a fourth unknown",
+    "To measure altitude directly",
+    "Because three satellites are often behind clouds",
+    "To double-check the first three"
+   ],
+   "correct_index": 0,
+   "t_start": 241.27,
+   "t_end": 260.19,
+   "anchor": "fourth unknown"
+  },
+  {
+   "id": "q12",
+   "segment": "seg4",
+   "question": "What side effect of the GPS solution did the lecturer mention?",
+   "options": [
+    "The phone learns the time as precisely as an atomic clock",
+    "The phone's battery lasts longer",
+    "The phone can see through buildings",
+    "The phone stops needing WiFi"
+   ],
+   "correct_index": 0,
+   "t_start": 272.23,
+   "t_end": 292.45,
+   "anchor": "borrowing time from the satellites"
+  },
+  {
+   "id": "q13",
+   "segment": "seg5",
+   "question": "By about how much per day do satellite clocks run fast, net of both relativistic effects?",
+   "options": [
+    "Thirty eight microseconds",
+    "Seven microseconds",
+    "Forty five milliseconds",
+    "Ten seconds"
+   ],
+   "correct_index": 0,
+   "t_start": 305.65,
+   "t_end": 325.07,
+   "anchor": "thirty eight microseconds"
+  },
+  {
+   "id": "q14",
+   "segment": "seg5",
+   "question": "Without the relativity correction, how far would positions drift each day?",
+   "options": [
+    "More than ten kilometers",
+    "About three hundred meters",
+    "About one meter",
+    "They would not drift"
+   ],
+   "correct_index": 0,
+   "t_start": 316.71,
+   "t_end": 336.41,
+   "anchor": "more than ten kilometers"
+  },
+  {
+   "id": "q15",
+   "segment": "seg5",
+   "question": "How is the relativistic effect handled in practice?",
+   "options": [
+    "Satellite clocks are set to tick slightly slow before launch",
+    "The phone ignores it",
+    "The satellites are launched lower",
+    "Signals are sent twice"
+   ],
+   "correct_index": 0,
+   "t_start": 322.94,
+   "t_end": 343.12,
+   "anchor": "tick slightly slow before launch"
+  }
+ ],
+ "words": [
+  {
+   "w": "Let's",
+   "start": 0.0,
+   "end": 0.42
+  },
+  {
+   "w": "start",
+   "start": 0.42,
+   "end": 0.84
+  },
+  {
+   "w": "with",
+   "start": 0.84,
+   "end": 1.24
+  },
+  {
+   "w": "what",
+   "start": 1.24,
+   "end": 1.64
+  },
+  {
+   "w": "a",
+   "start": 1.64,
+   "end": 1.98
+  },
+  {
+   "w": "GPS",
+   "start": 1.98,
+   "end": 2.36
+  },
+  {
+   "w": "satellite",
+   "start": 2.36,
+   "end": 2.86
+  },
+  {
+   "w": "actually",
+   "start": 2.86,
+   "end": 3.34
+  },
+  {
+   "w": "does,",
+   "start": 3.34,
+   "end": 3.76
+  },
+  {
+   "w": "because",
+   "start": 3.76,
+   "end": 4.22
+  },
+  {
+   "w": "it",
+   "start": 4.22,
+   "end": 4.58
+  },
+  {
+   "w": "is",
+   "start": 4.58,
+   "end": 4.94
+  },
+  {
+   "w": "simpler",
+   "start": 4.94,
+   "end": 5.4
+  },
+  {
+   "w": "than",
+   "start": 5.4,
+   "end": 5.8
+  },
+  {
+   "w": "people",
+   "start": 5.8,
+   "end": 6.24
+  },
+  {
+   "w": "think.",
+   "start": 6.24,
+   "end": 6.68
+  },
+  {
+   "w": "Every",
+   "start": 7.03,
+   "end": 7.45
+  },
+  {
+   "w": "GPS",
+   "start": 7.45,
+   "end": 7.83
+  },
+  {
+   "w": "satellite",
+   "start": 7.83,
+   "end": 8.33
+  },
+  {
+   "w": "does",
+   "start": 8.33,
+   "end": 8.73
+  },
+  {
+   "w": "one",
+   "start": 8.73,
+   "end": 9.11
+  },
+  {
+   "w": "thing",
+   "start": 9.11,
+   "end": 9.53
+  },
+  {
+   "w": "all",
+   "start": 9.53,
+   "end": 9.91
+  },
+  {
+   "w": "day",
+   "start": 9.91,
+   "end": 10.29
+  },
+  {
+   "w": "long.",
+   "start": 10.29,
+   "end": 10.71
+  },
+  {
+   "w": "It",
+   "start": 11.06,
+   "end": 11.42
+  },
+  {
+   "w": "broadcasts",
+   "start": 11.42,
+   "end": 11.94
+  },
+  {
+   "w": "the",
+   "start": 11.94,
+   "end": 12.32
+  },
+  {
+   "w": "current",
+   "start": 12.32,
+   "end": 12.78
+  },
+  {
+   "w": "time,",
+   "start": 12.78,
+   "end": 13.2
+  },
+  {
+   "w": "over",
+   "start": 13.2,
+   "end": 13.6
+  },
+  {
+   "w": "and",
+   "start": 13.6,
+   "end": 13.98
+  },
+  {
+   "w": "over,",
+   "start": 13.98,
+   "end": 14.4
+  },
+  {
+   "w": "along",
+   "start": 14.4,
+   "end": 14.82
+  },
+  {
+   "w": "with",
+   "start": 14.82,
+   "end": 15.22
+  },
+  {
+   "w": "where",
+   "start": 15.22,
+   "end": 15.64
+  },
+  {
+   "w": "it",
+   "start": 15.64,
+   "end": 16.0
+  },
+  {
+   "w": "is",
+   "start": 16.0,
+   "end": 16.36
+  },
+  {
+   "w": "in",
+   "start": 16.36,
+   "end": 16.72
+  },
+  {
+   "w": "its",
+   "start": 16.72,
+   "end": 17.1
+  },
+  {
+   "w": "orbit.",
+   "start": 17.1,
+   "end": 17.54
+  },
+  {
+   "w": "That's",
+   "start": 17.89,
+   "end": 18.33
+  },
+  {
+   "w": "it.",
+   "start": 18.33,
+   "end": 18.71
+  },
+  {
+   "w": "It",
+   "start": 19.06,
+   "end": 19.42
+  },
+  {
+   "w": "does",
+   "start": 19.42,
+   "end": 19.82
+  },
+  {
+   "w": "not",
+   "start": 19.82,
+   "end": 20.2
+  },
+  {
+   "w": "know",
+   "start": 20.2,
+   "end": 20.6
+  },
+  {
+   "w": "where",
+   "start": 20.6,
+   "end": 21.02
+  },
+  {
+   "w": "you",
+   "start": 21.02,
+   "end": 21.4
+  },
+  {
+   "w": "are.",
+   "start": 21.4,
+   "end": 21.8
+  },
+  {
+   "w": "It",
+   "start": 22.15,
+   "end": 22.51
+  },
+  {
+   "w": "does",
+   "start": 22.51,
+   "end": 22.91
+  },
+  {
+   "w": "not",
+   "start": 22.91,
+   "end": 23.29
+  },
+  {
+   "w": "track",
+   "start": 23.29,
+   "end": 23.71
+  },
+  {
+   "w": "you.",
+   "start": 23.71,
+   "end": 24.11
+  },
+  {
+   "w": "It",
+   "start": 24.46,
+   "end": 24.82
+  },
+  {
+   "w": "is",
+   "start": 24.82,
+   "end": 25.18
+  },
+  {
+   "w": "a",
+   "start": 25.18,
+   "end": 25.52
+  },
+  {
+   "w": "very",
+   "start": 25.52,
+   "end": 25.92
+  },
+  {
+   "w": "precise",
+   "start": 25.92,
+   "end": 26.38
+  },
+  {
+   "w": "clock",
+   "start": 26.38,
+   "end": 26.8
+  },
+  {
+   "w": "in",
+   "start": 26.8,
+   "end": 27.16
+  },
+  {
+   "w": "space,",
+   "start": 27.16,
+   "end": 27.6
+  },
+  {
+   "w": "shouting",
+   "start": 27.6,
+   "end": 28.08
+  },
+  {
+   "w": "the",
+   "start": 28.08,
+   "end": 28.46
+  },
+  {
+   "w": "time.",
+   "start": 28.46,
+   "end": 28.88
+  },
+  {
+   "w": "There",
+   "start": 29.23,
+   "end": 29.65
+  },
+  {
+   "w": "are",
+   "start": 29.65,
+   "end": 30.03
+  },
+  {
+   "w": "about",
+   "start": 30.03,
+   "end": 30.45
+  },
+  {
+   "w": "thirty",
+   "start": 30.45,
+   "end": 30.89
+  },
+  {
+   "w": "of",
+   "start": 30.89,
+   "end": 31.25
+  },
+  {
+   "w": "these",
+   "start": 31.25,
+   "end": 31.67
+  },
+  {
+   "w": "satellites,",
+   "start": 31.67,
+   "end": 32.21
+  },
+  {
+   "w": "arranged",
+   "start": 32.21,
+   "end": 32.69
+  },
+  {
+   "w": "so",
+   "start": 32.69,
+   "end": 33.05
+  },
+  {
+   "w": "that",
+   "start": 33.05,
+   "end": 33.45
+  },
+  {
+   "w": "from",
+   "start": 33.45,
+   "end": 33.85
+  },
+  {
+   "w": "any",
+   "start": 33.85,
+   "end": 34.23
+  },
+  {
+   "w": "point",
+   "start": 34.23,
+   "end": 34.65
+  },
+  {
+   "w": "on",
+   "start": 34.65,
+   "end": 35.01
+  },
+  {
+   "w": "Earth",
+   "start": 35.01,
+   "end": 35.43
+  },
+  {
+   "w": "you",
+   "start": 35.43,
+   "end": 35.81
+  },
+  {
+   "w": "can",
+   "start": 35.81,
+   "end": 36.19
+  },
+  {
+   "w": "usually",
+   "start": 36.19,
+   "end": 36.65
+  },
+  {
+   "w": "see",
+   "start": 36.65,
+   "end": 37.03
+  },
+  {
+   "w": "at",
+   "start": 37.03,
+   "end": 37.39
+  },
+  {
+   "w": "least",
+   "start": 37.39,
+   "end": 37.81
+  },
+  {
+   "w": "six",
+   "start": 37.81,
+   "end": 38.19
+  },
+  {
+   "w": "of",
+   "start": 38.19,
+   "end": 38.55
+  },
+  {
+   "w": "them",
+   "start": 38.55,
+   "end": 38.95
+  },
+  {
+   "w": "above",
+   "start": 38.95,
+   "end": 39.37
+  },
+  {
+   "w": "the",
+   "start": 39.37,
+   "end": 39.75
+  },
+  {
+   "w": "horizon.",
+   "start": 39.75,
+   "end": 40.23
+  },
+  {
+   "w": "Each",
+   "start": 40.58,
+   "end": 40.98
+  },
+  {
+   "w": "one",
+   "start": 40.98,
+   "end": 41.36
+  },
+  {
+   "w": "carries",
+   "start": 41.36,
+   "end": 41.82
+  },
+  {
+   "w": "an",
+   "start": 41.82,
+   "end": 42.18
+  },
+  {
+   "w": "atomic",
+   "start": 42.18,
+   "end": 42.62
+  },
+  {
+   "w": "clock,",
+   "start": 42.62,
+   "end": 43.06
+  },
+  {
+   "w": "accurate",
+   "start": 43.06,
+   "end": 43.54
+  },
+  {
+   "w": "to",
+   "start": 43.54,
+   "end": 43.9
+  },
+  {
+   "w": "a",
+   "start": 43.9,
+   "end": 44.24
+  },
+  {
+   "w": "few",
+   "start": 44.24,
+   "end": 44.62
+  },
+  {
+   "w": "billionths",
+   "start": 44.62,
+   "end": 45.14
+  },
+  {
+   "w": "of",
+   "start": 45.14,
+   "end": 45.5
+  },
+  {
+   "w": "a",
+   "start": 45.5,
+   "end": 45.84
+  },
+  {
+   "w": "second.",
+   "start": 45.84,
+   "end": 46.3
+  },
+  {
+   "w": "Your",
+   "start": 46.65,
+   "end": 47.05
+  },
+  {
+   "w": "phone",
+   "start": 47.05,
+   "end": 47.47
+  },
+  {
+   "w": "has",
+   "start": 47.47,
+   "end": 47.85
+  },
+  {
+   "w": "a",
+   "start": 47.85,
+   "end": 48.19
+  },
+  {
+   "w": "cheap",
+   "start": 48.19,
+   "end": 48.61
+  },
+  {
+   "w": "quartz",
+   "start": 48.61,
+   "end": 49.05
+  },
+  {
+   "w": "clock,",
+   "start": 49.05,
+   "end": 49.49
+  },
+  {
+   "w": "and",
+   "start": 49.49,
+   "end": 49.87
+  },
+  {
+   "w": "that",
+   "start": 49.87,
+   "end": 50.27
+  },
+  {
+   "w": "difference",
+   "start": 50.27,
+   "end": 50.79
+  },
+  {
+   "w": "is",
+   "start": 50.79,
+   "end": 51.15
+  },
+  {
+   "w": "going",
+   "start": 51.15,
+   "end": 51.57
+  },
+  {
+   "w": "to",
+   "start": 51.57,
+   "end": 51.93
+  },
+  {
+   "w": "matter",
+   "start": 51.93,
+   "end": 52.37
+  },
+  {
+   "w": "later.",
+   "start": 52.37,
+   "end": 52.81
+  },
+  {
+   "w": "So",
+   "start": 53.16,
+   "end": 53.52
+  },
+  {
+   "w": "remember",
+   "start": 53.52,
+   "end": 54.0
+  },
+  {
+   "w": "the",
+   "start": 54.0,
+   "end": 54.38
+  },
+  {
+   "w": "picture:",
+   "start": 54.38,
+   "end": 54.86
+  },
+  {
+   "w": "thirty",
+   "start": 54.86,
+   "end": 55.3
+  },
+  {
+   "w": "flying",
+   "start": 55.3,
+   "end": 55.74
+  },
+  {
+   "w": "clocks,",
+   "start": 55.74,
+   "end": 56.2
+  },
+  {
+   "w": "each",
+   "start": 56.2,
+   "end": 56.6
+  },
+  {
+   "w": "announcing",
+   "start": 56.6,
+   "end": 57.12
+  },
+  {
+   "w": "the",
+   "start": 57.12,
+   "end": 57.5
+  },
+  {
+   "w": "time",
+   "start": 57.5,
+   "end": 57.9
+  },
+  {
+   "w": "and",
+   "start": 57.9,
+   "end": 58.28
+  },
+  {
+   "w": "its",
+   "start": 58.28,
+   "end": 58.66
+  },
+  {
+   "w": "own",
+   "start": 58.66,
+   "end": 59.04
+  },
+  {
+   "w": "position,",
+   "start": 59.04,
+   "end": 59.54
+  },
+  {
+   "w": "and",
+   "start": 59.54,
+   "end": 59.92
+  },
+  {
+   "w": "your",
+   "start": 59.92,
+   "end": 60.32
+  },
+  {
+   "w": "phone",
+   "start": 60.32,
+   "end": 60.74
+  },
+  {
+   "w": "just",
+   "start": 60.74,
+   "end": 61.14
+  },
+  {
+   "w": "listening.",
+   "start": 61.14,
+   "end": 61.66
+  },
+  {
+   "w": "Now,",
+   "start": 62.66,
+   "end": 63.06
+  },
+  {
+   "w": "how",
+   "start": 63.06,
+   "end": 63.44
+  },
+  {
+   "w": "does",
+   "start": 63.44,
+   "end": 63.84
+  },
+  {
+   "w": "listening",
+   "start": 63.84,
+   "end": 64.34
+  },
+  {
+   "w": "to",
+   "start": 64.34,
+   "end": 64.7
+  },
+  {
+   "w": "a",
+   "start": 64.7,
+   "end": 65.04
+  },
+  {
+   "w": "clock",
+   "start": 65.04,
+   "end": 65.46
+  },
+  {
+   "w": "tell",
+   "start": 65.46,
+   "end": 65.86
+  },
+  {
+   "w": "you",
+   "start": 65.86,
+   "end": 66.24
+  },
+  {
+   "w": "where",
+   "start": 66.24,
+   "end": 66.66
+  },
+  {
+   "w": "you",
+   "start": 66.66,
+   "end": 67.04
+  },
+  {
+   "w": "are?",
+   "start": 67.04,
+   "end": 67.44
+  },
+  {
+   "w": "Radio",
+   "start": 67.79,
+   "end": 68.21
+  },
+  {
+   "w": "travels",
+   "start": 68.21,
+   "end": 68.67
+  },
+  {
+   "w": "at",
+   "start": 68.67,
+   "end": 69.03
+  },
+  {
+   "w": "the",
+   "start": 69.03,
+   "end": 69.41
+  },
+  {
+   "w": "speed",
+   "start": 69.41,
+   "end": 69.83
+  },
+  {
+   "w": "of",
+   "start": 69.83,
+   "end": 70.19
+  },
+  {
+   "w": "light,",
+   "start": 70.19,
+   "end": 70.63
+  },
+  {
+   "w": "about",
+   "start": 70.63,
+   "end": 71.05
+  },
+  {
+   "w": "three",
+   "start": 71.05,
+   "end": 71.47
+  },
+  {
+   "w": "hundred",
+   "start": 71.47,
+   "end": 71.93
+  },
+  {
+   "w": "thousand",
+   "start": 71.93,
+   "end": 72.41
+  },
+  {
+   "w": "kilometers",
+   "start": 72.41,
+   "end": 72.93
+  },
+  {
+   "w": "per",
+   "start": 72.93,
+   "end": 73.31
+  },
+  {
+   "w": "second.",
+   "start": 73.31,
+   "end": 73.77
+  },
+  {
+   "w": "When",
+   "start": 74.12,
+   "end": 74.52
+  },
+  {
+   "w": "your",
+   "start": 74.52,
+   "end": 74.92
+  },
+  {
+   "w": "phone",
+   "start": 74.92,
+   "end": 75.34
+  },
+  {
+   "w": "receives",
+   "start": 75.34,
+   "end": 75.82
+  },
+  {
+   "w": "a",
+   "start": 75.82,
+   "end": 76.16
+  },
+  {
+   "w": "satellite's",
+   "start": 76.16,
+   "end": 76.7
+  },
+  {
+   "w": "message,",
+   "start": 76.7,
+   "end": 77.18
+  },
+  {
+   "w": "it",
+   "start": 77.18,
+   "end": 77.54
+  },
+  {
+   "w": "compares",
+   "start": 77.54,
+   "end": 78.02
+  },
+  {
+   "w": "the",
+   "start": 78.02,
+   "end": 78.4
+  },
+  {
+   "w": "time",
+   "start": 78.4,
+   "end": 78.8
+  },
+  {
+   "w": "stamped",
+   "start": 78.8,
+   "end": 79.26
+  },
+  {
+   "w": "inside",
+   "start": 79.26,
+   "end": 79.7
+  },
+  {
+   "w": "the",
+   "start": 79.7,
+   "end": 80.08
+  },
+  {
+   "w": "message",
+   "start": 80.08,
+   "end": 80.54
+  },
+  {
+   "w": "with",
+   "start": 80.54,
+   "end": 80.94
+  },
+  {
+   "w": "the",
+   "start": 80.94,
+   "end": 81.32
+  },
+  {
+   "w": "time",
+   "start": 81.32,
+   "end": 81.72
+  },
+  {
+   "w": "it",
+   "start": 81.72,
+   "end": 82.08
+  },
+  {
+   "w": "was",
+   "start": 82.08,
+   "end": 82.46
+  },
+  {
+   "w": "received.",
+   "start": 82.46,
+   "end": 82.96
+  },
+  {
+   "w": "The",
+   "start": 83.31,
+   "end": 83.69
+  },
+  {
+   "w": "difference",
+   "start": 83.69,
+   "end": 84.21
+  },
+  {
+   "w": "is",
+   "start": 84.21,
+   "end": 84.57
+  },
+  {
+   "w": "how",
+   "start": 84.57,
+   "end": 84.95
+  },
+  {
+   "w": "long",
+   "start": 84.95,
+   "end": 85.35
+  },
+  {
+   "w": "the",
+   "start": 85.35,
+   "end": 85.73
+  },
+  {
+   "w": "signal",
+   "start": 85.73,
+   "end": 86.17
+  },
+  {
+   "w": "was",
+   "start": 86.17,
+   "end": 86.55
+  },
+  {
+   "w": "in",
+   "start": 86.55,
+   "end": 86.91
+  },
+  {
+   "w": "flight.",
+   "start": 86.91,
+   "end": 87.37
+  },
+  {
+   "w": "Multiply",
+   "start": 87.72,
+   "end": 88.2
+  },
+  {
+   "w": "that",
+   "start": 88.2,
+   "end": 88.6
+  },
+  {
+   "w": "delay",
+   "start": 88.6,
+   "end": 89.02
+  },
+  {
+   "w": "by",
+   "start": 89.02,
+   "end": 89.38
+  },
+  {
+   "w": "the",
+   "start": 89.38,
+   "end": 89.76
+  },
+  {
+   "w": "speed",
+   "start": 89.76,
+   "end": 90.18
+  },
+  {
+   "w": "of",
+   "start": 90.18,
+   "end": 90.54
+  },
+  {
+   "w": "light",
+   "start": 90.54,
+   "end": 90.96
+  },
+  {
+   "w": "and",
+   "start": 90.96,
+   "end": 91.34
+  },
+  {
+   "w": "you",
+   "start": 91.34,
+   "end": 91.72
+  },
+  {
+   "w": "get",
+   "start": 91.72,
+   "end": 92.1
+  },
+  {
+   "w": "the",
+   "start": 92.1,
+   "end": 92.48
+  },
+  {
+   "w": "distance",
+   "start": 92.48,
+   "end": 92.96
+  },
+  {
+   "w": "to",
+   "start": 92.96,
+   "end": 93.32
+  },
+  {
+   "w": "that",
+   "start": 93.32,
+   "end": 93.72
+  },
+  {
+   "w": "satellite.",
+   "start": 93.72,
+   "end": 94.24
+  },
+  {
+   "w": "Here's",
+   "start": 94.59,
+   "end": 95.03
+  },
+  {
+   "w": "a",
+   "start": 95.03,
+   "end": 95.37
+  },
+  {
+   "w": "concrete",
+   "start": 95.37,
+   "end": 95.85
+  },
+  {
+   "w": "example.",
+   "start": 95.85,
+   "end": 96.33
+  },
+  {
+   "w": "If",
+   "start": 96.68,
+   "end": 97.04
+  },
+  {
+   "w": "the",
+   "start": 97.04,
+   "end": 97.42
+  },
+  {
+   "w": "signal",
+   "start": 97.42,
+   "end": 97.86
+  },
+  {
+   "w": "took",
+   "start": 97.86,
+   "end": 98.26
+  },
+  {
+   "w": "seventy",
+   "start": 98.26,
+   "end": 98.72
+  },
+  {
+   "w": "milliseconds",
+   "start": 98.72,
+   "end": 99.28
+  },
+  {
+   "w": "to",
+   "start": 99.28,
+   "end": 99.64
+  },
+  {
+   "w": "arrive,",
+   "start": 99.64,
+   "end": 100.1
+  },
+  {
+   "w": "that",
+   "start": 100.1,
+   "end": 100.5
+  },
+  {
+   "w": "is",
+   "start": 100.5,
+   "end": 100.86
+  },
+  {
+   "w": "seventy",
+   "start": 100.86,
+   "end": 101.32
+  },
+  {
+   "w": "thousandths",
+   "start": 101.32,
+   "end": 101.86
+  },
+  {
+   "w": "of",
+   "start": 101.86,
+   "end": 102.22
+  },
+  {
+   "w": "a",
+   "start": 102.22,
+   "end": 102.56
+  },
+  {
+   "w": "second",
+   "start": 102.56,
+   "end": 103.0
+  },
+  {
+   "w": "times",
+   "start": 103.0,
+   "end": 103.42
+  },
+  {
+   "w": "three",
+   "start": 103.42,
+   "end": 103.84
+  },
+  {
+   "w": "hundred",
+   "start": 103.84,
+   "end": 104.3
+  },
+  {
+   "w": "thousand",
+   "start": 104.3,
+   "end": 104.78
+  },
+  {
+   "w": "kilometers",
+   "start": 104.78,
+   "end": 105.3
+  },
+  {
+   "w": "per",
+   "start": 105.3,
+   "end": 105.68
+  },
+  {
+   "w": "second,",
+   "start": 105.68,
+   "end": 106.14
+  },
+  {
+   "w": "which",
+   "start": 106.14,
+   "end": 106.56
+  },
+  {
+   "w": "is",
+   "start": 106.56,
+   "end": 106.92
+  },
+  {
+   "w": "twenty",
+   "start": 106.92,
+   "end": 107.36
+  },
+  {
+   "w": "one",
+   "start": 107.36,
+   "end": 107.74
+  },
+  {
+   "w": "thousand",
+   "start": 107.74,
+   "end": 108.22
+  },
+  {
+   "w": "kilometers.",
+   "start": 108.22,
+   "end": 108.76
+  },
+  {
+   "w": "So",
+   "start": 109.11,
+   "end": 109.47
+  },
+  {
+   "w": "the",
+   "start": 109.47,
+   "end": 109.85
+  },
+  {
+   "w": "phone",
+   "start": 109.85,
+   "end": 110.27
+  },
+  {
+   "w": "now",
+   "start": 110.27,
+   "end": 110.65
+  },
+  {
+   "w": "knows:",
+   "start": 110.65,
+   "end": 111.09
+  },
+  {
+   "w": "I",
+   "start": 111.09,
+   "end": 111.43
+  },
+  {
+   "w": "am",
+   "start": 111.43,
+   "end": 111.79
+  },
+  {
+   "w": "twenty",
+   "start": 111.79,
+   "end": 112.23
+  },
+  {
+   "w": "one",
+   "start": 112.23,
+   "end": 112.61
+  },
+  {
+   "w": "thousand",
+   "start": 112.61,
+   "end": 113.09
+  },
+  {
+   "w": "kilometers",
+   "start": 113.09,
+   "end": 113.61
+  },
+  {
+   "w": "from",
+   "start": 113.61,
+   "end": 114.01
+  },
+  {
+   "w": "that",
+   "start": 114.01,
+   "end": 114.41
+  },
+  {
+   "w": "satellite.",
+   "start": 114.41,
+   "end": 114.93
+  },
+  {
+   "w": "One",
+   "start": 115.28,
+   "end": 115.66
+  },
+  {
+   "w": "distance",
+   "start": 115.66,
+   "end": 116.14
+  },
+  {
+   "w": "puts",
+   "start": 116.14,
+   "end": 116.54
+  },
+  {
+   "w": "you",
+   "start": 116.54,
+   "end": 116.92
+  },
+  {
+   "w": "somewhere",
+   "start": 116.92,
+   "end": 117.42
+  },
+  {
+   "w": "on",
+   "start": 117.42,
+   "end": 117.78
+  },
+  {
+   "w": "a",
+   "start": 117.78,
+   "end": 118.12
+  },
+  {
+   "w": "sphere",
+   "start": 118.12,
+   "end": 118.56
+  },
+  {
+   "w": "around",
+   "start": 118.56,
+   "end": 119.0
+  },
+  {
+   "w": "that",
+   "start": 119.0,
+   "end": 119.4
+  },
+  {
+   "w": "satellite.",
+   "start": 119.4,
+   "end": 119.92
+  },
+  {
+   "w": "Two",
+   "start": 120.27,
+   "end": 120.65
+  },
+  {
+   "w": "distances",
+   "start": 120.65,
+   "end": 121.15
+  },
+  {
+   "w": "narrow",
+   "start": 121.15,
+   "end": 121.59
+  },
+  {
+   "w": "you",
+   "start": 121.59,
+   "end": 121.97
+  },
+  {
+   "w": "to",
+   "start": 121.97,
+   "end": 122.33
+  },
+  {
+   "w": "a",
+   "start": 122.33,
+   "end": 122.67
+  },
+  {
+   "w": "circle",
+   "start": 122.67,
+   "end": 123.11
+  },
+  {
+   "w": "where",
+   "start": 123.11,
+   "end": 123.53
+  },
+  {
+   "w": "two",
+   "start": 123.53,
+   "end": 123.91
+  },
+  {
+   "w": "spheres",
+   "start": 123.91,
+   "end": 124.37
+  },
+  {
+   "w": "meet.",
+   "start": 124.37,
+   "end": 124.79
+  },
+  {
+   "w": "Three",
+   "start": 125.14,
+   "end": 125.56
+  },
+  {
+   "w": "distances",
+   "start": 125.56,
+   "end": 126.06
+  },
+  {
+   "w": "narrow",
+   "start": 126.06,
+   "end": 126.5
+  },
+  {
+   "w": "you",
+   "start": 126.5,
+   "end": 126.88
+  },
+  {
+   "w": "to",
+   "start": 126.88,
+   "end": 127.24
+  },
+  {
+   "w": "two",
+   "start": 127.24,
+   "end": 127.62
+  },
+  {
+   "w": "points,",
+   "start": 127.62,
+   "end": 128.08
+  },
+  {
+   "w": "and",
+   "start": 128.08,
+   "end": 128.46
+  },
+  {
+   "w": "one",
+   "start": 128.46,
+   "end": 128.84
+  },
+  {
+   "w": "of",
+   "start": 128.84,
+   "end": 129.2
+  },
+  {
+   "w": "them",
+   "start": 129.2,
+   "end": 129.6
+  },
+  {
+   "w": "is",
+   "start": 129.6,
+   "end": 129.96
+  },
+  {
+   "w": "out",
+   "start": 129.96,
+   "end": 130.34
+  },
+  {
+   "w": "in",
+   "start": 130.34,
+   "end": 130.7
+  },
+  {
+   "w": "space,",
+   "start": 130.7,
+   "end": 131.14
+  },
+  {
+   "w": "so",
+   "start": 131.14,
+   "end": 131.5
+  },
+  {
+   "w": "it",
+   "start": 131.5,
+   "end": 131.86
+  },
+  {
+   "w": "is",
+   "start": 131.86,
+   "end": 132.22
+  },
+  {
+   "w": "thrown",
+   "start": 132.22,
+   "end": 132.66
+  },
+  {
+   "w": "away.",
+   "start": 132.66,
+   "end": 133.08
+  },
+  {
+   "w": "This",
+   "start": 133.43,
+   "end": 133.83
+  },
+  {
+   "w": "method",
+   "start": 133.83,
+   "end": 134.27
+  },
+  {
+   "w": "is",
+   "start": 134.27,
+   "end": 134.63
+  },
+  {
+   "w": "called",
+   "start": 134.63,
+   "end": 135.07
+  },
+  {
+   "w": "trilateration,",
+   "start": 135.07,
+   "end": 135.63
+  },
+  {
+   "w": "and",
+   "start": 135.63,
+   "end": 136.01
+  },
+  {
+   "w": "it",
+   "start": 136.01,
+   "end": 136.37
+  },
+  {
+   "w": "is",
+   "start": 136.37,
+   "end": 136.73
+  },
+  {
+   "w": "the",
+   "start": 136.73,
+   "end": 137.11
+  },
+  {
+   "w": "heart",
+   "start": 137.11,
+   "end": 137.53
+  },
+  {
+   "w": "of",
+   "start": 137.53,
+   "end": 137.89
+  },
+  {
+   "w": "GPS.",
+   "start": 137.89,
+   "end": 138.29
+  },
+  {
+   "w": "The",
+   "start": 139.29,
+   "end": 139.67
+  },
+  {
+   "w": "pseudorange",
+   "start": 139.67,
+   "end": 140.21
+  },
+  {
+   "w": "observable",
+   "start": 140.21,
+   "end": 140.73
+  },
+  {
+   "w": "is",
+   "start": 140.73,
+   "end": 141.09
+  },
+  {
+   "w": "corrupted",
+   "start": 141.09,
+   "end": 141.59
+  },
+  {
+   "w": "by",
+   "start": 141.59,
+   "end": 141.95
+  },
+  {
+   "w": "several",
+   "start": 141.95,
+   "end": 142.41
+  },
+  {
+   "w": "additive",
+   "start": 142.41,
+   "end": 142.89
+  },
+  {
+   "w": "error",
+   "start": 142.89,
+   "end": 143.31
+  },
+  {
+   "w": "terms",
+   "start": 143.31,
+   "end": 143.73
+  },
+  {
+   "w": "which",
+   "start": 143.73,
+   "end": 144.15
+  },
+  {
+   "w": "must",
+   "start": 144.15,
+   "end": 144.55
+  },
+  {
+   "w": "be",
+   "start": 144.55,
+   "end": 144.91
+  },
+  {
+   "w": "modeled",
+   "start": 144.91,
+   "end": 145.37
+  },
+  {
+   "w": "or",
+   "start": 145.37,
+   "end": 145.73
+  },
+  {
+   "w": "differenced",
+   "start": 145.73,
+   "end": 146.27
+  },
+  {
+   "w": "out.",
+   "start": 146.27,
+   "end": 146.67
+  },
+  {
+   "w": "The",
+   "start": 147.02,
+   "end": 147.4
+  },
+  {
+   "w": "ionospheric",
+   "start": 147.4,
+   "end": 147.94
+  },
+  {
+   "w": "delay",
+   "start": 147.94,
+   "end": 148.36
+  },
+  {
+   "w": "is",
+   "start": 148.36,
+   "end": 148.72
+  },
+  {
+   "w": "dispersive",
+   "start": 148.72,
+   "end": 149.24
+  },
+  {
+   "w": "and",
+   "start": 149.24,
+   "end": 149.62
+  },
+  {
+   "w": "proportional",
+   "start": 149.62,
+   "end": 150.18
+  },
+  {
+   "w": "to",
+   "start": 150.18,
+   "end": 150.54
+  },
+  {
+   "w": "total",
+   "start": 150.54,
+   "end": 150.96
+  },
+  {
+   "w": "electron",
+   "start": 150.96,
+   "end": 151.44
+  },
+  {
+   "w": "content",
+   "start": 151.44,
+   "end": 151.9
+  },
+  {
+   "w": "divided",
+   "start": 151.9,
+   "end": 152.36
+  },
+  {
+   "w": "by",
+   "start": 152.36,
+   "end": 152.72
+  },
+  {
+   "w": "frequency",
+   "start": 152.72,
+   "end": 153.22
+  },
+  {
+   "w": "squared,",
+   "start": 153.22,
+   "end": 153.7
+  },
+  {
+   "w": "so",
+   "start": 153.7,
+   "end": 154.06
+  },
+  {
+   "w": "a",
+   "start": 154.06,
+   "end": 154.4
+  },
+  {
+   "w": "dual-frequency",
+   "start": 154.4,
+   "end": 154.96
+  },
+  {
+   "w": "receiver",
+   "start": 154.96,
+   "end": 155.44
+  },
+  {
+   "w": "can",
+   "start": 155.44,
+   "end": 155.82
+  },
+  {
+   "w": "form",
+   "start": 155.82,
+   "end": 156.22
+  },
+  {
+   "w": "an",
+   "start": 156.22,
+   "end": 156.58
+  },
+  {
+   "w": "ionosphere-free",
+   "start": 156.58,
+   "end": 157.14
+  },
+  {
+   "w": "linear",
+   "start": 157.14,
+   "end": 157.58
+  },
+  {
+   "w": "combination,",
+   "start": 157.58,
+   "end": 158.14
+  },
+  {
+   "w": "whereas",
+   "start": 158.14,
+   "end": 158.6
+  },
+  {
+   "w": "a",
+   "start": 158.6,
+   "end": 158.94
+  },
+  {
+   "w": "single-frequency",
+   "start": 158.94,
+   "end": 159.5
+  },
+  {
+   "w": "receiver",
+   "start": 159.5,
+   "end": 159.98
+  },
+  {
+   "w": "relies",
+   "start": 159.98,
+   "end": 160.42
+  },
+  {
+   "w": "on",
+   "start": 160.42,
+   "end": 160.78
+  },
+  {
+   "w": "the",
+   "start": 160.78,
+   "end": 161.16
+  },
+  {
+   "w": "Klobuchar",
+   "start": 161.16,
+   "end": 161.66
+  },
+  {
+   "w": "model",
+   "start": 161.66,
+   "end": 162.08
+  },
+  {
+   "w": "broadcast",
+   "start": 162.08,
+   "end": 162.58
+  },
+  {
+   "w": "in",
+   "start": 162.58,
+   "end": 162.94
+  },
+  {
+   "w": "the",
+   "start": 162.94,
+   "end": 163.32
+  },
+  {
+   "w": "navigation",
+   "start": 163.32,
+   "end": 163.84
+  },
+  {
+   "w": "message.",
+   "start": 163.84,
+   "end": 164.32
+  },
+  {
+   "w": "Tropospheric",
+   "start": 164.67,
+   "end": 165.23
+  },
+  {
+   "w": "delay",
+   "start": 165.23,
+   "end": 165.65
+  },
+  {
+   "w": "is",
+   "start": 165.65,
+   "end": 166.01
+  },
+  {
+   "w": "non-dispersive",
+   "start": 166.01,
+   "end": 166.57
+  },
+  {
+   "w": "and",
+   "start": 166.57,
+   "end": 166.95
+  },
+  {
+   "w": "is",
+   "start": 166.95,
+   "end": 167.31
+  },
+  {
+   "w": "decomposed",
+   "start": 167.31,
+   "end": 167.83
+  },
+  {
+   "w": "into",
+   "start": 167.83,
+   "end": 168.23
+  },
+  {
+   "w": "hydrostatic",
+   "start": 168.23,
+   "end": 168.77
+  },
+  {
+   "w": "and",
+   "start": 168.77,
+   "end": 169.15
+  },
+  {
+   "w": "wet",
+   "start": 169.15,
+   "end": 169.53
+  },
+  {
+   "w": "zenith",
+   "start": 169.53,
+   "end": 169.97
+  },
+  {
+   "w": "components",
+   "start": 169.97,
+   "end": 170.49
+  },
+  {
+   "w": "mapped",
+   "start": 170.49,
+   "end": 170.93
+  },
+  {
+   "w": "through",
+   "start": 170.93,
+   "end": 171.39
+  },
+  {
+   "w": "an",
+   "start": 171.39,
+   "end": 171.75
+  },
+  {
+   "w": "elevation-dependent",
+   "start": 171.75,
+   "end": 172.31
+  },
+  {
+   "w": "mapping",
+   "start": 172.31,
+   "end": 172.77
+  },
+  {
+   "w": "function.",
+   "start": 172.77,
+   "end": 173.27
+  },
+  {
+   "w": "Multipath",
+   "start": 173.62,
+   "end": 174.12
+  },
+  {
+   "w": "introduces",
+   "start": 174.12,
+   "end": 174.64
+  },
+  {
+   "w": "a",
+   "start": 174.64,
+   "end": 174.98
+  },
+  {
+   "w": "geometry-dependent",
+   "start": 174.98,
+   "end": 175.54
+  },
+  {
+   "w": "bias",
+   "start": 175.54,
+   "end": 175.94
+  },
+  {
+   "w": "that",
+   "start": 175.94,
+   "end": 176.34
+  },
+  {
+   "w": "is",
+   "start": 176.34,
+   "end": 176.7
+  },
+  {
+   "w": "not",
+   "start": 176.7,
+   "end": 177.08
+  },
+  {
+   "w": "zero-mean",
+   "start": 177.08,
+   "end": 177.58
+  },
+  {
+   "w": "over",
+   "start": 177.58,
+   "end": 177.98
+  },
+  {
+   "w": "short",
+   "start": 177.98,
+   "end": 178.4
+  },
+  {
+   "w": "intervals.",
+   "start": 178.4,
+   "end": 178.92
+  },
+  {
+   "w": "Receiver",
+   "start": 179.27,
+   "end": 179.75
+  },
+  {
+   "w": "clock",
+   "start": 179.75,
+   "end": 180.17
+  },
+  {
+   "w": "bias",
+   "start": 180.17,
+   "end": 180.57
+  },
+  {
+   "w": "is",
+   "start": 180.57,
+   "end": 180.93
+  },
+  {
+   "w": "treated",
+   "start": 180.93,
+   "end": 181.39
+  },
+  {
+   "w": "as",
+   "start": 181.39,
+   "end": 181.75
+  },
+  {
+   "w": "a",
+   "start": 181.75,
+   "end": 182.09
+  },
+  {
+   "w": "fourth",
+   "start": 182.09,
+   "end": 182.53
+  },
+  {
+   "w": "unknown",
+   "start": 182.53,
+   "end": 182.99
+  },
+  {
+   "w": "in",
+   "start": 182.99,
+   "end": 183.35
+  },
+  {
+   "w": "the",
+   "start": 183.35,
+   "end": 183.73
+  },
+  {
+   "w": "state",
+   "start": 183.73,
+   "end": 184.15
+  },
+  {
+   "w": "vector,",
+   "start": 184.15,
+   "end": 184.61
+  },
+  {
+   "w": "and",
+   "start": 184.61,
+   "end": 184.99
+  },
+  {
+   "w": "the",
+   "start": 184.99,
+   "end": 185.37
+  },
+  {
+   "w": "geometry",
+   "start": 185.37,
+   "end": 185.85
+  },
+  {
+   "w": "matrix",
+   "start": 185.85,
+   "end": 186.29
+  },
+  {
+   "w": "conditions",
+   "start": 186.29,
+   "end": 186.81
+  },
+  {
+   "w": "the",
+   "start": 186.81,
+   "end": 187.19
+  },
+  {
+   "w": "covariance",
+   "start": 187.19,
+   "end": 187.71
+  },
+  {
+   "w": "through",
+   "start": 187.71,
+   "end": 188.17
+  },
+  {
+   "w": "the",
+   "start": 188.17,
+   "end": 188.55
+  },
+  {
+   "w": "dilution",
+   "start": 188.55,
+   "end": 189.03
+  },
+  {
+   "w": "of",
+   "start": 189.03,
+   "end": 189.39
+  },
+  {
+   "w": "precision.",
+   "start": 189.39,
+   "end": 189.91
+  },
+  {
+   "w": "A",
+   "start": 190.26,
+   "end": 190.6
+  },
+  {
+   "w": "Kalman",
+   "start": 190.6,
+   "end": 191.04
+  },
+  {
+   "w": "filter",
+   "start": 191.04,
+   "end": 191.48
+  },
+  {
+   "w": "propagates",
+   "start": 191.48,
+   "end": 192.0
+  },
+  {
+   "w": "the",
+   "start": 192.0,
+   "end": 192.38
+  },
+  {
+   "w": "state",
+   "start": 192.38,
+   "end": 192.8
+  },
+  {
+   "w": "estimate",
+   "start": 192.8,
+   "end": 193.28
+  },
+  {
+   "w": "with",
+   "start": 193.28,
+   "end": 193.68
+  },
+  {
+   "w": "a",
+   "start": 193.68,
+   "end": 194.02
+  },
+  {
+   "w": "process",
+   "start": 194.02,
+   "end": 194.48
+  },
+  {
+   "w": "noise",
+   "start": 194.48,
+   "end": 194.9
+  },
+  {
+   "w": "model",
+   "start": 194.9,
+   "end": 195.32
+  },
+  {
+   "w": "and",
+   "start": 195.32,
+   "end": 195.7
+  },
+  {
+   "w": "updates",
+   "start": 195.7,
+   "end": 196.16
+  },
+  {
+   "w": "it",
+   "start": 196.16,
+   "end": 196.52
+  },
+  {
+   "w": "with",
+   "start": 196.52,
+   "end": 196.92
+  },
+  {
+   "w": "the",
+   "start": 196.92,
+   "end": 197.3
+  },
+  {
+   "w": "innovation",
+   "start": 197.3,
+   "end": 197.82
+  },
+  {
+   "w": "weighted",
+   "start": 197.82,
+   "end": 198.3
+  },
+  {
+   "w": "by",
+   "start": 198.3,
+   "end": 198.66
+  },
+  {
+   "w": "the",
+   "start": 198.66,
+   "end": 199.04
+  },
+  {
+   "w": "Kalman",
+   "start": 199.04,
+   "end": 199.48
+  },
+  {
+   "w": "gain,",
+   "start": 199.48,
+   "end": 199.9
+  },
+  {
+   "w": "which",
+   "start": 199.9,
+   "end": 200.32
+  },
+  {
+   "w": "is",
+   "start": 200.32,
+   "end": 200.68
+  },
+  {
+   "w": "derived",
+   "start": 200.68,
+   "end": 201.14
+  },
+  {
+   "w": "from",
+   "start": 201.14,
+   "end": 201.54
+  },
+  {
+   "w": "the",
+   "start": 201.54,
+   "end": 201.92
+  },
+  {
+   "w": "a",
+   "start": 201.92,
+   "end": 202.26
+  },
+  {
+   "w": "priori",
+   "start": 202.26,
+   "end": 202.7
+  },
+  {
+   "w": "covariance",
+   "start": 202.7,
+   "end": 203.22
+  },
+  {
+   "w": "and",
+   "start": 203.22,
+   "end": 203.6
+  },
+  {
+   "w": "the",
+   "start": 203.6,
+   "end": 203.98
+  },
+  {
+   "w": "measurement",
+   "start": 203.98,
+   "end": 204.52
+  },
+  {
+   "w": "noise",
+   "start": 204.52,
+   "end": 204.94
+  },
+  {
+   "w": "covariance.",
+   "start": 204.94,
+   "end": 205.48
+  },
+  {
+   "w": "Ephemeris",
+   "start": 205.83,
+   "end": 206.33
+  },
+  {
+   "w": "errors",
+   "start": 206.33,
+   "end": 206.77
+  },
+  {
+   "w": "and",
+   "start": 206.77,
+   "end": 207.15
+  },
+  {
+   "w": "satellite",
+   "start": 207.15,
+   "end": 207.65
+  },
+  {
+   "w": "clock",
+   "start": 207.65,
+   "end": 208.07
+  },
+  {
+   "w": "errors",
+   "start": 208.07,
+   "end": 208.51
+  },
+  {
+   "w": "are",
+   "start": 208.51,
+   "end": 208.89
+  },
+  {
+   "w": "bounded",
+   "start": 208.89,
+   "end": 209.35
+  },
+  {
+   "w": "by",
+   "start": 209.35,
+   "end": 209.71
+  },
+  {
+   "w": "the",
+   "start": 209.71,
+   "end": 210.09
+  },
+  {
+   "w": "user",
+   "start": 210.09,
+   "end": 210.49
+  },
+  {
+   "w": "range",
+   "start": 210.49,
+   "end": 210.91
+  },
+  {
+   "w": "accuracy",
+   "start": 210.91,
+   "end": 211.39
+  },
+  {
+   "w": "index.",
+   "start": 211.39,
+   "end": 211.83
+  },
+  {
+   "w": "Together",
+   "start": 212.18,
+   "end": 212.66
+  },
+  {
+   "w": "these",
+   "start": 212.66,
+   "end": 213.08
+  },
+  {
+   "w": "terms",
+   "start": 213.08,
+   "end": 213.5
+  },
+  {
+   "w": "define",
+   "start": 213.5,
+   "end": 213.94
+  },
+  {
+   "w": "the",
+   "start": 213.94,
+   "end": 214.32
+  },
+  {
+   "w": "error",
+   "start": 214.32,
+   "end": 214.74
+  },
+  {
+   "w": "budget.",
+   "start": 214.74,
+   "end": 215.2
+  },
+  {
+   "w": "Let's",
+   "start": 216.2,
+   "end": 216.62
+  },
+  {
+   "w": "go",
+   "start": 216.62,
+   "end": 216.98
+  },
+  {
+   "w": "back",
+   "start": 216.98,
+   "end": 217.38
+  },
+  {
+   "w": "to",
+   "start": 217.38,
+   "end": 217.74
+  },
+  {
+   "w": "the",
+   "start": 217.74,
+   "end": 218.12
+  },
+  {
+   "w": "phone's",
+   "start": 218.12,
+   "end": 218.58
+  },
+  {
+   "w": "cheap",
+   "start": 218.58,
+   "end": 219.0
+  },
+  {
+   "w": "clock,",
+   "start": 219.0,
+   "end": 219.44
+  },
+  {
+   "w": "because",
+   "start": 219.44,
+   "end": 219.9
+  },
+  {
+   "w": "it",
+   "start": 219.9,
+   "end": 220.26
+  },
+  {
+   "w": "breaks",
+   "start": 220.26,
+   "end": 220.7
+  },
+  {
+   "w": "the",
+   "start": 220.7,
+   "end": 221.08
+  },
+  {
+   "w": "neat",
+   "start": 221.08,
+   "end": 221.48
+  },
+  {
+   "w": "picture",
+   "start": 221.48,
+   "end": 221.94
+  },
+  {
+   "w": "from",
+   "start": 221.94,
+   "end": 222.34
+  },
+  {
+   "w": "before.",
+   "start": 222.34,
+   "end": 222.8
+  },
+  {
+   "w": "Trilateration",
+   "start": 223.15,
+   "end": 223.71
+  },
+  {
+   "w": "assumed",
+   "start": 223.71,
+   "end": 224.17
+  },
+  {
+   "w": "the",
+   "start": 224.17,
+   "end": 224.55
+  },
+  {
+   "w": "phone",
+   "start": 224.55,
+   "end": 224.97
+  },
+  {
+   "w": "knows",
+   "start": 224.97,
+   "end": 225.39
+  },
+  {
+   "w": "exactly",
+   "start": 225.39,
+   "end": 225.85
+  },
+  {
+   "w": "when",
+   "start": 225.85,
+   "end": 226.25
+  },
+  {
+   "w": "the",
+   "start": 226.25,
+   "end": 226.63
+  },
+  {
+   "w": "signal",
+   "start": 226.63,
+   "end": 227.07
+  },
+  {
+   "w": "arrived.",
+   "start": 227.07,
+   "end": 227.55
+  },
+  {
+   "w": "But",
+   "start": 227.9,
+   "end": 228.28
+  },
+  {
+   "w": "a",
+   "start": 228.28,
+   "end": 228.62
+  },
+  {
+   "w": "quartz",
+   "start": 228.62,
+   "end": 229.06
+  },
+  {
+   "w": "clock",
+   "start": 229.06,
+   "end": 229.48
+  },
+  {
+   "w": "that",
+   "start": 229.48,
+   "end": 229.88
+  },
+  {
+   "w": "is",
+   "start": 229.88,
+   "end": 230.24
+  },
+  {
+   "w": "off",
+   "start": 230.24,
+   "end": 230.62
+  },
+  {
+   "w": "by",
+   "start": 230.62,
+   "end": 230.98
+  },
+  {
+   "w": "one",
+   "start": 230.98,
+   "end": 231.36
+  },
+  {
+   "w": "millionth",
+   "start": 231.36,
+   "end": 231.86
+  },
+  {
+   "w": "of",
+   "start": 231.86,
+   "end": 232.22
+  },
+  {
+   "w": "a",
+   "start": 232.22,
+   "end": 232.56
+  },
+  {
+   "w": "second",
+   "start": 232.56,
+   "end": 233.0
+  },
+  {
+   "w": "turns",
+   "start": 233.0,
+   "end": 233.42
+  },
+  {
+   "w": "into",
+   "start": 233.42,
+   "end": 233.82
+  },
+  {
+   "w": "three",
+   "start": 233.82,
+   "end": 234.24
+  },
+  {
+   "w": "hundred",
+   "start": 234.24,
+   "end": 234.7
+  },
+  {
+   "w": "meters",
+   "start": 234.7,
+   "end": 235.14
+  },
+  {
+   "w": "of",
+   "start": 235.14,
+   "end": 235.5
+  },
+  {
+   "w": "distance",
+   "start": 235.5,
+   "end": 235.98
+  },
+  {
+   "w": "error,",
+   "start": 235.98,
+   "end": 236.42
+  },
+  {
+   "w": "because",
+   "start": 236.42,
+   "end": 236.88
+  },
+  {
+   "w": "light",
+   "start": 236.88,
+   "end": 237.3
+  },
+  {
+   "w": "travels",
+   "start": 237.3,
+   "end": 237.76
+  },
+  {
+   "w": "three",
+   "start": 237.76,
+   "end": 238.18
+  },
+  {
+   "w": "hundred",
+   "start": 238.18,
+   "end": 238.64
+  },
+  {
+   "w": "meters",
+   "start": 238.64,
+   "end": 239.08
+  },
+  {
+   "w": "in",
+   "start": 239.08,
+   "end": 239.44
+  },
+  {
+   "w": "a",
+   "start": 239.44,
+   "end": 239.78
+  },
+  {
+   "w": "microsecond.",
+   "start": 239.78,
+   "end": 240.34
+  },
+  {
+   "w": "So",
+   "start": 240.69,
+   "end": 241.05
+  },
+  {
+   "w": "every",
+   "start": 241.05,
+   "end": 241.47
+  },
+  {
+   "w": "distance",
+   "start": 241.47,
+   "end": 241.95
+  },
+  {
+   "w": "the",
+   "start": 241.95,
+   "end": 242.33
+  },
+  {
+   "w": "phone",
+   "start": 242.33,
+   "end": 242.75
+  },
+  {
+   "w": "computes",
+   "start": 242.75,
+   "end": 243.23
+  },
+  {
+   "w": "is",
+   "start": 243.23,
+   "end": 243.59
+  },
+  {
+   "w": "wrong",
+   "start": 243.59,
+   "end": 244.01
+  },
+  {
+   "w": "by",
+   "start": 244.01,
+   "end": 244.37
+  },
+  {
+   "w": "the",
+   "start": 244.37,
+   "end": 244.75
+  },
+  {
+   "w": "same",
+   "start": 244.75,
+   "end": 245.15
+  },
+  {
+   "w": "unknown",
+   "start": 245.15,
+   "end": 245.61
+  },
+  {
+   "w": "amount,",
+   "start": 245.61,
+   "end": 246.07
+  },
+  {
+   "w": "the",
+   "start": 246.07,
+   "end": 246.45
+  },
+  {
+   "w": "phone's",
+   "start": 246.45,
+   "end": 246.91
+  },
+  {
+   "w": "clock",
+   "start": 246.91,
+   "end": 247.33
+  },
+  {
+   "w": "error.",
+   "start": 247.33,
+   "end": 247.77
+  },
+  {
+   "w": "Here's",
+   "start": 248.12,
+   "end": 248.56
+  },
+  {
+   "w": "the",
+   "start": 248.56,
+   "end": 248.94
+  },
+  {
+   "w": "trick.",
+   "start": 248.94,
+   "end": 249.38
+  },
+  {
+   "w": "The",
+   "start": 249.73,
+   "end": 250.11
+  },
+  {
+   "w": "phone",
+   "start": 250.11,
+   "end": 250.53
+  },
+  {
+   "w": "treats",
+   "start": 250.53,
+   "end": 250.97
+  },
+  {
+   "w": "its",
+   "start": 250.97,
+   "end": 251.35
+  },
+  {
+   "w": "own",
+   "start": 251.35,
+   "end": 251.73
+  },
+  {
+   "w": "clock",
+   "start": 251.73,
+   "end": 252.15
+  },
+  {
+   "w": "error",
+   "start": 252.15,
+   "end": 252.57
+  },
+  {
+   "w": "as",
+   "start": 252.57,
+   "end": 252.93
+  },
+  {
+   "w": "a",
+   "start": 252.93,
+   "end": 253.27
+  },
+  {
+   "w": "fourth",
+   "start": 253.27,
+   "end": 253.71
+  },
+  {
+   "w": "unknown,",
+   "start": 253.71,
+   "end": 254.19
+  },
+  {
+   "w": "next",
+   "start": 254.19,
+   "end": 254.59
+  },
+  {
+   "w": "to",
+   "start": 254.59,
+   "end": 254.95
+  },
+  {
+   "w": "latitude,",
+   "start": 254.95,
+   "end": 255.45
+  },
+  {
+   "w": "longitude",
+   "start": 255.45,
+   "end": 255.95
+  },
+  {
+   "w": "and",
+   "start": 255.95,
+   "end": 256.33
+  },
+  {
+   "w": "altitude.",
+   "start": 256.33,
+   "end": 256.83
+  },
+  {
+   "w": "Four",
+   "start": 257.18,
+   "end": 257.58
+  },
+  {
+   "w": "unknowns",
+   "start": 257.58,
+   "end": 258.06
+  },
+  {
+   "w": "need",
+   "start": 258.06,
+   "end": 258.46
+  },
+  {
+   "w": "four",
+   "start": 258.46,
+   "end": 258.86
+  },
+  {
+   "w": "equations,",
+   "start": 258.86,
+   "end": 259.38
+  },
+  {
+   "w": "so",
+   "start": 259.38,
+   "end": 259.74
+  },
+  {
+   "w": "the",
+   "start": 259.74,
+   "end": 260.12
+  },
+  {
+   "w": "phone",
+   "start": 260.12,
+   "end": 260.54
+  },
+  {
+   "w": "uses",
+   "start": 260.54,
+   "end": 260.94
+  },
+  {
+   "w": "a",
+   "start": 260.94,
+   "end": 261.28
+  },
+  {
+   "w": "fourth",
+   "start": 261.28,
+   "end": 261.72
+  },
+  {
+   "w": "satellite.",
+   "start": 261.72,
+   "end": 262.24
+  },
+  {
+   "w": "With",
+   "start": 262.59,
+   "end": 262.99
+  },
+  {
+   "w": "four",
+   "start": 262.99,
+   "end": 263.39
+  },
+  {
+   "w": "satellites",
+   "start": 263.39,
+   "end": 263.91
+  },
+  {
+   "w": "it",
+   "start": 263.91,
+   "end": 264.27
+  },
+  {
+   "w": "solves",
+   "start": 264.27,
+   "end": 264.71
+  },
+  {
+   "w": "for",
+   "start": 264.71,
+   "end": 265.09
+  },
+  {
+   "w": "all",
+   "start": 265.09,
+   "end": 265.47
+  },
+  {
+   "w": "four",
+   "start": 265.47,
+   "end": 265.87
+  },
+  {
+   "w": "numbers",
+   "start": 265.87,
+   "end": 266.33
+  },
+  {
+   "w": "at",
+   "start": 266.33,
+   "end": 266.69
+  },
+  {
+   "w": "once.",
+   "start": 266.69,
+   "end": 267.11
+  },
+  {
+   "w": "A",
+   "start": 267.46,
+   "end": 267.8
+  },
+  {
+   "w": "nice",
+   "start": 267.8,
+   "end": 268.2
+  },
+  {
+   "w": "side",
+   "start": 268.2,
+   "end": 268.6
+  },
+  {
+   "w": "effect",
+   "start": 268.6,
+   "end": 269.04
+  },
+  {
+   "w": "is",
+   "start": 269.04,
+   "end": 269.4
+  },
+  {
+   "w": "that",
+   "start": 269.4,
+   "end": 269.8
+  },
+  {
+   "w": "your",
+   "start": 269.8,
+   "end": 270.2
+  },
+  {
+   "w": "phone",
+   "start": 270.2,
+   "end": 270.62
+  },
+  {
+   "w": "ends",
+   "start": 270.62,
+   "end": 271.02
+  },
+  {
+   "w": "up",
+   "start": 271.02,
+   "end": 271.38
+  },
+  {
+   "w": "knowing",
+   "start": 271.38,
+   "end": 271.84
+  },
+  {
+   "w": "the",
+   "start": 271.84,
+   "end": 272.22
+  },
+  {
+   "w": "time",
+   "start": 272.22,
+   "end": 272.62
+  },
+  {
+   "w": "as",
+   "start": 272.62,
+   "end": 272.98
+  },
+  {
+   "w": "precisely",
+   "start": 272.98,
+   "end": 273.48
+  },
+  {
+   "w": "as",
+   "start": 273.48,
+   "end": 273.84
+  },
+  {
+   "w": "an",
+   "start": 273.84,
+   "end": 274.2
+  },
+  {
+   "w": "atomic",
+   "start": 274.2,
+   "end": 274.64
+  },
+  {
+   "w": "clock,",
+   "start": 274.64,
+   "end": 275.08
+  },
+  {
+   "w": "for",
+   "start": 275.08,
+   "end": 275.46
+  },
+  {
+   "w": "free.",
+   "start": 275.46,
+   "end": 275.88
+  },
+  {
+   "w": "That",
+   "start": 276.23,
+   "end": 276.63
+  },
+  {
+   "w": "is",
+   "start": 276.63,
+   "end": 276.99
+  },
+  {
+   "w": "why",
+   "start": 276.99,
+   "end": 277.37
+  },
+  {
+   "w": "the",
+   "start": 277.37,
+   "end": 277.75
+  },
+  {
+   "w": "clocks",
+   "start": 277.75,
+   "end": 278.19
+  },
+  {
+   "w": "on",
+   "start": 278.19,
+   "end": 278.55
+  },
+  {
+   "w": "phones",
+   "start": 278.55,
+   "end": 278.99
+  },
+  {
+   "w": "all",
+   "start": 278.99,
+   "end": 279.37
+  },
+  {
+   "w": "over",
+   "start": 279.37,
+   "end": 279.77
+  },
+  {
+   "w": "the",
+   "start": 279.77,
+   "end": 280.15
+  },
+  {
+   "w": "world",
+   "start": 280.15,
+   "end": 280.57
+  },
+  {
+   "w": "agree",
+   "start": 280.57,
+   "end": 280.99
+  },
+  {
+   "w": "to",
+   "start": 280.99,
+   "end": 281.35
+  },
+  {
+   "w": "within",
+   "start": 281.35,
+   "end": 281.79
+  },
+  {
+   "w": "a",
+   "start": 281.79,
+   "end": 282.13
+  },
+  {
+   "w": "few",
+   "start": 282.13,
+   "end": 282.51
+  },
+  {
+   "w": "nanoseconds:",
+   "start": 282.51,
+   "end": 283.07
+  },
+  {
+   "w": "they",
+   "start": 283.07,
+   "end": 283.47
+  },
+  {
+   "w": "are",
+   "start": 283.47,
+   "end": 283.85
+  },
+  {
+   "w": "all",
+   "start": 283.85,
+   "end": 284.23
+  },
+  {
+   "w": "borrowing",
+   "start": 284.23,
+   "end": 284.73
+  },
+  {
+   "w": "time",
+   "start": 284.73,
+   "end": 285.13
+  },
+  {
+   "w": "from",
+   "start": 285.13,
+   "end": 285.53
+  },
+  {
+   "w": "the",
+   "start": 285.53,
+   "end": 285.91
+  },
+  {
+   "w": "satellites.",
+   "start": 285.91,
+   "end": 286.45
+  },
+  {
+   "w": "One",
+   "start": 287.45,
+   "end": 287.83
+  },
+  {
+   "w": "last",
+   "start": 287.83,
+   "end": 288.23
+  },
+  {
+   "w": "thing,",
+   "start": 288.23,
+   "end": 288.67
+  },
+  {
+   "w": "and",
+   "start": 288.67,
+   "end": 289.05
+  },
+  {
+   "w": "it",
+   "start": 289.05,
+   "end": 289.41
+  },
+  {
+   "w": "is",
+   "start": 289.41,
+   "end": 289.77
+  },
+  {
+   "w": "my",
+   "start": 289.77,
+   "end": 290.13
+  },
+  {
+   "w": "favorite",
+   "start": 290.13,
+   "end": 290.61
+  },
+  {
+   "w": "part.",
+   "start": 290.61,
+   "end": 291.03
+  },
+  {
+   "w": "The",
+   "start": 291.38,
+   "end": 291.76
+  },
+  {
+   "w": "satellite",
+   "start": 291.76,
+   "end": 292.26
+  },
+  {
+   "w": "clocks",
+   "start": 292.26,
+   "end": 292.7
+  },
+  {
+   "w": "are",
+   "start": 292.7,
+   "end": 293.08
+  },
+  {
+   "w": "moving",
+   "start": 293.08,
+   "end": 293.52
+  },
+  {
+   "w": "fast",
+   "start": 293.52,
+   "end": 293.92
+  },
+  {
+   "w": "and",
+   "start": 293.92,
+   "end": 294.3
+  },
+  {
+   "w": "they",
+   "start": 294.3,
+   "end": 294.7
+  },
+  {
+   "w": "are",
+   "start": 294.7,
+   "end": 295.08
+  },
+  {
+   "w": "far",
+   "start": 295.08,
+   "end": 295.46
+  },
+  {
+   "w": "from",
+   "start": 295.46,
+   "end": 295.86
+  },
+  {
+   "w": "Earth's",
+   "start": 295.86,
+   "end": 296.32
+  },
+  {
+   "w": "gravity,",
+   "start": 296.32,
+   "end": 296.8
+  },
+  {
+   "w": "so",
+   "start": 296.8,
+   "end": 297.16
+  },
+  {
+   "w": "relativity",
+   "start": 297.16,
+   "end": 297.68
+  },
+  {
+   "w": "changes",
+   "start": 297.68,
+   "end": 298.14
+  },
+  {
+   "w": "how",
+   "start": 298.14,
+   "end": 298.52
+  },
+  {
+   "w": "fast",
+   "start": 298.52,
+   "end": 298.92
+  },
+  {
+   "w": "they",
+   "start": 298.92,
+   "end": 299.32
+  },
+  {
+   "w": "tick.",
+   "start": 299.32,
+   "end": 299.74
+  },
+  {
+   "w": "Moving",
+   "start": 300.09,
+   "end": 300.53
+  },
+  {
+   "w": "fast",
+   "start": 300.53,
+   "end": 300.93
+  },
+  {
+   "w": "makes",
+   "start": 300.93,
+   "end": 301.35
+  },
+  {
+   "w": "them",
+   "start": 301.35,
+   "end": 301.75
+  },
+  {
+   "w": "tick",
+   "start": 301.75,
+   "end": 302.15
+  },
+  {
+   "w": "slower",
+   "start": 302.15,
+   "end": 302.59
+  },
+  {
+   "w": "by",
+   "start": 302.59,
+   "end": 302.95
+  },
+  {
+   "w": "about",
+   "start": 302.95,
+   "end": 303.37
+  },
+  {
+   "w": "seven",
+   "start": 303.37,
+   "end": 303.79
+  },
+  {
+   "w": "microseconds",
+   "start": 303.79,
+   "end": 304.35
+  },
+  {
+   "w": "a",
+   "start": 304.35,
+   "end": 304.69
+  },
+  {
+   "w": "day.",
+   "start": 304.69,
+   "end": 305.09
+  },
+  {
+   "w": "Being",
+   "start": 305.44,
+   "end": 305.86
+  },
+  {
+   "w": "higher",
+   "start": 305.86,
+   "end": 306.3
+  },
+  {
+   "w": "in",
+   "start": 306.3,
+   "end": 306.66
+  },
+  {
+   "w": "the",
+   "start": 306.66,
+   "end": 307.04
+  },
+  {
+   "w": "gravity",
+   "start": 307.04,
+   "end": 307.5
+  },
+  {
+   "w": "well",
+   "start": 307.5,
+   "end": 307.9
+  },
+  {
+   "w": "makes",
+   "start": 307.9,
+   "end": 308.32
+  },
+  {
+   "w": "them",
+   "start": 308.32,
+   "end": 308.72
+  },
+  {
+   "w": "tick",
+   "start": 308.72,
+   "end": 309.12
+  },
+  {
+   "w": "faster",
+   "start": 309.12,
+   "end": 309.56
+  },
+  {
+   "w": "by",
+   "start": 309.56,
+   "end": 309.92
+  },
+  {
+   "w": "about",
+   "start": 309.92,
+   "end": 310.34
+  },
+  {
+   "w": "forty",
+   "start": 310.34,
+   "end": 310.76
+  },
+  {
+   "w": "five",
+   "start": 310.76,
+   "end": 311.16
+  },
+  {
+   "w": "microseconds",
+   "start": 311.16,
+   "end": 311.72
+  },
+  {
+   "w": "a",
+   "start": 311.72,
+   "end": 312.06
+  },
+  {
+   "w": "day.",
+   "start": 312.06,
+   "end": 312.46
+  },
+  {
+   "w": "The",
+   "start": 312.81,
+   "end": 313.19
+  },
+  {
+   "w": "net",
+   "start": 313.19,
+   "end": 313.57
+  },
+  {
+   "w": "effect",
+   "start": 313.57,
+   "end": 314.01
+  },
+  {
+   "w": "is",
+   "start": 314.01,
+   "end": 314.37
+  },
+  {
+   "w": "that",
+   "start": 314.37,
+   "end": 314.77
+  },
+  {
+   "w": "the",
+   "start": 314.77,
+   "end": 315.15
+  },
+  {
+   "w": "satellite",
+   "start": 315.15,
+   "end": 315.65
+  },
+  {
+   "w": "clocks",
+   "start": 315.65,
+   "end": 316.09
+  },
+  {
+   "w": "run",
+   "start": 316.09,
+   "end": 316.47
+  },
+  {
+   "w": "fast",
+   "start": 316.47,
+   "end": 316.87
+  },
+  {
+   "w": "by",
+   "start": 316.87,
+   "end": 317.23
+  },
+  {
+   "w": "about",
+   "start": 317.23,
+   "end": 317.65
+  },
+  {
+   "w": "thirty",
+   "start": 317.65,
+   "end": 318.09
+  },
+  {
+   "w": "eight",
+   "start": 318.09,
+   "end": 318.51
+  },
+  {
+   "w": "microseconds",
+   "start": 318.51,
+   "end": 319.07
+  },
+  {
+   "w": "a",
+   "start": 319.07,
+   "end": 319.41
+  },
+  {
+   "w": "day.",
+   "start": 319.41,
+   "end": 319.81
+  },
+  {
+   "w": "That",
+   "start": 320.16,
+   "end": 320.56
+  },
+  {
+   "w": "sounds",
+   "start": 320.56,
+   "end": 321.0
+  },
+  {
+   "w": "tiny,",
+   "start": 321.0,
+   "end": 321.42
+  },
+  {
+   "w": "but",
+   "start": 321.42,
+   "end": 321.8
+  },
+  {
+   "w": "remember",
+   "start": 321.8,
+   "end": 322.28
+  },
+  {
+   "w": "one",
+   "start": 322.28,
+   "end": 322.66
+  },
+  {
+   "w": "microsecond",
+   "start": 322.66,
+   "end": 323.2
+  },
+  {
+   "w": "is",
+   "start": 323.2,
+   "end": 323.56
+  },
+  {
+   "w": "three",
+   "start": 323.56,
+   "end": 323.98
+  },
+  {
+   "w": "hundred",
+   "start": 323.98,
+   "end": 324.44
+  },
+  {
+   "w": "meters.",
+   "start": 324.44,
+   "end": 324.9
+  },
+  {
+   "w": "Without",
+   "start": 325.25,
+   "end": 325.71
+  },
+  {
+   "w": "the",
+   "start": 325.71,
+   "end": 326.09
+  },
+  {
+   "w": "correction,",
+   "start": 326.09,
+   "end": 326.63
+  },
+  {
+   "w": "GPS",
+   "start": 326.63,
+   "end": 327.01
+  },
+  {
+   "w": "positions",
+   "start": 327.01,
+   "end": 327.51
+  },
+  {
+   "w": "would",
+   "start": 327.51,
+   "end": 327.93
+  },
+  {
+   "w": "drift",
+   "start": 327.93,
+   "end": 328.35
+  },
+  {
+   "w": "by",
+   "start": 328.35,
+   "end": 328.71
+  },
+  {
+   "w": "more",
+   "start": 328.71,
+   "end": 329.11
+  },
+  {
+   "w": "than",
+   "start": 329.11,
+   "end": 329.51
+  },
+  {
+   "w": "ten",
+   "start": 329.51,
+   "end": 329.89
+  },
+  {
+   "w": "kilometers",
+   "start": 329.89,
+   "end": 330.41
+  },
+  {
+   "w": "every",
+   "start": 330.41,
+   "end": 330.83
+  },
+  {
+   "w": "day.",
+   "start": 330.83,
+   "end": 331.23
+  },
+  {
+   "w": "So",
+   "start": 331.58,
+   "end": 331.94
+  },
+  {
+   "w": "the",
+   "start": 331.94,
+   "end": 332.32
+  },
+  {
+   "w": "satellite",
+   "start": 332.32,
+   "end": 332.82
+  },
+  {
+   "w": "clocks",
+   "start": 332.82,
+   "end": 333.26
+  },
+  {
+   "w": "are",
+   "start": 333.26,
+   "end": 333.64
+  },
+  {
+   "w": "deliberately",
+   "start": 333.64,
+   "end": 334.2
+  },
+  {
+   "w": "set",
+   "start": 334.2,
+   "end": 334.58
+  },
+  {
+   "w": "to",
+   "start": 334.58,
+   "end": 334.94
+  },
+  {
+   "w": "tick",
+   "start": 334.94,
+   "end": 335.34
+  },
+  {
+   "w": "slightly",
+   "start": 335.34,
+   "end": 335.82
+  },
+  {
+   "w": "slow",
+   "start": 335.82,
+   "end": 336.22
+  },
+  {
+   "w": "before",
+   "start": 336.22,
+   "end": 336.66
+  },
+  {
+   "w": "launch,",
+   "start": 336.66,
+   "end": 337.12
+  },
+  {
+   "w": "so",
+   "start": 337.12,
+   "end": 337.48
+  },
+  {
+   "w": "that",
+   "start": 337.48,
+   "end": 337.88
+  },
+  {
+   "w": "in",
+   "start": 337.88,
+   "end": 338.24
+  },
+  {
+   "w": "orbit",
+   "start": 338.24,
+   "end": 338.66
+  },
+  {
+   "w": "they",
+   "start": 338.66,
+   "end": 339.06
+  },
+  {
+   "w": "tick",
+   "start": 339.06,
+   "end": 339.46
+  },
+  {
+   "w": "at",
+   "start": 339.46,
+   "end": 339.82
+  },
+  {
+   "w": "the",
+   "start": 339.82,
+   "end": 340.2
+  },
+  {
+   "w": "right",
+   "start": 340.2,
+   "end": 340.62
+  },
+  {
+   "w": "rate.",
+   "start": 340.62,
+   "end": 341.04
+  },
+  {
+   "w": "Every",
+   "start": 341.39,
+   "end": 341.81
+  },
+  {
+   "w": "time",
+   "start": 341.81,
+   "end": 342.21
+  },
+  {
+   "w": "you",
+   "start": 342.21,
+   "end": 342.59
+  },
+  {
+   "w": "get",
+   "start": 342.59,
+   "end": 342.97
+  },
+  {
+   "w": "directions",
+   "start": 342.97,
+   "end": 343.49
+  },
+  {
+   "w": "on",
+   "start": 343.49,
+   "end": 343.85
+  },
+  {
+   "w": "your",
+   "start": 343.85,
+   "end": 344.25
+  },
+  {
+   "w": "phone,",
+   "start": 344.25,
+   "end": 344.69
+  },
+  {
+   "w": "you",
+   "start": 344.69,
+   "end": 345.07
+  },
+  {
+   "w": "are",
+   "start": 345.07,
+   "end": 345.45
+  },
+  {
+   "w": "using",
+   "start": 345.45,
+   "end": 345.87
+  },
+  {
+   "w": "Einstein's",
+   "start": 345.87,
+   "end": 346.39
+  },
+  {
+   "w": "equations.",
+   "start": 346.39,
+   "end": 346.91
+  },
+  {
+   "w": "Next",
+   "start": 347.26,
+   "end": 347.66
+  },
+  {
+   "w": "week",
+   "start": 347.66,
+   "end": 348.06
+  },
+  {
+   "w": "we",
+   "start": 348.06,
+   "end": 348.42
+  },
+  {
+   "w": "will",
+   "start": 348.42,
+   "end": 348.82
+  },
+  {
+   "w": "look",
+   "start": 348.82,
+   "end": 349.22
+  },
+  {
+   "w": "at",
+   "start": 349.22,
+   "end": 349.58
+  },
+  {
+   "w": "how",
+   "start": 349.58,
+   "end": 349.96
+  },
+  {
+   "w": "a",
+   "start": 349.96,
+   "end": 350.3
+  },
+  {
+   "w": "phone",
+   "start": 350.3,
+   "end": 350.72
+  },
+  {
+   "w": "combines",
+   "start": 350.72,
+   "end": 351.2
+  },
+  {
+   "w": "GPS",
+   "start": 351.2,
+   "end": 351.58
+  },
+  {
+   "w": "with",
+   "start": 351.58,
+   "end": 351.98
+  },
+  {
+   "w": "WiFi",
+   "start": 351.98,
+   "end": 352.38
+  },
+  {
+   "w": "and",
+   "start": 352.38,
+   "end": 352.76
+  },
+  {
+   "w": "cell",
+   "start": 352.76,
+   "end": 353.16
+  },
+  {
+   "w": "towers",
+   "start": 353.16,
+   "end": 353.6
+  },
+  {
+   "w": "to",
+   "start": 353.6,
+   "end": 353.96
+  },
+  {
+   "w": "fix",
+   "start": 353.96,
+   "end": 354.34
+  },
+  {
+   "w": "a",
+   "start": 354.34,
+   "end": 354.68
+  },
+  {
+   "w": "position",
+   "start": 354.68,
+   "end": 355.16
+  },
+  {
+   "w": "indoors,",
+   "start": 355.16,
+   "end": 355.64
+  },
+  {
+   "w": "where",
+   "start": 355.64,
+   "end": 356.06
+  },
+  {
+   "w": "it",
+   "start": 356.06,
+   "end": 356.42
+  },
+  {
+   "w": "cannot",
+   "start": 356.42,
+   "end": 356.86
+  },
+  {
+   "w": "see",
+   "start": 356.86,
+   "end": 357.24
+  },
+  {
+   "w": "the",
+   "start": 357.24,
+   "end": 357.62
+  },
+  {
+   "w": "sky",
+   "start": 357.62,
+   "end": 358.0
+  },
+  {
+   "w": "at",
+   "start": 358.0,
+   "end": 358.36
+  },
+  {
+   "w": "all.",
+   "start": 358.36,
+   "end": 358.76
+  }
+ ],
+ "duration": 358.76,
+ "text": "Let's start with what a GPS satellite actually does, because it is simpler than people think. Every GPS satellite does one thing all day long. It broadcasts the current time, over and over, along with where it is in its orbit. That's it. It does not know where you are. It does not track you. It is a very precise clock in space, shouting the time. There are about thirty of these satellites, arranged so that from any point on Earth you can usually see at least six of them above the horizon. Each one carries an atomic clock, accurate to a few billionths of a second. Your phone has a cheap quartz clock, and that difference is going to matter later. So remember the picture: thirty flying clocks, each announcing the time and its own position, and your phone just listening.\n\nNow, how does listening to a clock tell you where you are? Radio travels at the speed of light, about three hundred thousand kilometers per second. When your phone receives a satellite's message, it compares the time stamped inside the message with the time it was received. The difference is how long the signal was in flight. Multiply that delay by the speed of light and you get the distance to that satellite. Here's a concrete example. If the signal took seventy milliseconds to arrive, that is seventy thousandths of a second times three hundred thousand kilometers per second, which is twenty one thousand kilometers. So the phone now knows: I am twenty one thousand kilometers from that satellite. One distance puts you somewhere on a sphere around that satellite. Two distances narrow you to a circle where two spheres meet. Three distances narrow you to two points, and one of them is out in space, so it is thrown away. This method is called trilateration, and it is the heart of GPS.\n\nThe pseudorange observable is corrupted by several additive error terms which must be modeled or differenced out. The ionospheric delay is dispersive and proportional to total electron content divided by frequency squared, so a dual-frequency receiver can form an ionosphere-free linear combination, whereas a single-frequency receiver relies on the Klobuchar model broadcast in the navigation message. Tropospheric delay is non-dispersive and is decomposed into hydrostatic and wet zenith components mapped through an elevation-dependent mapping function. Multipath introduces a geometry-dependent bias that is not zero-mean over short intervals. Receiver clock bias is treated as a fourth unknown in the state vector, and the geometry matrix conditions the covariance through the dilution of precision. A Kalman filter propagates the state estimate with a process noise model and updates it with the innovation weighted by the Kalman gain, which is derived from the a priori covariance and the measurement noise covariance. Ephemeris errors and satellite clock errors are bounded by the user range accuracy index. Together these terms define the error budget.\n\nLet's go back to the phone's cheap clock, because it breaks the neat picture from before. Trilateration assumed the phone knows exactly when the signal arrived. But a quartz clock that is off by one millionth of a second turns into three hundred meters of distance error, because light travels three hundred meters in a microsecond. So every distance the phone computes is wrong by the same unknown amount, the phone's clock error. Here's the trick. The phone treats its own clock error as a fourth unknown, next to latitude, longitude and altitude. Four unknowns need four equations, so the phone uses a fourth satellite. With four satellites it solves for all four numbers at once. A nice side effect is that your phone ends up knowing the time as precisely as an atomic clock, for free. That is why the clocks on phones all over the world agree to within a few nanoseconds: they are all borrowing time from the satellites.\n\nOne last thing, and it is my favorite part. The satellite clocks are moving fast and they are far from Earth's gravity, so relativity changes how fast they tick. Moving fast makes them tick slower by about seven microseconds a day. Being higher in the gravity well makes them tick faster by about forty five microseconds a day. The net effect is that the satellite clocks run fast by about thirty eight microseconds a day. That sounds tiny, but remember one microsecond is three hundred meters. Without the correction, GPS positions would drift by more than ten kilometers every day. So the satellite clocks are deliberately set to tick slightly slow before launch, so that in orbit they tick at the right rate. Every time you get directions on your phone, you are using Einstein's equations. Next week we will look at how a phone combines GPS with WiFi and cell towers to fix a position indoors, where it cannot see the sky at all."
+}

@@ -1,0 +1,25 @@
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+# env / secrets
+.env
+# runtime data (sessions, sqlite, llm cache, recordings)
+data/*.db
+data/*.db-journal
+data/*.db-shm
+data/*.db-wal
+data/sessions/
+data/cache/
+data/lectures/*/media.*
+data/uploads/
+# node
+node_modules/
+frontend/dist/
+# arduino
+firmware/**/build/
+# os
+.DS_Store

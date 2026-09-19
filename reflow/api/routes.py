@@ -1,0 +1,488 @@
+"""REST routes (TDD §9.1)."""
+
+from __future__ import annotations
+
+import dataclasses
+import json
+import shutil
+import time
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
+from pydantic import BaseModel
+
+from .. import __version__
+from ..config import FORMS
+from ..core import tally as tallymod
+from ..core.lossmap import compute_lossmap
+from ..core.review import ReviewEngine
+from ..core.session import SessionRuntime
+from ..core.study import analyze, lossmap_inputs
+from ..doctor import run_doctor
+from ..ids import new_id
+from ..transcribe.scripted import script_from_text
+
+router = APIRouter()
+
+
+def _db(request: Request):
+    return request.app.state.db
+
+
+def _s(request: Request):
+    return request.app.state.settings
+
+
+# ---------------------------------------------------------------- health / doctor
+@router.get("/health")
+def health():
+    return {"ok": True, "version": __version__, "time": time.time()}
+
+
+@router.get("/doctor")
+async def doctor(request: Request):
+    return await run_doctor(_s(request))
+
+
+# ---------------------------------------------------------------- learners
+class LearnerIn(BaseModel):
+    name: str
+
+
+@router.get("/learners")
+def list_learners(request: Request):
+    return {"learners": _db(request).list_learners()}
+
+
+@router.post("/learners")
+def create_learner(body: LearnerIn, request: Request):
+    return _db(request).create_learner(body.name)
+
+
+@router.get("/learners/{learner_id}")
+def get_learner(learner_id: str, request: Request):
+    lr = _db(request).get_learner(learner_id)
+    if not lr:
+        raise HTTPException(404, "unknown learner")
+    return lr
+
+
+@router.get("/learners/{learner_id}/tally")
+def learner_tally(learner_id: str, request: Request):
+    db = _db(request)
+    if not db.get_learner(learner_id):
+        raise HTTPException(404, "unknown learner")
+    return tallymod.summary(
+        db.get_tally(learner_id), db.population_tally(), _s(request), np.random.default_rng()
+    )
+
+
+# ---------------------------------------------------------------- lectures
+@router.get("/lectures")
+def list_lectures(request: Request):
+    return {"lectures": _db(request).list_lectures()}
+
+
+@router.get("/lectures/{lecture_id}")
+def get_lecture(lecture_id: str, request: Request, full: int = 0):
+    lec = _db(request).get_lecture(lecture_id, full=bool(full))
+    if not lec:
+        raise HTTPException(404, "unknown lecture")
+    return lec
+
+
+@router.post("/lectures")
+async def create_lecture(
+    request: Request,
+    title: str = Form(...),
+    file: UploadFile | None = File(None),
+    script: UploadFile | None = File(None),
+    text: str | None = Form(None),
+    segments: str | None = Form(None),
+    quiz: str | None = Form(None),
+    keyterms: str | None = Form(None),
+):
+    s, db = _s(request), _db(request)
+    lid = new_id("lec")
+    words: list[dict] | None = None
+    media_path: str | None = None
+    kind = "scripted"
+    kt = json.loads(keyterms) if keyterms else []
+    if script is not None:
+        data = json.loads((await script.read()).decode())
+        words = data.get("words") or [
+            w.to_dict() for w in script_from_text(data["text"], data.get("wpm", 150.0))
+        ]
+        segments = segments or json.dumps(data.get("segments", []))
+        quiz = quiz or json.dumps(data.get("quiz", []))
+        kt = kt or data.get("keyterms", [])
+    elif text:
+        words = [w.to_dict() for w in script_from_text(text)]
+    if file is not None:
+        kind = "media"
+        dest_dir = s.lectures_dir / lid
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        ext = Path(file.filename or "media.bin").suffix or ".bin"
+        dest = dest_dir / f"media{ext}"
+        with dest.open("wb") as fh:
+            shutil.copyfileobj(file.file, fh)
+        media_path = str(dest)
+        if words is None:
+            if not s.deepgram_api_key:
+                raise HTTPException(400, "media upload needs DEEPGRAM_API_KEY (or attach a script)")
+            from ..transcribe.deepgram_prerecorded import transcribe_file
+
+            words = [
+                w.to_dict() for w in await transcribe_file(dest, s.deepgram_api_key, s.deepgram_model, kt)
+            ]
+    if not words:
+        raise HTTPException(400, "provide a media file, a script JSON, or text")
+    lec = db.create_lecture(
+        title=title,
+        kind=kind,
+        words=words,
+        segments=json.loads(segments) if segments else [],
+        quiz=json.loads(quiz) if quiz else [],
+        keyterms=kt,
+        media_path=media_path,
+        lecture_id=lid,
+    )
+    lec.pop("words", None)
+    return lec
+
+
+@router.get("/lectures/{lecture_id}/lossmap")
+def lecture_lossmap(lecture_id: str, request: Request):
+    s, db = _s(request), _db(request)
+    lec = db.get_lecture(lecture_id)
+    if not lec:
+        raise HTTPException(404, "unknown lecture")
+    sessions = [
+        x for x in db.list_sessions(lecture_id=lecture_id) if x["status"] in ("ended", "reviewed", "running")
+    ]
+    inputs = [x for x in lossmap_inputs(db, sessions, s) if x["samples"] or x["taps"]]
+    out = compute_lossmap(inputs, lec.get("duration") or 0.0, lec.get("segments"), s)
+    out["lecture"] = {"id": lec["id"], "title": lec["title"], "duration": lec.get("duration")}
+    return out
+
+
+@router.get("/lectures/{lecture_id}/study")
+def lecture_study(lecture_id: str, request: Request):
+    try:
+        return analyze(_db(request), _s(request), lecture_id)
+    except ValueError as e:
+        raise HTTPException(404, str(e)) from e
+
+
+# ---------------------------------------------------------------- sessions
+class SessionIn(BaseModel):
+    learner_id: str
+    lecture_id: str | None = None
+    mode: str = "live"
+    catchup_policy: str = "always"
+    baseline_seconds: float | None = None
+    use_stored_baseline: bool = False
+    auto_pause: bool = True
+    headset: str = "auto"  # auto | sim
+    totem: str = "auto"
+    transcript: str = "auto"  # auto | scripted | deepgram | recorded
+    seed: int | None = None
+
+
+def _session_public(request: Request, sess: dict) -> dict:
+    rt: SessionRuntime | None = request.app.state.runtimes.get(sess["id"])
+    db = _db(request)
+    out = dict(sess)
+    out["running"] = rt is not None and rt.status == "running"
+    out["flags"] = [rt._flag_public(f) for f in rt.flags.values()] if rt else db.get_flags(sess["id"])
+    out["gaps"] = len(db.get_gaps(sess["id"]))
+    out["words"] = rt.words_total if rt else len(db.get_words(sess["id"]))
+    out["catchups_shown"] = (
+        rt.catchups_shown if rt else sum(1 for f in out["flags"] if f.get("catchup_shown"))
+    )
+    if rt:
+        out["headset"] = rt.headset_status()
+        out["totem"] = rt.totem.status()
+        out["best_form"] = rt.best_form
+        out["transcript_kind"] = rt.transcript_kind
+    return out
+
+
+@router.get("/sessions")
+def list_sessions(request: Request, lecture_id: str | None = None, learner_id: str | None = None):
+    return {
+        "sessions": [_session_public(request, x) for x in _db(request).list_sessions(lecture_id, learner_id)]
+    }
+
+
+@router.post("/sessions")
+async def create_session(body: SessionIn, request: Request):
+    app = request.app
+    s, db = _s(request), _db(request)
+    learner = db.get_learner(body.learner_id)
+    if not learner:
+        raise HTTPException(404, "unknown learner")
+    lecture = db.get_lecture(body.lecture_id, full=True) if body.lecture_id else None
+    if body.lecture_id and not lecture:
+        raise HTTPException(404, "unknown lecture")
+    if body.mode not in ("live", "recorded"):
+        raise HTTPException(400, "mode must be live or recorded")
+    if body.catchup_policy not in ("always", "randomized"):
+        raise HTTPException(400, "catchup_policy must be always or randomized")
+    # transcript kind
+    tk = body.transcript
+    if tk == "auto":
+        if body.mode == "recorded":
+            tk = "recorded"
+        elif lecture and lecture.get("words"):
+            tk = "scripted"
+        else:
+            tk = "deepgram"
+    if tk in ("scripted", "recorded") and not (lecture and lecture.get("words")):
+        raise HTTPException(400, f"transcript={tk} needs a lecture with words")
+    if tk == "deepgram" and not s.deepgram_api_key:
+        raise HTTPException(400, "live microphone needs DEEPGRAM_API_KEY; pick a scripted lecture instead")
+    if body.mode == "recorded" and tk != "recorded":
+        raise HTTPException(400, "recorded mode uses the lecture transcript")
+    settings = dataclasses.replace(s)
+    if body.baseline_seconds is not None:
+        settings.baseline_seconds = max(5.0, float(body.baseline_seconds))
+    baseline = None
+    if body.use_stored_baseline and learner.get("baseline_mu") is not None:
+        baseline = {"mu": learner["baseline_mu"], "sigma": learner["baseline_sigma"], "stored": True}
+    seed = body.seed if body.seed is not None else int(time.time() * 1000) % 2_000_000_000
+    sess = db.create_session(
+        learner_id=learner["id"],
+        lecture_id=(lecture or {}).get("id"),
+        mode=body.mode,
+        catchup_policy=body.catchup_policy,
+        baseline=baseline,
+        seed=seed,
+        auto_pause=body.auto_pause,
+    )
+    hp = "sim" if body.headset == "sim" else settings.headset_port
+    tp = "sim" if body.totem == "sim" else settings.totem_port
+    rt = SessionRuntime(
+        settings, db, app.state.llm, sess, learner, lecture, tk, headset_port=hp, totem_port=tp
+    )
+    app.state.runtimes[sess["id"]] = rt
+    await rt.start()
+    return _session_public(request, db.get_session(sess["id"]))  # type: ignore[arg-type]
+
+
+@router.get("/sessions/{session_id}")
+def get_session(session_id: str, request: Request):
+    sess = _db(request).get_session(session_id)
+    if not sess:
+        raise HTTPException(404, "unknown session")
+    return _session_public(request, sess)
+
+
+@router.post("/sessions/{session_id}/end")
+async def end_session(session_id: str, request: Request):
+    from .ws import end_session as _end
+
+    db = _db(request)
+    if not db.get_session(session_id):
+        raise HTTPException(404, "unknown session")
+    gaps = await _end(request.app, session_id)
+    return {
+        "gaps": [_gap_public(g) for g in gaps],
+        "session": _session_public(request, db.get_session(session_id)),
+    }  # type: ignore[arg-type]
+
+
+@router.post("/sessions/{session_id}/tap")
+def session_tap(session_id: str, request: Request):
+    rt = request.app.state.runtimes.get(session_id)
+    if not rt:
+        raise HTTPException(404, "session is not running")
+    return rt._flag_public(rt.tap(source="sim_tap"))
+
+
+class SimHeadsetIn(BaseModel):
+    state: str
+
+
+@router.post("/sessions/{session_id}/sim/headset")
+def sim_headset(session_id: str, body: SimHeadsetIn, request: Request):
+    rt = request.app.state.runtimes.get(session_id)
+    if not rt:
+        raise HTTPException(404, "session is not running")
+    try:
+        rt.set_sim_headset(body.state)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    return rt.headset_status()
+
+
+@router.get("/sessions/{session_id}/events")
+def session_events(session_id: str, request: Request):
+    s = _s(request)
+    if not _db(request).get_session(session_id):
+        raise HTTPException(404, "unknown session")
+    path = s.sessions_dir / f"{session_id}.jsonl"
+    events: list[dict] = []
+    if path.exists():
+        with path.open(encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if line:
+                    try:
+                        events.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        continue
+    return {"session_id": session_id, "events": events}
+
+
+def _gap_public(g: dict) -> dict:
+    pkg = g.get("package") or {}
+    q = dict(pkg.get("question", {}))
+    q.pop("correct_index", None)
+    q.pop("explanation", None)
+    return {
+        "id": g["id"],
+        "ord": g["ord"],
+        "t_start": g["t_start"],
+        "t_end": g["t_end"],
+        "span_text": g["span_text"],
+        "context_text": g.get("context_text", ""),
+        "flag_ids": g.get("flag_ids", []),
+        "status": g["status"],
+        "note": pkg.get("note"),
+        "question": q,
+        "package_source": g.get("package_source"),
+        "forms_available": [f for f in FORMS if (pkg.get("forms") or {}).get(f)],
+    }
+
+
+@router.get("/sessions/{session_id}/notes")
+def session_notes(session_id: str, request: Request):
+    db = _db(request)
+    sess = db.get_session(session_id)
+    if not sess:
+        raise HTTPException(404, "unknown session")
+    gaps = db.get_gaps(session_id)
+    return {
+        "session": _session_public(request, sess),
+        "gaps": [_gap_public(g) for g in gaps],
+        "words": db.get_words(session_id),
+    }
+
+
+# ---------------------------------------------------------------- review
+def _review(request: Request, session_id: str) -> ReviewEngine:
+    app = request.app
+    db = _db(request)
+    eng = app.state.reviews.get(session_id)
+    if eng is None:
+        sess = db.get_session(session_id)
+        if not sess:
+            raise HTTPException(404, "unknown session")
+        if sess["status"] == "running":
+            raise HTTPException(409, "end the session first")
+        eng = ReviewEngine(db, _s(request), session_id, sess["learner_id"], seed=int(sess.get("seed") or 0))
+        app.state.reviews[session_id] = eng
+    return eng
+
+
+class AnswerIn(BaseModel):
+    card_id: str
+    choice: int
+
+
+class CardIn(BaseModel):
+    card_id: str
+
+
+@router.post("/sessions/{session_id}/review/start")
+def review_start(session_id: str, request: Request):
+    eng = _review(request, session_id)
+    out = eng.start()
+    if out["progress"]["done"]:
+        _db(request).update_session(session_id, status="reviewed")
+    return out
+
+
+@router.get("/sessions/{session_id}/review")
+def review_state(session_id: str, request: Request):
+    return _review(request, session_id).state()
+
+
+@router.post("/sessions/{session_id}/review/answer")
+def review_answer(session_id: str, body: AnswerIn, request: Request):
+    eng = _review(request, session_id)
+    try:
+        out = eng.answer(body.card_id, body.choice)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    if out["done"]:
+        _db(request).update_session(session_id, status="reviewed")
+    return out
+
+
+@router.post("/sessions/{session_id}/review/drop")
+def review_drop(session_id: str, body: CardIn, request: Request):
+    eng = _review(request, session_id)
+    try:
+        out = eng.drop(body.card_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    if out["done"]:
+        _db(request).update_session(session_id, status="reviewed")
+    return out
+
+
+@router.post("/sessions/{session_id}/review/advance")
+def review_advance(session_id: str, body: CardIn, request: Request):
+    eng = _review(request, session_id)
+    try:
+        return eng.advance(body.card_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+
+
+# ---------------------------------------------------------------- quiz (study)
+class QuizIn(BaseModel):
+    phase: str = "before"
+    answers: dict[str, int]
+
+
+@router.get("/sessions/{session_id}/quiz")
+def quiz_get(session_id: str, request: Request):
+    db = _db(request)
+    sess = db.get_session(session_id)
+    if not sess:
+        raise HTTPException(404, "unknown session")
+    lec = db.get_lecture(sess["lecture_id"]) if sess.get("lecture_id") else None
+    items = []
+    for q in (lec or {}).get("quiz") or []:
+        items.append(
+            {"id": q["id"], "question": q["question"], "options": q["options"], "segment": q.get("segment")}
+        )
+    return {"items": items, "answers": db.get_quiz_answers(session_id)}
+
+
+@router.post("/sessions/{session_id}/quiz")
+def quiz_post(session_id: str, body: QuizIn, request: Request):
+    db = _db(request)
+    sess = db.get_session(session_id)
+    if not sess:
+        raise HTTPException(404, "unknown session")
+    if body.phase not in ("before", "after"):
+        raise HTTPException(400, "phase must be before or after")
+    lec = db.get_lecture(sess["lecture_id"]) if sess.get("lecture_id") else None
+    items = {q["id"]: q for q in (lec or {}).get("quiz") or []}
+    rows: list[dict[str, Any]] = []
+    for iid, choice in body.answers.items():
+        q = items.get(iid)
+        if not q:
+            continue
+        rows.append(
+            {"item_id": iid, "choice": int(choice), "correct": int(choice) == int(q["correct_index"])}
+        )
+    db.set_quiz_answers(session_id, body.phase, rows)
+    score = sum(r["correct"] for r in rows)
+    return {"phase": body.phase, "score": score, "total": len(rows), "per_item": rows}

@@ -1,0 +1,46 @@
+import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { api } from "../lib/api";
+import type { Learner, TallySummary } from "../lib/types";
+import TallyPanel from "../components/TallyPanel";
+import { FORM_LABEL, FORMS } from "../lib/types";
+
+export default function Tally() {
+  const { learnerId = "" } = useParams();
+  const [tally, setTally] = useState<TallySummary | null>(null);
+  const [learner, setLearner] = useState<Learner | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    Promise.all([api.tally(learnerId), api.learner(learnerId)])
+      .then(([t, l]) => {
+        setTally(t);
+        setLearner(l);
+      })
+      .catch((e) => setErr(String(e)));
+  }, [learnerId]);
+  if (err) return <div className="panel error">{err}</div>;
+  if (!tally) return <div className="panel muted">loading…</div>;
+  return (
+    <div className="col" style={{ maxWidth: 820 }}>
+      <div className="row" style={{ justifyContent: "space-between" }}>
+        <h1 style={{ margin: 0 }}>{learner?.name ?? "learner"}: which form lands</h1>
+        <Link to="/">home</Link>
+      </div>
+      <div className="muted">We don't believe in learning styles. We test it on you, and show you the data.</div>
+      <TallyPanel tally={tally} />
+      <div className="panel">
+        <h2>Population prior</h2>
+        <div className="small muted">New learners start from the average across all learners (pseudo-count 2).</div>
+        {FORMS.map((f) => (
+          <div key={f} className="tally-row">
+            <div className="name">{FORM_LABEL[f]}</div>
+            <div className="mono small muted">
+              {tally.population[f].rescues}/{tally.population[f].attempts} rescues pooled
+            </div>
+            <div className="mono small muted">prior Beta({tally.forms[f].prior_a}, {tally.forms[f].prior_b})</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
