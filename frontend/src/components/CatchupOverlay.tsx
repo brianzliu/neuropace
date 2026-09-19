@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { FORM_LABEL, FORMS, type Form } from "../lib/types";
+import { mmss } from "../lib/format";
 import type { VisibleCatchup } from "../lib/sessionState";
 import { SourceBadge } from "./Badges";
 
@@ -38,7 +39,9 @@ export default function CatchupOverlay({ card, onExpire, onDismiss, cycleToken, 
   return (
     <div className={"catchup" + (freeze ? "" : " fading")} style={{ ["--ttl" as string]: `${card.ttl_s}s` }} onClick={onDismiss}>
       <div>
-        <span className="lbl">You missed</span>
+        <span className="lbl">
+          You missed{card.since !== undefined && (card.linked_eeg || (card.span_seconds ?? 0) >= 15) ? ` since ${mmss(card.since)}` : ""}
+        </span>
         {line}
         {card.now_text ? (
           <>
@@ -53,6 +56,7 @@ export default function CatchupOverlay({ card, onExpire, onDismiss, cycleToken, 
         <SourceBadge source={card.source} />
         {card.reason === "video_pause" ? <span className="badge accent">video paused</span> : null}
         {card.reason === "eeg" ? <span className="badge">eeg flag</span> : null}
+        {card.linked_eeg ? <span className="badge">tap confirms an eeg flag · {Math.round(card.span_seconds ?? 0)} s</span> : null}
       </div>
     </div>
   );

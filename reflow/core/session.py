@@ -354,8 +354,22 @@ class SessionRuntime:
                 "catchup_form",
                 "opened",
                 "simulated",
+                "linked_eeg",
             )
         }
+
+    def _recent_eeg_flag(self, t: float) -> dict | None:
+        """The open EEG-style flag, or the latest one that closed within tap_link_eeg_seconds of t."""
+        if self.open_eeg_flag and self.open_eeg_flag in self.flags:
+            return self.flags[self.open_eeg_flag]
+        recent = [
+            f
+            for f in self.flags.values()
+            if f["source"] in ("eeg", "forced")
+            and f.get("t_end") is not None
+            and t - float(f["t_end"]) <= self.s.tap_link_eeg_seconds
+        ]
+        return max(recent, key=lambda f: float(f["t_end"])) if recent else None
 
     def _persist_flag(self, f: dict) -> None:
         self.db.upsert_flag({**f, "session_id": self.id})
@@ -383,6 +397,9 @@ class SessionRuntime:
         return {
             "type": "catchup",
             "flag_id": flag["id"],
+            "since": flag["t_start"],
+            "span_seconds": round(max(0.0, t - flag["t_start"]), 1),
+            "linked_eeg": flag.get("linked_eeg"),
             "form": self.best_form,
             "line": recap.forms.get(self.best_form) or recap.forms.get("plain", ""),
             "now_text": self._now_text(t),
@@ -405,6 +422,7 @@ class SessionRuntime:
             "catchup_form": None,
             "opened": False,
             "simulated": simulated,
+            "linked_eeg": None,
             "created_at": time.time(),
         }
         self.flags[f["id"]] = f
@@ -444,7 +462,14 @@ class SessionRuntime:
     def tap(self, source: str = "sim_tap") -> dict:
         t = self.clock.now()
         t_start, t_end = tap_span(self.transcript, t, self.s)
+        linked = self._recent_eeg_flag(t)
+        if linked is not None:
+            # the tap confirms a lapse the EEG already saw: the span starts where focus dropped (capped)
+            t_start = max(min(t_start, float(linked["t_start"])), t - self.s.tap_link_max_back, 0.0)
         f = self._open_flag(source, t, t_start, t_end, simulated=(source != "tap"))
+        if linked is not None:
+            f["linked_eeg"] = linked["id"]
+            self.broadcast({"type": "flag_open", "flag": self._flag_public(f)})
         self._offer_catchup(f, t, auto_show=True, reason="tap")
         return f
 

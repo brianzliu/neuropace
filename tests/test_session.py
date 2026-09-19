@@ -175,3 +175,51 @@ async def test_no_flags_means_no_gaps(settings, db, llm):
     await _drive(rt, words, 40)
     gaps = await rt.end()
     assert gaps == [] and db.get_gaps(rt.id) == []
+
+
+@pytest.mark.asyncio
+async def test_tap_during_an_eeg_flag_inherits_the_drop_start(settings, db, llm):
+    rt, lec, _ = _make(settings, db, llm, seed=21)
+    await rt.start()
+    q = rt.subscribe()
+    words = [Word(**w) for w in lec["words"]]
+    await _drive(rt, words, 45, {30: lambda: rt.set_sim_headset("drifting")})
+    # drive until the EEG flag opens, then tap 12 s later while it is still open
+    t = 45
+    while rt.open_eeg_flag is None and t < 110:
+        t += 1
+        await _drive_one(rt, words, t)
+    assert rt.open_eeg_flag, "no EEG flag opened while drifting"
+    eeg = rt.flags[rt.open_eeg_flag]
+    for _ in range(12):
+        t += 1
+        await _drive_one(rt, words, t)
+    tap = rt.tap("sim_tap")
+    assert tap["linked_eeg"] == eeg["id"]
+    assert tap["t_start"] == max(eeg["t_start"], t - settings.tap_link_max_back)
+    assert tap["t_start"] < t - 8.5, "the linked tap reaches further back than the plain 8 s lead-in"
+    msgs = _drain(q)
+    cu = [m for m in msgs if m["type"] == "catchup" and m["flag_id"] == tap["id"]]
+    assert cu and cu[0]["since"] == tap["t_start"] and cu[0]["linked_eeg"] == eeg["id"]
+    assert cu[0]["span_seconds"] >= 12 and cu[0]["recap_window"][0] <= t
+    # a tap long after the flag closed is not linked
+    rt.set_sim_headset("focused")
+    while rt.open_eeg_flag is not None and t < 250:
+        t += 1
+        await _drive_one(rt, words, t)
+    for _ in range(int(settings.tap_link_eeg_seconds) + 2):
+        t += 1
+        await _drive_one(rt, words, t)
+    tap2 = rt.tap("sim_tap")
+    assert tap2["linked_eeg"] is None and tap2["t_start"] >= t - 20.5
+    await rt.end()
+
+
+async def _drive_one(rt: SessionRuntime, words: list[Word], t: int) -> None:
+    rt.clock.set(float(t))
+    batch = [w for w in words if t - 1 < w.end <= t]
+    if batch:
+        rt._on_words(batch, True)
+    rt.feed_sim_second()
+    rt.step(float(t))
+    await asyncio.sleep(0)

@@ -6,12 +6,13 @@ What was checked, how, and what is still unverified. Re-run the commands before 
 
 | Check | Command | Result |
 |---|---|---|
-| Backend unit + integration tests (parser, features, blinks, spans, recaps, LLM client with a fake OpenAI, tally, review, loss map, session runtime, REST + WebSocket real-time flow, study analysis, Deepgram client parsing, mindwave bridge on `FakeSource` with a byte-level cross-check of both ThinkGear parsers, port detection on macOS and Windows listings with a fake serial module) | `uv run pytest -q` | 65 passed in about 23 s, no network, no hardware |
+| Backend unit + integration tests (parser, features, blinks, spans, recaps, LLM client with a fake OpenAI, tally, review, loss map, session runtime, REST + WebSocket real-time flow, study analysis, Deepgram client parsing, mindwave bridge on `FakeSource` with a byte-level cross-check of both ThinkGear parsers, port detection on macOS and Windows listings with a fake serial module) | `uv run pytest -q` | 69 passed in about 22 s, no network, no hardware |
 | Lint | `uv run ruff check reflow tests scripts` | clean (the spec's three sim scripts are kept verbatim and excluded from style rules) |
 | Frontend types + build | `cd frontend && pnpm typecheck && pnpm build` | 0 errors, 67 modules, `dist/` served by the backend |
 | Firmware | `arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi firmware/totem` and `:minima` | both compile (57 KB / 44 KB) |
 | Spec toolkit | `uv run reflow sim selftest` | SELFTEST PASS |
 | Live end-to-end against a running server, everything simulated | `uv run reflow serve` then `uv run python scripts/smoke_e2e.py --baseline 8` | 14/14 PASS; tap to catch-up 1 to 3 ms |
+| Tap confirms an EEG flag (TDD §6 linking rule) | unit test on the runtime plus a live WebSocket check: simulated drift, EEG flag opens, tap 8 s later | the tap span starts at the drop (`linked_eeg` set), the card carries `since` and `span_seconds`; a tap more than 10 s after the flag closed is not linked |
 
 ## The team's EEG pipeline (`mindwave/`, merged from brianzliu/neuropace)
 
@@ -51,6 +52,10 @@ Screenshots from that pass were taken during the session and are not part of the
 ## Calibration measured on the simulator
 
 See `docs/TDD.md` §3.3. With the defaults (enter −1.25, exit −0.6, 30 s cap, 20 s refractory, 180 s baseline) a focused simulated wearer gets about 5 flags per 10 minutes and a drift is flagged after a median of about 11 s.
+
+## On-device status (asked on 19 Sep, evening)
+
+Nothing has run on the physical devices. This Mac has no MindWave paired (Bluetooth shows only AirPods and a speaker) and no Arduino on USB, so the serial port list is empty apart from the system ports. To test on device: pair the headset (System Settings, Bluetooth, pin 0000), plug the UNO R4 in, flash `firmware/totem/totem.ino`, then `uv run reflow doctor` should show both ports and a live session with headset `auto` uses the real pipeline. The pipeline itself was validated on a real head by its author on a Windows laptop.
 
 ## Not verified (needs the hardware or the event)
 

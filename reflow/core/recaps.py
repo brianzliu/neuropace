@@ -40,10 +40,19 @@ class RecapRing:
         return self._items[-1] if self._items else None
 
     def lookup(self, t: float, span_start: float) -> Recap | None:
-        """Latest recap ending at or before t (+2 s slack) that still reaches back to the span; else the latest."""
-        cands = [r for r in self._items if r.t_to <= t + 2.0 and r.t_to >= span_start - 5.0]
-        if cands:
-            return max(cands, key=lambda r: r.t_to)
+        """The recap that covers the missed span [span_start, t] best: largest overlap, later one on ties
+        (for a span shorter than one window this is simply the latest recap that reaches into it)."""
+        cands = [r for r in self._items if r.t_to <= t + 2.0]
+        if not cands:
+            return self.latest()
+        best, best_key = None, None
+        for r in cands:
+            overlap = max(0.0, min(r.t_to, t) - max(r.t_from, span_start))
+            key = (round(overlap, 3), r.t_to)
+            if best_key is None or key > best_key:
+                best, best_key = r, key
+        if best is not None and best_key is not None and best_key[0] > 0:
+            return best
         return self.latest()
 
     def all(self) -> list[dict]:

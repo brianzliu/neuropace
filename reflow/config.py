@@ -73,6 +73,8 @@ class Settings:
     tap_snap_back_max: float = 20.0
     tap_end_extend_max: float = 5.0
     gap_merge_gap_seconds: float = 10.0
+    tap_link_eeg_seconds: float = 10.0  # a tap inherits an EEG flag that is open or closed this recently
+    tap_link_max_back: float = 60.0  # cap on how far back a linked tap span reaches
     gap_min_seconds: float = 8.0
     gap_max_seconds: float = 90.0
 

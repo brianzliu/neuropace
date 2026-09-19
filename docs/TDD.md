@@ -177,9 +177,10 @@ Port: `REFLOW_TOTEM_PORT`, else the first port whose name contains `usbmodem` an
 ## 6. Spans, recaps, catch-ups (FR-L4, FR-L8, FR-L9, FR-L10)
 
 - Tap span: `t_end = t_tap`, `t_start = t_tap − 8`. Snap `t_start` back to the nearest earlier sentence start within 20 s of `t_tap`; snap `t_end` forward to the end of the sentence in progress when it arrives (cap `t_tap + 5`).
+- Tap linked to an EEG flag: if an EEG (or forced) flag is open at the tap, or closed within `tap_link_eeg_seconds` (10 s) before it, the tap confirms that lapse: `t_start = max(min(t_start, flag.t_start), t_tap − tap_link_max_back (60 s))` and the tap flag carries `linked_eeg`. The catch-up card carries `since` (the span start), `span_seconds` and `linked_eeg`, and the UI labels it "You missed since m:ss".
 - EEG span: `t_start = t_enter − 8`, `t_end = t_exit` (cap 30 s), same snapping.
 - Rolling recap every 20 s: input = words in `[t − 30, t]` (skip if < 12 words). One LLM call returns `RecapForms {plain, keyterm, analogy, sketch}`, each ≤ 25 words. Stored with `(t_from, t_to)` in a ring of the last 30 recaps. Timeout 15 s; a late result is discarded (NFR-2).
-- Catch-up lookup on a trigger at `t`: the latest recap with `t_to ≤ t + 2` and `t_to ≥ t_start − 5`; else the latest recap; else an immediate offline recap built from the span text. `now_text` = the last ≤ 12 final words ending at or before `t`.
+- Catch-up lookup on a trigger at `t`: among recaps with `t_to ≤ t + 2`, the one whose window overlaps the missed span `[t_start, t]` the most, later one on ties (for a span shorter than one window this is the latest recap that reaches into it); no overlap → the latest recap; empty ring → an immediate offline recap built from the span text. The card stays one line even for a long lapse; the full span goes to the gap note. `now_text` = the last ≤ 12 final words ending at or before `t`.
 - Card: `{flag_id, form: best_form, line: forms[best_form], now_text, forms, source, ttl_s: 6}`. Tap → `auto_show: true`. EEG → `chip` (+ totem `PULSE`); in recorded mode with `auto_pause` → `pause_request` + card `auto_show: true`.
 - Policy `randomized`: coin flip per flagged lapse (seeded per session, logged as `catchup_shown`). Withheld lapses still become gaps.
 - `best_form` = tally Thompson pick, drawn once per session at start and re-drawn after every review outcome. The demo's "show a second form" key cycles `forms` locally on the client, no backend call.
@@ -397,6 +398,7 @@ reflow kaggle-check PATH/EEG_data.csv          hour-0 feature check on Wang et a
 | `recap_timeout_seconds` | 15 | llm |
 | `catchup_ttl_seconds` | 6 | ui |
 | `gap_merge_gap_seconds` | 10 | spans |
+| `tap_link_eeg_seconds` / `tap_link_max_back` | 10 / 60 | tap linking to an EEG flag |
 | `gap_min_seconds` / `gap_max_seconds` | 8 / 90 | spans |
 | `tally_prior_pseudocount` | 2 | tally |
 | `tally_enough_attempts` | 12 | tally |

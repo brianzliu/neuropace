@@ -45,6 +45,7 @@ export interface Flag {
   catchup_shown: boolean | null;
   catchup_form: Form | null;
   opened: boolean;
+  linked_eeg?: string | null;
   simulated?: boolean;
 }
 
@@ -52,6 +53,9 @@ export interface CatchupMsg {
   type: "catchup";
   t: number;
   flag_id: string;
+  since?: number; // lecture time where the missed span starts (the EEG drop when a tap is linked)
+  span_seconds?: number;
+  linked_eeg?: string | null;
   form: Form;
   line: string;
   now_text: string;
