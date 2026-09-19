@@ -35,14 +35,14 @@ cd frontend && pnpm install && pnpm build && cd ..
 uv run reflow serve             # http://127.0.0.1:8765
 ```
 
-Open the URL, create a learner, pick the demo lecture ("How GPS finds you", scripted, with a planted bad segment 3), start a live session with headset `sim` and totem `sim`, and press `T` to tap. Press `1`/`2` to switch the simulated headset between focused and drifting and watch the EEG flag arrive as a chip and a totem pulse.
+Open the URL, create a learner, pick the demo lecture ("How GPS finds you", scripted, with a planted bad segment 3), start a live session with headset `sim` (the totem falls back to the keyboard when no Arduino is plugged in), and press Space or `T` to tap. Press `1`/`2` to switch the simulated headset between focused and drifting and watch the EEG flag arrive as a chip and a totem pulse.
 
 Frontend development with hot reload: `cd frontend && pnpm dev` (proxies `/api`, `/ws`, `/media` to the backend on 8765).
 
 ## Hardware
 
 - **Headset:** pair the MindWave Mobile 2 over Bluetooth Classic. It appears as `/dev/cu.MindWaveMobile-SerialPort` (or similar; COM3 on Windows) and is auto-detected; the team's `mindwave/` pipeline reads it (see the EEG bridge section). Force a port with `REFLOW_HEADSET_PORT`, or `REFLOW_HEADSET_PORT=sim` to simulate.
-- **Totem:** flash `firmware/totem/totem.ino` to an UNO R4 WiFi (or Minima) with `arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi firmware/totem && arduino-cli upload -p /dev/cu.usbmodemXXXX --fqbn arduino:renesas_uno:unor4wifi firmware/totem`. Jumper D2 to a foil pad. The board is auto-detected on `usbmodem*`; `REFLOW_TOTEM_PORT=sim` simulates it. If capacitive touch misbehaves, set `USE_CAPTOUCH 0` in the sketch and wire a pushbutton between D2 and GND.
+- **Totem:** optional. Without an Arduino the totem falls back to the keyboard: Space or T in the browser, the on-screen "Lost me" pad, or Space/T in the terminal running `reflow serve`. Key taps are real learner actions (flag source `key`), not simulations; plugging the Arduino in mid-session switches to it automatically. To use the pad, flash `firmware/totem/totem.ino` to an UNO R4 WiFi (or Minima) with `arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi firmware/totem && arduino-cli upload -p /dev/cu.usbmodemXXXX --fqbn arduino:renesas_uno:unor4wifi firmware/totem`. Jumper D2 to a foil pad. The board is auto-detected on `usbmodem*`; `REFLOW_TOTEM_PORT=keyboard` forces the keyboard fallback. If capacitive touch misbehaves, set `USE_CAPTOUCH 0` in the sketch and wire a pushbutton between D2 and GND.
 - **Hour-1 gate:** with the headset on a real forehead the live view must show blink ticks on the trace. If it does not, the raw stream is not real; fix pairing before anything else.
 
 ## EEG bridge (`mindwave/`)

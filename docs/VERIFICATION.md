@@ -6,7 +6,7 @@ What was checked, how, and what is still unverified. Re-run the commands before 
 
 | Check | Command | Result |
 |---|---|---|
-| Backend unit + integration tests (parser, features, blinks, spans, recaps, LLM client with a fake OpenAI, tally, review, loss map, session runtime, REST + WebSocket real-time flow, study analysis, Deepgram client parsing, mindwave bridge on `FakeSource` with a byte-level cross-check of both ThinkGear parsers, port detection on macOS and Windows listings with a fake serial module) | `uv run pytest -q` | 69 passed in about 22 s, no network, no hardware |
+| Backend unit + integration tests (parser, features, blinks, spans, recaps, LLM client with a fake OpenAI, tally, review, loss map, session runtime, REST + WebSocket real-time flow, study analysis, Deepgram client parsing, mindwave bridge on `FakeSource` with a byte-level cross-check of both ThinkGear parsers, port detection on macOS and Windows listings with a fake serial module) | `uv run pytest -q` | 74 passed in about 22 s, no network, no hardware |
 | Lint | `uv run ruff check reflow tests scripts` | clean (the spec's three sim scripts are kept verbatim and excluded from style rules) |
 | Frontend types + build | `cd frontend && pnpm typecheck && pnpm build` | 0 errors, 67 modules, `dist/` served by the backend |
 | Firmware | `arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi firmware/totem` and `:minima` | both compile (57 KB / 44 KB) |
@@ -22,6 +22,15 @@ What was checked, how, and what is still unverified. Re-run the commands before 
 | Bridge over the API | session with `headset: "fake"`, `POST /calibrate`, WS `calibrate`, `sim_headset: drifting` | `mw` extras on focus samples, `cal_phase` follows the commands, EEG flag 22 s after the switch, `headset_kind` stored as `fake` |
 | Live view on the fake headset | ego-browser: "fake headset" badge, calibration buttons, "calibrating: eyes_closed" chip | renders |
 | Real MindWave through the bridge | not verified: no headset on this machine | the pipeline itself was validated on a real head by its author (`EEG_PIPELINE.md`); `auto` picks it up when a `MindWave` serial port is present |
+
+## Totem keyboard fallback
+
+| Check | How | Result |
+|---|---|---|
+| No Arduino → keyboard totem | unit tests on `make_totem` and `KeyboardTotem`; `reflow doctor` | kind `keyboard` with the hint "no Arduino: press Space or T, or use the on-screen pad" |
+| Terminal keys in `reflow serve` | server started under a pseudo-terminal, Space then L pressed in that terminal | flags `('key', simulated False)` then `('forced', simulated True)` on the running session |
+| Browser/API tap source | WebSocket `tap` and `POST /tap` | source `key`, `simulated: false` (a learner action, not a simulation) |
+| Arduino plugged in mid-session | unit test with a fake serial totem and a patched detector | the session switches from keyboard to the Arduino within one 5 s probe, replays FIT/DOT, records `totem_kind = real` |
 
 ## Platforms
 

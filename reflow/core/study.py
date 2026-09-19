@@ -26,7 +26,7 @@ def lossmap_inputs(db: DB, sessions: list[dict], s: Settings) -> list[dict]:
             {
                 "id": sess["id"],
                 "samples": db.get_focus_samples(sess["id"]),
-                "taps": [f["t_trigger"] for f in flags if f["source"] in ("tap", "sim_tap")],
+                "taps": [f["t_trigger"] for f in flags if f["source"] in ("tap", "key", "sim_tap")],
                 "eeg_flags": [_flag_span(f, s) for f in flags if f["source"] in ("eeg", "forced")],
             }
         )

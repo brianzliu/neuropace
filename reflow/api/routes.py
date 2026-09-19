@@ -188,7 +188,7 @@ class SessionIn(BaseModel):
     use_stored_baseline: bool = False
     auto_pause: bool = True
     headset: str = "auto"  # auto | sim | fake | replay:<dir> | serial:<port> | <device path>
-    totem: str = "auto"
+    totem: str = "auto"  # auto | keyboard | <serial port>
     transcript: str = "auto"  # auto | scripted | deepgram | recorded
     seed: int | None = None
 
@@ -267,7 +267,7 @@ async def create_session(body: SessionIn, request: Request):
     hp = await asyncio.to_thread(
         resolve_headset, settings.headset_port if body.headset == "auto" else body.headset
     )
-    tp = "sim" if body.totem == "sim" else settings.totem_port
+    tp = (settings.totem_port or "auto") if body.totem == "auto" else body.totem
     rt = SessionRuntime(
         settings, db, app.state.llm, sess, learner, lecture, tk, headset_port=hp, totem_port=tp
     )
@@ -303,7 +303,7 @@ def session_tap(session_id: str, request: Request):
     rt = request.app.state.runtimes.get(session_id)
     if not rt:
         raise HTTPException(404, "session is not running")
-    return rt._flag_public(rt.tap(source="sim_tap"))
+    return rt._flag_public(rt.tap(source="key"))
 
 
 class SimHeadsetIn(BaseModel):

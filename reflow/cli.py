@@ -25,8 +25,25 @@ def cmd_serve(args: argparse.Namespace) -> int:
         )
     else:
         from .api.app import create_app
+        from .keys import start_key_listener
 
-        uvicorn.run(create_app(s), host=host, port=port, log_level="info")
+        app = create_app(s)
+
+        def _on_loop(fn):
+            loop = getattr(app.state, "loop", None)
+            if loop is not None:
+                loop.call_soon_threadsafe(fn)
+
+        stop = start_key_listener(lambda: _on_loop(app.state.tap_all), lambda: _on_loop(app.state.force_all))
+        if stop is not None:
+            print(
+                "terminal keys: SPACE or T = lost me (keyboard totem), L = force an EEG-style flag (simulated)"
+            )
+        try:
+            uvicorn.run(app, host=host, port=port, log_level="info")
+        finally:
+            if stop is not None:
+                stop.set()
     return 0
 
 

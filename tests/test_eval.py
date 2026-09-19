@@ -59,7 +59,7 @@ def _seed_session(db, s, lecture, learner, flagged_items, correct_items, policy=
             {
                 "id": f"flag_{sess['id']}_{i}",
                 "session_id": sess["id"],
-                "source": "sim_tap",
+                "source": "key",
                 "t_trigger": q["t_end"] - 1,
                 "t_start": q["t_start"],
                 "t_end": q["t_end"],

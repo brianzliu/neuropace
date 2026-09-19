@@ -59,6 +59,9 @@ def create_app(
 
     @contextlib.asynccontextmanager
     async def lifespan(app: FastAPI):
+        import asyncio
+
+        app.state.loop = asyncio.get_running_loop()
         yield
         for rt in list(app.state.runtimes.values()):
             with contextlib.suppress(Exception):
@@ -70,6 +73,22 @@ def create_app(
     app.state.llm = llm
     app.state.runtimes = {}
     app.state.reviews = {}
+    app.state.loop = None
+
+    def _each_running(fn):
+        for rt in list(app.state.runtimes.values()):
+            if rt.status == "running":
+                fn(rt)
+
+    def tap_all() -> None:
+        """Keyboard totem from the terminal: a "lost me" on every running session."""
+        _each_running(lambda rt: rt.tap(source="key"))
+
+    def force_all() -> None:
+        _each_running(lambda rt: rt.force_flag())
+
+    app.state.tap_all = tap_all
+    app.state.force_all = force_all
     app.include_router(routes.router, prefix="/api")
     app.include_router(ws.router)
 

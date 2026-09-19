@@ -21,7 +21,7 @@ def _setup(tmp_path, n_gaps=3, catchup_form=None, seed=0):
             {
                 "id": fid,
                 "session_id": sess["id"],
-                "source": "sim_tap",
+                "source": "key",
                 "t_trigger": 10.0 * i + 8,
                 "t_start": 10.0 * i,
                 "t_end": 10.0 * i + 8,

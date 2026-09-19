@@ -42,12 +42,16 @@ def autodetect_totem_port(exclude: str | None = None) -> str | None:
     return None
 
 
-class SimulatedTotem:
-    kind = "simulated"
+class KeyboardTotem:
+    """Fallback when no Arduino is plugged in: taps come from the keyboard (Space or T in the browser or in the
+    terminal running `reflow serve`) or the on-screen pad button. A key tap is a real learner action, not a simulation."""
+
+    kind = "keyboard"
+    hint = "no Arduino: press Space or T, or use the on-screen pad"
 
     def __init__(self, on_tap: TapCallback) -> None:
         self.on_tap = on_tap
-        self.port = "sim"
+        self.port = "keyboard"
         self.connected = True
         self.dots = 0
         self.fit = 0
@@ -73,7 +77,14 @@ class SimulatedTotem:
             self.dots, self.fit = 0, 0
 
     def status(self) -> dict:
-        return {"connected": True, "kind": self.kind, "port": self.port, "dots": self.dots, "fit": self.fit}
+        return {
+            "connected": True,
+            "kind": self.kind,
+            "port": self.port,
+            "dots": self.dots,
+            "fit": self.fit,
+            "hint": self.hint,
+        }
 
 
 class SerialTotem:
@@ -165,9 +176,15 @@ class SerialTotem:
 
 
 def make_totem(port_setting: str | None, on_tap: TapCallback, exclude_port: str | None = None):
-    if port_setting == "sim":
-        return SimulatedTotem(on_tap)
-    port = port_setting or autodetect_totem_port(exclude=exclude_port)
+    """None/"auto" -> an Arduino if one is plugged in, else the keyboard fallback; "keyboard" (or the old "sim")
+    -> keyboard; anything else -> a serial port path."""
+    setting = (port_setting or "auto").strip()
+    if setting in ("keyboard", "sim"):
+        return KeyboardTotem(on_tap)
+    port = autodetect_totem_port(exclude=exclude_port) if setting == "auto" else setting
     if port:
         return SerialTotem(port, on_tap)
-    return SimulatedTotem(on_tap)
+    return KeyboardTotem(on_tap)
+
+
+SimulatedTotem = KeyboardTotem  # old name

@@ -96,9 +96,11 @@ class SessionRuntime:
             on_frame=self._on_frame,
             log_dir=str(s.data_dir / "eeg"),
         )
+        self._totem_setting = totem_port
         self.totem = make_totem(
             totem_port, self._on_totem_tap, exclude_port=getattr(self.headset, "port", None)
         )
+        self._totem_probe_task: asyncio.Task | None = None
         self.transcriber: Any = None
         self.audio_sample_rate = 16000
         self._last_tick_t = -1.0
@@ -226,7 +228,7 @@ class SessionRuntime:
             "notices": self.notices[-5:],
             "sim": {
                 "headset": self.headset.kind != "real",
-                "totem": self.totem.kind == "simulated",
+                "totem": False,  # the keyboard totem is a real input, not a simulation
                 "transcript": self.transcript_kind == "scripted",
             },
         }
@@ -459,14 +461,17 @@ class SessionRuntime:
             self.broadcast({"type": "chip", "flag_id": f["id"]})
         self.broadcast(card)
 
-    def tap(self, source: str = "sim_tap") -> dict:
+    def tap(self, source: str = "key") -> dict:
+        """A "lost me" from the pad (source "tap") or the keyboard / on-screen pad (source "key"). Both are real."""
+        if source == "sim_tap":
+            source = "key"
         t = self.clock.now()
         t_start, t_end = tap_span(self.transcript, t, self.s)
         linked = self._recent_eeg_flag(t)
         if linked is not None:
             # the tap confirms a lapse the EEG already saw: the span starts where focus dropped (capped)
             t_start = max(min(t_start, float(linked["t_start"])), t - self.s.tap_link_max_back, 0.0)
-        f = self._open_flag(source, t, t_start, t_end, simulated=(source != "tap"))
+        f = self._open_flag(source, t, t_start, t_end, simulated=False)
         if linked is not None:
             f["linked_eeg"] = linked["id"]
             self.broadcast({"type": "flag_open", "flag": self._flag_public(f)})
@@ -539,6 +544,7 @@ class SessionRuntime:
         elif self.totem.fit != 8:
             self.totem.send("FIT 8")
         self._on_detector_events(events, t)
+        self._maybe_attach_totem(t)
         self.recaps.maybe_run(t)
         self._focus_hist.append(d)
         if len(self._focus_hist) > 4000:
@@ -550,6 +556,33 @@ class SessionRuntime:
         self.broadcast({"type": "focus", **d})
         self._last_tick_t = t
         return d
+
+    def _maybe_attach_totem(self, t: float) -> None:
+        """Hot-plug: on the keyboard fallback with an auto setting, look for an Arduino every 5 s and switch to it."""
+        if self.totem.kind != "keyboard" or (self._totem_setting or "auto") != "auto" or self.drive_manually:
+            return
+        if int(t) % 5 != 0 or (self._totem_probe_task is not None and not self._totem_probe_task.done()):
+            return
+        self._totem_probe_task = asyncio.create_task(
+            self._attach_totem_if_found(), name=f"totem-probe-{self.id}"
+        )
+
+    async def _attach_totem_if_found(self) -> None:
+        from ..totem import bridge
+
+        port = await asyncio.to_thread(bridge.autodetect_totem_port, getattr(self.headset, "port", None))
+        if not port or self.status != "running" or self.totem.kind != "keyboard":
+            return
+        old = self.totem
+        new = bridge.SerialTotem(port, self._on_totem_tap)
+        await new.start()
+        new.send("CLEAR")
+        new.send(f"FIT {old.fit}")
+        new.send(f"DOT {len(self.flags)}")
+        self.totem = new
+        self.db.update_session(self.id, totem_kind=new.kind)
+        self.notice("info", f"Arduino totem attached on {port}")
+        self.broadcast({"type": "totem", **new.status(), "pulse": False})
 
     async def _tick_loop(self) -> None:
         next_t = time.monotonic()
