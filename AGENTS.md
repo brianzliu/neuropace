@@ -9,7 +9,9 @@ Three things, kept deliberately separate:
 0. **`reflow/`, `frontend/`, `firmware/`, `tests/`, `docs/`, `study/`** — the Reflow product built
    on 19 Sep 2026 against `docs/PRD.md` and `docs/TDD.md` (the contract every module follows).
    Backend `uv run reflow serve` (Python 3.13 via uv, FastAPI), frontend Vite + React built into
-   `frontend/dist`, UNO R4 totem firmware. `uv run pytest -q` runs the suite (no hardware, no
+   `frontend/dist`, UNO Q 4 GB BLE relay prototype as the current hardware target
+   (`firmware/uno_q_relay/`, experimental and uncompiled) with the UNO R4 direct-USB sketch
+   (`firmware/totem/`) retained as a fallback. `uv run pytest -q` runs the suite (no hardware, no
    network); `uv run python scripts/smoke_e2e.py` runs against a live server. `docs/VERIFICATION.md`
    records what was verified and how. The headset front end is the `mindwave/` pipeline below,
    consumed in-process (README "EEG bridge"); Reflow's own simulator covers the no-hardware path.

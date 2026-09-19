@@ -5,6 +5,29 @@ import type { Learner, TallySummary } from "../lib/types";
 import TallyPanel from "../components/TallyPanel";
 import { FORM_LABEL, FORMS } from "../lib/types";
 
+/** Card body shared by the Insights shell and the legacy /tally/:learnerId deep link.
+ *  Learner-scoped: only ever renders the selected learner's own tally. */
+export function TallyCard({ tally }: { tally: TallySummary }) {
+  return (
+    <>
+      <TallyPanel tally={tally} />
+      <div className="panel">
+        <h2>Population prior</h2>
+        <div className="small muted">New learners start from the average across all learners (pseudo-count 2).</div>
+        {FORMS.map((f) => (
+          <div key={f} className="tally-row">
+            <div className="name">{FORM_LABEL[f]}</div>
+            <div className="mono small muted">
+              {tally.population[f].rescues}/{tally.population[f].attempts} rescues pooled
+            </div>
+            <div className="mono small muted">prior Beta({tally.forms[f].prior_a}, {tally.forms[f].prior_b})</div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
 export default function Tally() {
   const { learnerId = "" } = useParams();
   const [tally, setTally] = useState<TallySummary | null>(null);
@@ -27,20 +50,7 @@ export default function Tally() {
         <Link to="/">home</Link>
       </div>
       <div className="muted">We don't believe in learning styles. We test it on you, and show you the data.</div>
-      <TallyPanel tally={tally} />
-      <div className="panel">
-        <h2>Population prior</h2>
-        <div className="small muted">New learners start from the average across all learners (pseudo-count 2).</div>
-        {FORMS.map((f) => (
-          <div key={f} className="tally-row">
-            <div className="name">{FORM_LABEL[f]}</div>
-            <div className="mono small muted">
-              {tally.population[f].rescues}/{tally.population[f].attempts} rescues pooled
-            </div>
-            <div className="mono small muted">prior Beta({tally.forms[f].prior_a}, {tally.forms[f].prior_b})</div>
-          </div>
-        ))}
-      </div>
+      <TallyCard tally={tally} />
     </div>
   );
 }

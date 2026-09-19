@@ -4,24 +4,11 @@ import { api } from "../lib/api";
 import type { LectureFull, LossMap } from "../lib/types";
 import { mmss, range } from "../lib/format";
 
-export default function LossMapView() {
-  const { lectureId = "" } = useParams();
-  const [lm, setLm] = useState<LossMap | null>(null);
-  const [lecture, setLecture] = useState<LectureFull | null>(null);
-  const [err, setErr] = useState<string | null>(null);
+/** Aggregate, anonymous lecture loss map. Shared by the Insights shell and the
+ *  legacy /lossmap/:lectureId deep link. Never takes a learner id: no per-learner
+ *  traces on this card, ever. */
+export function LossMapCard({ lm, lecture }: { lm: LossMap; lecture: LectureFull }) {
   const [reveal, setReveal] = useState(false);
-  const load = () =>
-    Promise.all([api.lossmap(lectureId), api.lecture(lectureId)])
-      .then(([m, l]) => {
-        setLm(m);
-        setLecture(l);
-      })
-      .catch((e) => setErr(String(e)));
-  useEffect(() => {
-    void load();
-  }, [lectureId]); // eslint-disable-line react-hooks/exhaustive-deps
-  if (err) return <div className="panel error">{err}</div>;
-  if (!lm || !lecture) return <div className="panel muted">loading…</div>;
   const planted = new Set((lecture.segments ?? []).filter((s) => s.planted_bad).map((s) => s.id));
   const bins = lm.bins ?? [];
   const maxLoss = Math.max(0.5, ...bins.map((b) => b.loss ?? 0));
@@ -29,14 +16,7 @@ export default function LossMapView() {
   const span = maxLoss - minLoss || 1;
   const peak = lm.peak;
   return (
-    <div className="col">
-      <div className="row" style={{ justifyContent: "space-between" }}>
-        <h1 style={{ margin: 0 }}>Lecture loss map: {lecture.title}</h1>
-        <div className="row">
-          <button className="ghost" onClick={() => void load()}>refresh</button>
-          <Link to="/">home</Link>
-        </div>
-      </div>
+    <>
       <div className="muted">Where the room was lost. Aggregate and anonymous: it grades the lecture, never a student. n = {lm.n} learner{lm.n === 1 ? "" : "s"}.</div>
       {!lm.ready ? (
         <div className="panel">needs 2 or more learners on this lecture ({lm.n} so far)</div>
@@ -96,6 +76,37 @@ export default function LossMapView() {
           </div>
         </>
       )}
+    </>
+  );
+}
+
+export default function LossMapView() {
+  const { lectureId = "" } = useParams();
+  const [lm, setLm] = useState<LossMap | null>(null);
+  const [lecture, setLecture] = useState<LectureFull | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [refresh, setRefresh] = useState(0);
+  useEffect(() => {
+    setErr(null);
+    Promise.all([api.lossmap(lectureId), api.lecture(lectureId)])
+      .then(([m, l]) => {
+        setLm(m);
+        setLecture(l);
+      })
+      .catch((e) => setErr(String(e)));
+  }, [lectureId, refresh]);
+  if (err) return <div className="panel error">{err}</div>;
+  if (!lm || !lecture) return <div className="panel muted">loading…</div>;
+  return (
+    <div className="col">
+      <div className="row" style={{ justifyContent: "space-between" }}>
+        <h1 style={{ margin: 0 }}>Lecture loss map: {lecture.title}</h1>
+        <div className="row">
+          <button className="ghost" onClick={() => setRefresh((r) => r + 1)}>refresh</button>
+          <Link to="/">home</Link>
+        </div>
+      </div>
+      <LossMapCard lm={lm} lecture={lecture} />
     </div>
   );
 }
