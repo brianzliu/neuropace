@@ -19,7 +19,7 @@ import numpy as np
 from ..clock import LiveClock, MediaClock
 from ..config import FORMS, Settings
 from ..ids import new_id
-from ..llm.client import LLMClient
+from ..llm.client import LLMClient, LLMUnavailable
 from ..llm.fallback import recap_forms as offline_recap
 from ..signal.features import DetectorEvent, FocusEngine
 from ..signal.headset import make_headset
@@ -78,6 +78,10 @@ class SessionRuntime:
         keyterms = (lecture or {}).get("keyterms") or []
         self.keyterms = keyterms
         self.recaps = RecapScheduler(s, llm, self.transcript, self.ring, self._on_recap, keyterms)
+        self.recaps.on_unavailable = lambda reason: self.notice(
+            "error",
+            f"Recaps unavailable ({reason}). Catch-ups show the verbatim transcript until it recovers.",
+        )
         self.flags: dict[str, dict] = {}
         self.open_eeg_flag: str | None = None
         self.best_form: str = session.get("best_form") or self._draw_best_form()
@@ -388,13 +392,19 @@ class SessionRuntime:
     def _build_catchup(self, flag: dict, t: float) -> dict:
         recap = self.ring.lookup(t, flag["t_start"])
         if recap is None:
+            # nothing generated yet (first seconds, or the API is down): the verbatim transcript, never invented text
             span_text = self.transcript.text_between(flag["t_start"], t) or self._now_text(t)
-            if span_text.strip():
+            if span_text.strip() and self.llm.offline_allowed:
                 forms = offline_recap(span_text, self.transcript.text_between(0, t)).model_dump()
                 source = "offline"
+            elif span_text.strip():
+                words = span_text.split()
+                line = ("… " if len(words) > 30 else "") + " ".join(words[-30:])
+                forms = dict.fromkeys(FORMS, line)
+                source = "transcript"
             else:
-                forms = {f: "(nothing transcribed yet for this span)" for f in FORMS}
-                source = "offline"
+                forms = dict.fromkeys(FORMS, "(nothing transcribed yet for this span)")
+                source = "transcript"
             recap = Recap(flag["t_start"], t, forms, source)
         return {
             "type": "catchup",
@@ -677,9 +687,18 @@ class SessionRuntime:
 
         async def fill(row: dict, i: int) -> None:
             async with sem:
-                pkg, source = await self.llm.gap_package(
-                    row["span_text"], row["context_text"], corpus, self.keyterms, seed=self.seed + i
-                )
+                try:
+                    pkg, source = await self.llm.gap_package(
+                        row["span_text"], row["context_text"], corpus, self.keyterms, seed=self.seed + i
+                    )
+                except LLMUnavailable as e:
+                    row["package"] = {"error": str(e)}
+                    row["package_source"] = "failed"
+                    self.notice(
+                        "error",
+                        f"Gap {row['ord'] + 1}: notes not generated ({e}). Retry from the notes page.",
+                    )
+                    return
                 row["package"] = pkg.model_dump()
                 row["package_source"] = source
 

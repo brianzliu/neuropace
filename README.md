@@ -18,7 +18,7 @@ HackMIT 2026 · Education track · NeuroSky MindWave Mobile 2 + Arduino UNO R4 �
 5. **Your tally.** Which form rescued which misses, scored by quiz answers only. It picks the form of your next live catch-up. New learners start from the average across learners.
 6. **Lecture loss map.** Across learners, the 40 seconds where the room was lost. Anonymous and aggregate: it grades the lecture, never a student.
 
-Everything runs with no hardware and no API keys (simulated headset, simulated totem, scripted transcript, offline recaps), and every simulated thing is labelled on screen.
+Everything runs with no hardware (simulated headset, keyboard totem, scripted transcript) and every simulated thing is labelled on screen. An OpenAI key is required for a session: recaps, gap notes, check questions and re-teach forms are generated, never templated. If the API is down mid-lecture the catch-up shows the verbatim transcript (labelled), and notes that could not be generated say so with a retry button.
 
 ## Quick start
 
@@ -112,8 +112,8 @@ docs/          PRD, TDD, demo runbook
 
 ## Honesty rules baked in
 
-- A simulated headset, totem, or transcript is labelled on screen, and forced flags carry `source: "forced"`.
-- Offline (non-LLM) recaps and notes carry `source: "offline"` and a badge.
+- A simulated headset or scripted transcript is labelled on screen, and forced flags carry `source: "forced"`. Keyboard taps are real taps.
+- No placeholder text: without `OPENAI_API_KEY` a session cannot start; during an outage the catch-up is the verbatim transcript (`source: "transcript"`) and failed notes are reported (`package_source: "failed"`) with a retry. The extractive `offline` generator only runs in automated tests (`REFLOW_ALLOW_OFFLINE_LLM=1`).
 - The tally says "not enough data yet" until 12 scored cards.
 - The loss map refuses to render with fewer than 2 learners.
 - Every study number is reported with its interval, including nulls.

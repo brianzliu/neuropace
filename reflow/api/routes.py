@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from .. import __version__
 from ..config import FORMS
 from ..core import tally as tallymod
+from ..core.gaps import regenerate_packages
 from ..core.lossmap import compute_lossmap
 from ..core.review import ReviewEngine
 from ..core.session import SessionRuntime
@@ -231,6 +232,12 @@ async def create_session(body: SessionIn, request: Request):
         raise HTTPException(404, "unknown lecture")
     if body.mode not in ("live", "recorded"):
         raise HTTPException(400, "mode must be live or recorded")
+    if not app.state.llm.enabled and not s.allow_offline_llm:
+        raise HTTPException(
+            400,
+            "OPENAI_API_KEY is missing: recaps, gap notes and review cards need it. Add it to .env and restart "
+            "(REFLOW_ALLOW_OFFLINE_LLM=1 is for automated tests only).",
+        )
     if body.catchup_policy not in ("always", "randomized"):
         raise HTTPException(400, "catchup_policy must be always or randomized")
     # transcript kind
@@ -371,6 +378,7 @@ def _gap_public(g: dict) -> dict:
         "note": pkg.get("note"),
         "question": q,
         "package_source": g.get("package_source"),
+        "error": pkg.get("error"),
         "forms_available": [f for f in FORMS if (pkg.get("forms") or {}).get(f)],
     }
 
@@ -389,6 +397,22 @@ def session_notes(session_id: str, request: Request):
     }
 
 
+@router.post("/sessions/{session_id}/regenerate")
+async def session_regenerate(session_id: str, request: Request, only_failed: int = 1):
+    """Re-run gap note generation (after an OpenAI outage, or with a new key)."""
+    db = _db(request)
+    if not db.get_session(session_id):
+        raise HTTPException(404, "unknown session")
+    if request.app.state.runtimes.get(session_id):
+        raise HTTPException(409, "end the session first")
+    gaps = await regenerate_packages(db, request.app.state.llm, session_id, only_failed=bool(only_failed))
+    request.app.state.reviews.pop(session_id, None)
+    return {
+        "gaps": [_gap_public(g) for g in gaps],
+        "failed": sum(1 for g in gaps if g.get("package_source") == "failed"),
+    }
+
+
 # ---------------------------------------------------------------- review
 def _review(request: Request, session_id: str) -> ReviewEngine:
     app = request.app
@@ -400,6 +424,14 @@ def _review(request: Request, session_id: str) -> ReviewEngine:
             raise HTTPException(404, "unknown session")
         if sess["status"] == "running":
             raise HTTPException(409, "end the session first")
+        missing = [
+            g for g in db.get_gaps(session_id) if not g.get("package") or g.get("package_source") == "failed"
+        ]
+        if missing:
+            raise HTTPException(
+                409,
+                f"{len(missing)} gap(s) have no generated notes yet: retry generation from the notes page",
+            )
         eng = ReviewEngine(db, _s(request), session_id, sess["learner_id"], seed=int(sess.get("seed") or 0))
         app.state.reviews[session_id] = eng
     return eng

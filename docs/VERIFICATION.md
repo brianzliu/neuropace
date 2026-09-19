@@ -6,7 +6,7 @@ What was checked, how, and what is still unverified. Re-run the commands before 
 
 | Check | Command | Result |
 |---|---|---|
-| Backend unit + integration tests (parser, features, blinks, spans, recaps, LLM client with a fake OpenAI, tally, review, loss map, session runtime, REST + WebSocket real-time flow, study analysis, Deepgram client parsing, mindwave bridge on `FakeSource` with a byte-level cross-check of both ThinkGear parsers, port detection on macOS and Windows listings with a fake serial module) | `uv run pytest -q` | 74 passed in about 22 s, no network, no hardware |
+| Backend unit + integration tests (parser, features, blinks, spans, recaps, LLM client with a fake OpenAI, tally, review, loss map, session runtime, REST + WebSocket real-time flow, study analysis, Deepgram client parsing, mindwave bridge on `FakeSource` with a byte-level cross-check of both ThinkGear parsers, port detection on macOS and Windows listings with a fake serial module) | `uv run pytest -q` | 78 passed in about 22 s, no network, no hardware |
 | Lint | `uv run ruff check reflow tests scripts` | clean (the spec's three sim scripts are kept verbatim and excluded from style rules) |
 | Frontend types + build | `cd frontend && pnpm typecheck && pnpm build` | 0 errors, 67 modules, `dist/` served by the backend |
 | Firmware | `arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi firmware/totem` and `:minima` | both compile (57 KB / 44 KB) |
@@ -22,6 +22,15 @@ What was checked, how, and what is still unverified. Re-run the commands before 
 | Bridge over the API | session with `headset: "fake"`, `POST /calibrate`, WS `calibrate`, `sim_headset: drifting` | `mw` extras on focus samples, `cal_phase` follows the commands, EEG flag 22 s after the switch, `headset_kind` stored as `fake` |
 | Live view on the fake headset | ego-browser: "fake headset" badge, calibration buttons, "calibrating: eyes_closed" chip | renders |
 | Real MindWave through the bridge | not verified: no headset on this machine | the pipeline itself was validated on a real head by its author (`EEG_PIPELINE.md`); `auto` picks it up when a `MindWave` serial port is present |
+
+## Generated content policy (no placeholder text)
+
+| Check | How | Result |
+|---|---|---|
+| No OpenAI key | `POST /api/sessions` with the default settings | refused with 400 "OPENAI_API_KEY is missing: recaps, gap notes and review cards need it"; `reflow doctor` prints REQUIRED |
+| OpenAI down mid-lecture | runtime test with a failing fake client | recaps skipped with one notice; the tap catch-up shows the verbatim transcript (`source: transcript`), all four forms identical, no "(offline)" text |
+| OpenAI down at session end | same test | gap package retried 3 times, stored as `package_source: failed` with the error; review refuses (409); `regenerate_packages` fills it once the API answers |
+| Real OpenAI call | not verified: no key on this machine | the client is exercised with a fake OpenAI (strict schema, cache, retries, reasoning-param fallback) |
 
 ## Totem keyboard fallback
 
@@ -50,7 +59,7 @@ What was checked, how, and what is still unverified. Re-run the commands before 
 | Deepgram prerecorded | `transcribe_file` on a 17.6 s wav synthesized with macOS `say` | 54 words with timestamps in 0.4 s |
 | Deepgram streaming | `DeepgramLive` fed 100 ms PCM frames at real-time pace, mic started 2 s into the lecture | 49 final words, interim results flowing, first word stamped at 2.12 s lecture time (offset correct) |
 | Microphone path through the server | WebSocket `audio_start` + binary PCM into a `transcript=deepgram` session | words broadcast on lecture time, tap produced a catch-up from the live transcript, gap built at session end |
-| OpenAI | not verified: no key on this machine yet | recaps and notes ran in the labelled `offline` fallback; the client is covered by tests with a fake OpenAI (strict schema, cache, retry, timeout, reasoning-param fallback) |
+| OpenAI | not verified: no key on this machine yet | sessions now refuse to start without the key; the client is covered by tests with a fake OpenAI (strict schema, cache, retry, timeout, reasoning-param fallback) |
 
 ## In the browser (ego-browser, built frontend served by the backend)
 

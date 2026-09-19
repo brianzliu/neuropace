@@ -85,7 +85,7 @@ GOOD_RECAP = json.dumps({"plain": "p", "keyterm": "k: d", "analogy": "a", "sketc
 
 
 def test_llm_uses_strict_format_and_caches(tmp_path):
-    s = Settings(data_dir=tmp_path, openai_model="gpt-5-mini")
+    s = Settings(data_dir=tmp_path, openai_model="gpt-5-mini", allow_offline_llm=True)
     db = DB(s.db_path)
     fake = FakeClient([GOOD_RECAP])
     c = LLMClient(s, db, client=fake)
@@ -99,7 +99,7 @@ def test_llm_uses_strict_format_and_caches(tmp_path):
 
 
 def test_llm_retries_once_on_invalid_then_falls_back(tmp_path):
-    s = Settings(data_dir=tmp_path)
+    s = Settings(data_dir=tmp_path, allow_offline_llm=True)
     db = DB(s.db_path)
     fake = FakeClient(['{"plain": ""}', '{"nope": 1}'])
     c = LLMClient(s, db, client=fake)
@@ -109,7 +109,7 @@ def test_llm_retries_once_on_invalid_then_falls_back(tmp_path):
 
 
 def test_llm_drops_reasoning_param_when_rejected(tmp_path):
-    s = Settings(data_dir=tmp_path, openai_model="gpt-5-mini")
+    s = Settings(data_dir=tmp_path, openai_model="gpt-5-mini", allow_offline_llm=True)
     db = DB(s.db_path)
     fake = FakeClient([RuntimeError("Unsupported parameter: 'reasoning'"), GOOD_RECAP])
     c = LLMClient(s, db, client=fake)
@@ -118,7 +118,7 @@ def test_llm_drops_reasoning_param_when_rejected(tmp_path):
 
 
 def test_llm_timeout_falls_back(tmp_path):
-    s = Settings(data_dir=tmp_path, recap_timeout_seconds=0.05)
+    s = Settings(data_dir=tmp_path, recap_timeout_seconds=0.05, allow_offline_llm=True)
     db = DB(s.db_path)
 
     class Slow:
@@ -134,7 +134,7 @@ def test_llm_timeout_falls_back(tmp_path):
 
 
 def test_no_key_means_offline_without_network(tmp_path):
-    s = Settings(data_dir=tmp_path, openai_api_key=None)
+    s = Settings(data_dir=tmp_path, openai_api_key=None, allow_offline_llm=True)
     c = LLMClient(s, DB(s.db_path))
     assert not c.enabled
     pkg, source = asyncio.run(c.gap_package(SPAN, CTX, CTX + " " + SPAN))

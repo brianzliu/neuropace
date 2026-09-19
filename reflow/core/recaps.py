@@ -9,7 +9,7 @@ from collections.abc import Callable
 from dataclasses import asdict, dataclass
 
 from ..config import Settings
-from ..llm.client import LLMClient
+from ..llm.client import LLMClient, LLMUnavailable
 from ..transcribe.transcript import Transcript
 
 log = logging.getLogger(__name__)
@@ -79,6 +79,8 @@ class RecapScheduler:
         self._task: asyncio.Task | None = None
         self.runs = 0
         self.skipped = 0
+        self.unavailable_reason: str | None = None
+        self.on_unavailable: Callable[[str], None] | None = None
 
     def due(self, t: float) -> bool:
         return self.last_t is None or (t - self.last_t) >= self.s.recap_period_seconds
@@ -107,6 +109,12 @@ class RecapScheduler:
             self.ring.add(r)
             self.runs += 1
             self.on_recap(r)
+        except LLMUnavailable as e:
+            first = self.unavailable_reason is None
+            self.unavailable_reason = str(e)
+            if first and self.on_unavailable is not None:
+                self.on_unavailable(str(e))
+            log.warning("recap unavailable: %s", e)
         except Exception as e:  # noqa: BLE001
             log.warning("recap failed: %s", e)
 

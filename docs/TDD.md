@@ -83,7 +83,9 @@ Session end → `GapBuilder` merges flags into gaps → one LLM call per gap (pa
 | Headset | `SimulatedHeadset` (state set from UI: focused / drifting / poor) | "SIMULATED HEADSET" |
 | Totem | `KeyboardTotem` (Space/T in the browser or terminal, on-screen pad) | "keyboard fallback"; taps carry `source: "key"` and are real learner actions |
 | Deepgram key or connection | `ScriptedTranscript` (word-timed script replayed in real time) or, in recorded mode, a cached transcript | "SCRIPTED TRANSCRIPT" |
-| OpenAI key or a failed call | `fallback.py` extractive recap / note / question | `source: "offline"` badge |
+| OpenAI key missing | session creation refused (400) unless `allow_offline_llm` (tests only) | doctor row "required" |
+| OpenAI call fails mid-lecture | recap skipped, catch-up shows the verbatim transcript of the span | `source: "transcript"` capsule |
+| OpenAI fails at session end | gap package retried 3 times, then stored as `package_source: "failed"` with the error; `POST /sessions/{id}/regenerate` retries; review refuses (409) until notes exist | notes page shows the error and a retry button |
 | Frontend build | `reflow serve` prints the `pnpm build` command and still serves the API | n/a |
 
 ## 3. Signal engine (FR-L5, FR-L6, FR-L7)
@@ -204,7 +206,7 @@ GapPackage      {note: GapNote, question: CheckQuestion, forms: FullForms}
 ```
 
 - Grounding rule in every prompt: use only the given transcript text; quote it; never introduce facts that are not in it; if the span is too thin, say so inside the field rather than inventing.
-- Fallback (`fallback.py`): plain = last ~22 words of the span; keyterm = the rarest non-stopword token ≥ 6 letters (by frequency in the whole transcript) with the sentence it appears in; analogy and sketch = the plain line prefixed `(offline)`; question = "Which phrase was said in this part of the lecture?" with three distractor phrases from elsewhere in the transcript; diagram = nodes from the top 4 terms in a chain.
+- Fallback (`fallback.py`, automated tests only, `allow_offline_llm`): plain = last ~22 words of the span; keyterm = the rarest non-stopword token ≥ 6 letters (by frequency in the whole transcript) with the sentence it appears in; analogy and sketch = the plain line prefixed `(offline)`; question = "Which phrase was said in this part of the lecture?" with three distractor phrases from elsewhere in the transcript; diagram = nodes from the top 4 terms in a chain.
 
 ## 8. Core state
 
@@ -296,7 +298,8 @@ Requires ≥ 2 sessions; otherwise returns `{n, ready: false}`.
 | `POST /sessions` | `{learner_id, lecture_id?, mode, catchup_policy?, baseline_seconds?, use_stored_baseline?, auto_pause?}` → session |
 | `GET /sessions/{id}` | session + counts + best_form + flags + gaps summary |
 | `GET /sessions/{id}/events` | the JSONL as a JSON array (replay) |
-| `POST /sessions/{id}/end` | ends the runtime, builds gaps and packages → `{gaps:[…]}` |
+| `POST /sessions/{id}/end` | ends the runtime, builds gaps and packages → `{gaps:[…]}` (a gap whose generation failed carries `package_source: "failed"` and `error`) |
+| `POST /sessions/{id}/regenerate?only_failed=1` | re-runs gap generation → `{gaps, failed}` |
 | `GET /sessions/{id}/notes` | `{gaps:[{id, t_start, t_end, span_text, note, question(without correct_index)}]}` |
 | `POST /sessions/{id}/review/start` | → `{card, progress}` |
 | `POST /sessions/{id}/review/answer` | `{card_id, choice}` → `{outcome, correct_index, explanation, next: card or null, done, streak, tally}` |

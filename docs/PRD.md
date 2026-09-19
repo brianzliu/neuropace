@@ -68,7 +68,7 @@ Stages A to D of the spec's build order. Each stage is a complete demo on its ow
 | FR-L5 | The **focus index** E = β/(α+θ) is computed from the headset's 512 Hz raw stream once per second, EMA-smoothed, and z-scored against the wearer's own baseline from the first 3 minutes of listening (configurable; a stored baseline for a calibrated wearer is allowed and labelled) |
 | FR-L6 | An **EEG flag** opens when the 15 s mean of z(E) stays below the drop threshold and closes when it recovers or after 30 s. The span starts 8 s before the drop was detected. Flags are suppressed while the poor-signal byte is above the gate, during baseline collection, and within 20 s of the previous EEG flag |
 | FR-L7 | Raw segments with outlier peak-to-peak amplitude (blinks) are excluded before the FFT. Blinks are also counted and shown as ticks on the trace (the hour-1 hardware gate: "real blinks on a real forehead") |
-| FR-L8 | Every 20 s the backend writes a **rolling recap** of the last ~30 s of transcript in all four form families (glance size) plus a plain line. The learner's current best form is marked. Generation never blocks the UI; if the LLM is unavailable an extractive fallback is used and labelled `offline` |
+| FR-L8 | Every 20 s the backend writes a **rolling recap** of the last ~30 s of transcript in all four form families (glance size) plus a plain line. The learner's current best form is marked. Generation never blocks the UI. If the model is unavailable the catch-up shows the verbatim transcript, labelled; it never shows templated text |
 | FR-L9 | On a **tap**, the catch-up card for the flagged span appears in under 1 s. If the EEG had already flagged the lapse (flag open, or closed within 10 s), the tap confirms it: the span starts where focus dropped (up to 60 s back) and the card says since when: "You missed: <glance in the learner's best form>. Now: <the last few words spoken>". It is one line, dim, static, and fades after ~6 s (configurable). A key shows the same recap in a second form (demo) |
 | FR-L10 | On an **EEG flag** without a tap, the totem pulses and a small "catch-up ready" chip appears at the screen edge. Opening it shows the card; ignoring it costs nothing. In `recorded` mode the player may pause and show the card automatically (setting, default on) |
 | FR-L11 | The live view shows: streaming transcript, focus trace (last 3 min) with baseline and threshold, blink ticks, signal quality, flags as bands, taps as marks, totem status, headset kind (`real`/`simulated`), and the current best form |
@@ -129,7 +129,7 @@ Stages A to D of the spec's build order. Each stage is a complete demo on its ow
 | ID | Requirement |
 |---|---|
 | FR-O1 | `reflow doctor` reports: keys present, Deepgram reachable, OpenAI model available, headset port, totem port, frontend build present |
-| FR-O2 | Everything runs with no keys and no hardware: simulated headset, simulated totem, scripted transcript, offline recaps, all labelled |
+| FR-O2 | Everything runs with no hardware: simulated headset, keyboard totem, scripted transcript, all labelled. An OpenAI key is required to start a session; the extractive offline generator exists for automated tests only |
 | FR-O3 | One command starts the whole product: `uv run reflow serve` |
 | FR-O4 | LLM outputs are cached on disk by content hash, so replays and re-runs are free and instant |
 

@@ -69,7 +69,7 @@ async def run_doctor(s: Settings) -> dict:
     return {
         "keys": {"deepgram": bool(s.deepgram_api_key), "openai": bool(s.openai_api_key)},
         "deepgram": dg,
-        "openai": oa,
+        "openai": {**oa, "required": not s.allow_offline_llm},
         "headset": {
             "port": hp,
             "kind": "simulated" if not hp or hp == "sim" else "real",
