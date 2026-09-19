@@ -156,3 +156,37 @@ def test_review_records_focus_and_profile_reset(app):
         r2 = c.post("/api/sessions", json={"mode": "review", "headset": "sim", "totem": "keyboard"})
         assert r2.status_code == 200 and r2.json()["transcript_kind"] == "none"
         c.post(f"/api/sessions/{r2.json()['id']}/end")
+
+
+def test_orphaned_running_sessions_are_closed_at_startup(settings, db, llm):
+    from reflow.core.gaps import recover_orphaned_sessions
+
+    me = db.default_learner()
+    sess = db.create_session(learner_id=me["id"], lecture_id="lec_demo0001", mode="live", seed=1)
+    lec = db.get_lecture("lec_demo0001", full=True)
+    db.add_words(sess["id"], lec["words"][:120], 0)
+    db.upsert_flag(
+        {
+            "id": "flag_o1",
+            "session_id": sess["id"],
+            "source": "key",
+            "t_trigger": 20.0,
+            "t_start": 12.0,
+            "t_end": 20.0,
+            "catchup_shown": True,
+            "catchup_form": "words",
+        }
+    )
+    assert db.get_session(sess["id"])["status"] == "running"
+    recovered = recover_orphaned_sessions(db, settings)
+    assert recovered == [sess["id"]]
+    s2 = db.get_session(sess["id"])
+    gaps = db.get_gaps(sess["id"])
+    assert (
+        s2["status"] == "ended"
+        and len(gaps) == 1
+        and gaps[0]["package"] is None
+        and gaps[0]["package_source"] == "failed"
+    )
+    assert gaps[0]["span_text"] and 12.0 <= gaps[0]["t_start"] <= 20.0
+    assert recover_orphaned_sessions(db, settings) == []

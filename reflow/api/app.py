@@ -56,6 +56,11 @@ def create_app(
     db = db or DB(s.db_path)
     llm = llm or LLMClient(s, db)
     ensure_demo_lecture(db)
+    from ..core.gaps import recover_orphaned_sessions
+
+    orphans = recover_orphaned_sessions(db, s)
+    if orphans:
+        log.info("closed %d session(s) left running by a previous process", len(orphans))
 
     @contextlib.asynccontextmanager
     async def lifespan(app: FastAPI):

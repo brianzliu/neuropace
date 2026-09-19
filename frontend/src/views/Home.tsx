@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { api, errorText, type SessionCreate } from "../lib/api";
+import { api, errorText } from "../lib/api";
 import type { Doctor, LectureFull, SessionPublic } from "../lib/types";
-import { mmss } from "../lib/format";
-import { Badge } from "../components/Badges";
 
-/** Listen: one decision and one button (docs/PRODUCT.md §6). Everything technical lives on the team page. */
+/** Listen (docs/PRODUCT.md §6): one button. A practice lecture is a fallback, not a peer choice.
+ * "Next up" shows at most one lecture with moments left to restudy; the history lives on Lectures. */
 export default function Home() {
   const nav = useNavigate();
-  const [lectures, setLectures] = useState<LectureFull[]>([]);
-  const [sessions, setSessions] = useState<SessionPublic[]>([]);
   const [doctor, setDoctor] = useState<Doctor | null>(null);
-  const [lectureId, setLectureId] = useState<string | null | undefined>(undefined);
+  const [practice, setPractice] = useState<LectureFull | null>(null);
+  const [lectures, setLectures] = useState<LectureFull[]>([]);
+  const [nextUp, setNextUp] = useState<SessionPublic | null>(null);
+  const [running, setRunning] = useState<SessionPublic | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -20,23 +20,25 @@ export default function Home() {
       const [lec, s, d] = await Promise.allSettled([api.lectures(), api.sessions(), api.doctor()]);
       if (lec.status === "fulfilled") {
         setLectures(lec.value.lectures);
-        setLectureId((cur) => (cur === undefined ? (lec.value.lectures[0]?.id ?? null) : cur));
-      } else setErr(errorText(lec.reason));
-      if (s.status === "fulfilled") setSessions(s.value.sessions.filter((x) => x.mode !== "review").slice(0, 4));
+        setPractice(lec.value.lectures.find((l) => l.kind === "scripted") ?? lec.value.lectures[0] ?? null);
+      }
+      if (s.status === "fulfilled") {
+        const all = s.value.sessions.filter((x) => x.mode !== "review");
+        setRunning(all.find((x) => x.status === "running") ?? null);
+        setNextUp(all.find((x) => x.status === "ended" && x.gaps > 0) ?? null);
+      }
       if (d.status === "fulfilled") setDoctor(d.value);
     })();
   }, []);
 
-  const deepgramOk = !!doctor && doctor.keys.deepgram && doctor.deepgram.ok;
+  const liveOk = !!doctor && doctor.keys.deepgram && doctor.deepgram.ok;
   const notesOk = !!doctor && doctor.keys.openai && doctor.openai.ok;
-  const liveMic = lectureId === null;
 
-  const start = async () => {
+  const start = async (lectureId: string | null) => {
     setErr(null);
     setBusy(true);
     try {
-      const body: SessionCreate = { lecture_id: lectureId ?? null, mode: "live", headset: "auto", totem: "auto" };
-      const s = await api.createSession(body);
+      const s = await api.createSession({ lecture_id: lectureId, mode: "live", headset: "auto", totem: "auto" });
       nav(`/live/${s.id}`);
     } catch (e) {
       setErr(friendly(errorText(e)));
@@ -45,12 +47,16 @@ export default function Home() {
     }
   };
 
-  const headsetLine = !doctor ? "Checking your headset…" : doctor.headset.kind === "real" ? "Headset connected." : "No headset today. The button still works, and focus is simulated for practice.";
-  const padLine = !doctor ? "" : doctor.totem.kind === "real" ? "Pad connected." : "No pad today: press Space when you feel lost.";
+  const statusLine = !doctor
+    ? ""
+    : [
+        doctor.headset.kind === "real" ? "Headset connected." : "No headset today, so focus is simulated for practice.",
+        doctor.totem.kind === "real" ? "Pad connected." : "Press Space whenever you feel lost.",
+      ].join(" ");
 
   return (
-    <div className="page">
-      <header className="hero">
+    <div className="page narrow">
+      <header className="hero center-hero">
         <h1 className="t-large">Ready when you are.</h1>
         <p className="sub">Put the headset on and start the lecture. If you drift, Reflow catches you up in one line and, afterwards, teaches you only what you missed.</p>
       </header>
@@ -58,77 +64,56 @@ export default function Home() {
       {err ? <div className="callout danger">{err}</div> : null}
       {doctor && !notesOk ? <div className="callout warning">Reflow can't write notes right now. Ask the team to check the setup before you start.</div> : null}
 
-      <div className="home-grid">
-        <div className="stack-lg">
-          <div className="start-card">
-            <div className="eyebrow">What are you listening to?</div>
-            <div className="lecture-cards">
-              {lectures.map((l) => (
-                <button key={l.id} className={"lecture-card" + (lectureId === l.id ? " selected" : "")} onClick={() => setLectureId(l.id)}>
-                  <span className="lc-kind">{l.kind === "media" ? "Recorded lecture" : "Practice lecture"}</span>
-                  <span className="lc-title">{l.title}</span>
-                  <span className="lc-meta">
-                    {mmss(l.duration)} · {l.segments?.length ?? 0} parts
-                  </span>
-                </button>
-              ))}
-              <button className={"lecture-card" + (liveMic ? " selected" : "")} onClick={() => setLectureId(null)}>
-                <span className="lc-kind">Live</span>
-                <span className="lc-title">A lecture happening now</span>
-                <span className="lc-meta">{deepgramOk ? "Uses your laptop microphone." : "Not available right now."}</span>
-              </button>
-            </div>
-            <div className="row">
-              <button className="btn btn-primary btn-lg" disabled={busy || lectureId === undefined || (liveMic && !deepgramOk)} onClick={() => void start()}>
-                {busy ? "Starting…" : "Start listening"}
-              </button>
-              <span className="label-2 t-subhead">
-                Feel lost? Press <kbd className="kbd">space</kbd> or tap the pad.
-              </span>
-            </div>
-            <div className="t-footnote label-2">
-              {headsetLine} {padLine}
-            </div>
+      <div className="start">
+        {running ? (
+          <Link className="btn btn-primary btn-lg btn-block" to={`/live/${running.id}`}>
+            Back to the lecture
+          </Link>
+        ) : liveOk ? (
+          <button className="btn btn-primary btn-lg btn-block" disabled={busy} onClick={() => void start(null)}>
+            {busy ? "Starting…" : "Start listening"}
+          </button>
+        ) : practice ? (
+          <button className="btn btn-primary btn-lg btn-block" disabled={busy} onClick={() => void start(practice.id)}>
+            {busy ? "Starting…" : "Try a practice lecture"}
+          </button>
+        ) : (
+          <button className="btn btn-primary btn-lg btn-block" disabled>
+            Nothing to listen to yet
+          </button>
+        )}
+        <div className="start-note">{statusLine}</div>
+        {liveOk && practice && !running ? (
+          <div className="start-alt">
+            No lecture right now?{" "}
+            <button className="linklike" disabled={busy} onClick={() => void start(practice.id)}>
+              Try a practice lecture
+            </button>
           </div>
-        </div>
-
-        <aside className="stack-lg">
-          <div className="card">
-            <div className="card-header">
-              <span className="card-title">Pick up where you left off</span>
-              <Link className="t-footnote" to="/lectures">
-                all lectures
-              </Link>
-            </div>
-            {sessions.length === 0 ? <div className="label-2 t-subhead">Your first lecture shows up here.</div> : null}
-            <div className="session-list">
-              {sessions.map((s) => {
-                const lec = lectures.find((l) => l.id === s.lecture_id);
-                const st = s.status === "running" ? { text: "Listening now", tone: "success" as const } : s.status === "reviewed" ? { text: "Restudied", tone: "accent" as const } : s.gaps ? { text: `${s.gaps} to restudy`, tone: "warning" as const } : { text: "All clear", tone: "neutral" as const };
-                const to = s.status === "running" ? `/live/${s.id}` : `/lecture/${s.id}`;
-                return (
-                  <div key={s.id} className="session-item">
-                    <div className="si-main">
-                      <div className="si-title">{lec?.title ?? (s.transcript_kind === "deepgram" ? "Live lecture" : "Lecture")}</div>
-                      <div className="si-meta">{new Date(s.started_at * 1000).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}</div>
-                    </div>
-                    <Badge tone={st.tone}>{st.text}</Badge>
-                    <Link className="btn btn-sm" to={to}>
-                      Open
-                    </Link>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </aside>
+        ) : null}
+        {!liveOk && doctor ? <div className="start-alt">Live lectures aren't available on this laptop right now.</div> : null}
       </div>
+
+      {nextUp ? (
+        <section className="next-up">
+          <div className="eyebrow">Next up</div>
+          <Link className="list-row" to={`/lecture/${nextUp.id}`}>
+            <span className="lr-main">
+              <span className="lr-title">{lectures.find((l) => l.id === nextUp.lecture_id)?.title ?? "Live lecture"}</span>
+              <span className="lr-meta">
+                {nextUp.gaps} moment{nextUp.gaps === 1 ? "" : "s"} to restudy · {new Date(nextUp.started_at * 1000).toLocaleDateString(undefined, { weekday: "long" })}
+              </span>
+            </span>
+            <span className="btn btn-blue btn-sm">Restudy</span>
+          </Link>
+        </section>
+      ) : null}
     </div>
   );
 }
 
 function friendly(detail: string): string {
   if (/OPENAI_API_KEY/i.test(detail)) return "Reflow can't write notes right now. Ask the team to check the setup.";
-  if (/DEEPGRAM/i.test(detail)) return "Live transcription isn't available right now. Pick a practice lecture, or ask the team.";
+  if (/DEEPGRAM/i.test(detail)) return "Live lectures aren't available right now. Try a practice lecture, or ask the team.";
   return detail;
 }

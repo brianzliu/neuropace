@@ -245,8 +245,11 @@ export default function Live() {
           <span className="dot" /> {state.ended ? "ended" : listening ? "listening" : status}
         </span>
         <span className="t-subhead label-2 mono">{mmss(state.t)}</span>
-        {state.headset && state.headset.kind !== "real" ? <Badge tone="warning">practice headset</Badge> : null}
-        {hello?.transcript_kind === "scripted" ? <Badge tone="warning">practice lecture</Badge> : null}
+        {(state.headset && state.headset.kind !== "real") || hello?.transcript_kind === "scripted" ? (
+          <Badge tone="warning" title={[state.headset && state.headset.kind !== "real" ? "simulated headset" : "", hello?.transcript_kind === "scripted" ? "practice transcript" : ""].filter(Boolean).join(", ")}>
+            practice
+          </Badge>
+        ) : null}
       </div>
       <div className="row">
         {recorded && hello ? (

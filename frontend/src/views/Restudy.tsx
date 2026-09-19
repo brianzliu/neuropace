@@ -211,7 +211,7 @@ export default function Restudy() {
   return (
     <div className="page">
       <div className="lesson-top">
-        <Link className="btn btn-plain btn-sm" to={`/lecture/${sessionId}`} title="Back to the lecture">
+        <Link className="lesson-close" to={`/lecture/${sessionId}`} title="Back to the lecture">
           ✕
         </Link>
         <div className="progress" title={`${progress.gaps_closed} of ${progress.gaps_total} moments done`}>
@@ -222,7 +222,7 @@ export default function Restudy() {
         </span>
       </div>
 
-      <div className="lesson">
+      <div className="lesson single">
         <div className="stack">
           {lectureTitle ? <div className="eyebrow">{lectureTitle}</div> : null}
           <div className="lesson-card">
@@ -245,14 +245,10 @@ export default function Restudy() {
                   </div>
                 </div>
                 <WhatWorked tally={tally} />
-                <div className="row">
-                  <Link className="btn btn-primary btn-lg" to="/lectures">
-                    Back to lectures
-                  </Link>
-                  <Link className="btn btn-plain" to="/you">
-                    What works for you
-                  </Link>
-                </div>
+                <FamilyList tally={tally} />
+                <Link className="btn btn-primary btn-lg" to="/lectures">
+                  Done
+                </Link>
               </div>
             ) : card.kind === "question" && card.question ? (
               <>
@@ -320,20 +316,11 @@ export default function Restudy() {
           </div>
         </div>
 
-        <aside className="lesson-side">
-          <BrainWaves samples={focus.raw} bands={focus.bands} connected={headsetOn} compact label="Your focus" />
-          <div className="card">
-            <div className="card-header">
-              <span className="card-title">What works for you</span>
-            </div>
-            <FamilyList tally={tally} />
-            {!tally.enough_data ? <div className="t-footnote label-2" style={{ marginTop: 8 }}>Still learning: {tally.total_attempts} of {tally.needed_attempts} answers.</div> : null}
+        {headsetOn ? (
+          <div className="lesson-waves">
+            <BrainWaves samples={focus.raw} bands={focus.bands} connected={headsetOn} compact label="Your focus while you read" />
           </div>
-          {!headsetOn ? <div className="t-footnote label-2">Put the headset on to measure how each explanation holds your attention.</div> : null}
-          <div className="t-footnote label-3">
-            <kbd className="kbd">D</kbd> simulates a drift (team)
-          </div>
-        </aside>
+        ) : null}
       </div>
     </div>
   );

@@ -61,6 +61,10 @@ What was checked, how, and what is still unverified. Re-run the commands before 
 | Microphone path through the server | WebSocket `audio_start` + binary PCM into a `transcript=deepgram` session | words broadcast on lecture time, tap produced a catch-up from the live transcript, gap built at session end |
 | OpenAI | not verified: no key on this machine yet | sessions now refuse to start without the key; the client is covered by tests with a fake OpenAI (strict schema, cache, retry, timeout, reasoning-param fallback) |
 
+## Product v2, streamlined (19 Sep, night)
+
+After the user's note that the screens carried purposeless boxes and repeated content: Home is one button ("Start listening", or "Back to the lecture" while one runs, or "Try a practice lecture" when live is unavailable) plus at most one "Next up"; the practice lecture is a fallback link, not a peer choice; Lectures is the only history; a lecture leads with Restudy and lists its moments as expandable rows; Restudy is a single column (progress, card, brain waves only with a headset; preferences appear at the lesson end and on You); You is one column with one footer line for the device. Orphaned "running" sessions from a previous server process are closed at startup with their flags kept as moments. Verified in the browser: Home, Lectures, Lecture, Restudy, You.
+
 ## Product v2 (19 Sep, night)
 
 Backend: four explanation families with a migration from the old form keys, the artifact catalogue (summary, key idea, analogy, diagram, chart with real numbers only, steps for processes, worked example) chosen inside a family by content, headset-only restudy sessions that stream brain waves and flag drifts, per-card focus ratio, profile and reset. `uv run pytest -q`: 83 passed, including the migration, artifact choice, the restudy stream and focus recording.

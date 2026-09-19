@@ -19,7 +19,6 @@ export default function Done() {
   }, [sessionId]);
   if (!sess) return <div className="page narrow"><div className="loading">Wrapping up…</div></div>;
   const taps = sess.flags.filter((f) => f.source === "tap" || f.source === "key").length;
-  const catchups = sess.catchups_shown;
   return (
     <div className="page narrow">
       <div className="complete">
@@ -35,27 +34,28 @@ export default function Done() {
           </div>
           <div className="stat">
             <div className="v">{taps}</div>
-            <div className="k">times you said lost me</div>
+            <div className="k">times you said I'm lost</div>
           </div>
           <div className="stat green">
-            <div className="v">{catchups}</div>
-            <div className="k">catch-ups shown</div>
+            <div className="v">{sess.catchups_shown}</div>
+            <div className="k">catch-ups</div>
           </div>
         </div>
-        <p className="sub">{sess.gaps ? "Those moments are ready to restudy: one quick question each, explained a different way if you need it." : "You stayed with it the whole way. Nothing to restudy this time."}</p>
-        <div className="row">
-          {sess.gaps ? (
+        <p className="sub">{sess.gaps ? "One quick question per moment, explained a different way if you need it. Five minutes." : "You stayed with it the whole way. Nothing to restudy this time."}</p>
+        {sess.gaps ? (
+          <>
             <Link className="btn btn-primary btn-lg" to={`/restudy/${sessionId}`}>
               Restudy now
             </Link>
-          ) : null}
-          <Link className="btn" to={`/lecture/${sessionId}`}>
-            {sess.gaps ? "Later, show me the notes" : "See the lecture"}
+            <Link className="linklike" to={`/lecture/${sessionId}`}>
+              Later
+            </Link>
+          </>
+        ) : (
+          <Link className="btn btn-primary btn-lg" to="/">
+            Done
           </Link>
-          <Link className="btn btn-plain" to="/">
-            Home
-          </Link>
-        </div>
+        )}
       </div>
     </div>
   );

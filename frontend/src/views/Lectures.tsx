@@ -4,45 +4,42 @@ import { api } from "../lib/api";
 import type { LectureFull, SessionPublic } from "../lib/types";
 import { Badge } from "../components/Badges";
 
-/** Every past lecture as a tile with restudy progress (docs/PRODUCT.md §6). */
+/** Lectures: the history, newest first. The only place it lives (docs/PRODUCT.md §6). */
 export default function Lectures() {
   const [sessions, setSessions] = useState<SessionPublic[]>([]);
   const [lectures, setLectures] = useState<LectureFull[]>([]);
   const [loaded, setLoaded] = useState(false);
   useEffect(() => {
     Promise.allSettled([api.sessions(), api.lectures()]).then(([s, l]) => {
-      if (s.status === "fulfilled") setSessions(s.value.sessions.filter((x) => x.mode !== "review" && x.status !== "running"));
+      if (s.status === "fulfilled") setSessions(s.value.sessions.filter((x) => x.mode !== "review"));
       if (l.status === "fulfilled") setLectures(l.value.lectures);
       setLoaded(true);
     });
   }, []);
   return (
-    <div className="page">
+    <div className="page narrow">
       <header className="hero">
-        <h1 className="t-large">Your lectures</h1>
-        <p className="sub">Every lecture you listened to, with the moments Reflow knows you missed. Restudy any of them.</p>
+        <h1 className="t-large">Lectures</h1>
+        <p className="sub">Everything you listened to. Open one to restudy the moments you missed.</p>
       </header>
       {loaded && sessions.length === 0 ? (
         <div className="empty-state">
-          Nothing yet. <Link to="/">Start listening</Link> to a lecture and it will show up here.
+          Nothing yet. <Link to="/">Start listening</Link> and your lectures will show up here.
         </div>
       ) : null}
-      <div className="tiles">
+      <div className="list">
         {sessions.map((s) => {
           const lec = lectures.find((l) => l.id === s.lecture_id);
+          const running = s.status === "running";
           const restudied = s.status === "reviewed";
-          const tone = restudied ? "accent" : s.gaps ? "warning" : "neutral";
+          const badge = running ? { t: "Listening now", tone: "success" as const } : restudied ? { t: "Restudied", tone: "accent" as const } : s.gaps ? { t: `${s.gaps} to restudy`, tone: "warning" as const } : { t: "All clear", tone: "neutral" as const };
           return (
-            <Link key={s.id} className={"tile" + (restudied || !s.gaps ? " done" : "")} to={`/lecture/${s.id}`}>
-              <div className="tile-title">{lec?.title ?? (s.transcript_kind === "deepgram" ? "Live lecture" : "Lecture")}</div>
-              <div className="tile-meta">{new Date(s.started_at * 1000).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
-              <div className="progress thin">
-                <i style={{ width: restudied ? "100%" : s.gaps ? "0%" : "100%" }} />
-              </div>
-              <div className="tile-foot">
-                <Badge tone={tone}>{restudied ? "Restudied" : s.gaps ? `${s.gaps} moment${s.gaps === 1 ? "" : "s"} to restudy` : "All clear"}</Badge>
-                <span className="t-footnote label-2">{s.flags.length} flag{s.flags.length === 1 ? "" : "s"}</span>
-              </div>
+            <Link key={s.id} className="list-row" to={running ? `/live/${s.id}` : `/lecture/${s.id}`}>
+              <span className="lr-main">
+                <span className="lr-title">{lec?.title ?? (s.transcript_kind === "deepgram" ? "Live lecture" : "Lecture")}</span>
+                <span className="lr-meta">{new Date(s.started_at * 1000).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+              </span>
+              <Badge tone={badge.tone}>{badge.t}</Badge>
             </Link>
           );
         })}

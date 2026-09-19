@@ -143,7 +143,7 @@ export default function Sidebar({ sessionId, sessionRunning, rail }: { sessionId
         ) : null}
       </nav>
       <div className="sb-footer">
-        <Item to="/team" icon="team" label={setupNeeded ? "Setup needed" : "For the team"} rail={rail} />
+        <Item to="/team" icon="team" label={setupNeeded ? "Setup needed" : "Team"} rail={rail} />
         {rail ? null : (
           <div className="segmented sm sb-theme" aria-label="appearance">
             {(["auto", "light", "dark"] as Theme[]).map((t) => (
