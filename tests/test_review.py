@@ -21,7 +21,7 @@ def _setup(tmp_path, n_gaps=3, catchup_form=None, seed=0):
             {
                 "id": fid,
                 "session_id": sess["id"],
-                "source": "sim_tap",
+                "source": "key",
                 "t_trigger": 10.0 * i + 8,
                 "t_start": 10.0 * i,
                 "t_end": 10.0 * i + 8,
@@ -81,7 +81,7 @@ def test_miss_reteach_in_next_form_then_hit_credits_that_form(tmp_path):
     wrong = (_correct_choice(db, card) + 1) % 4
     r = eng.answer(card["id"], wrong)
     assert r["outcome"] == "miss" and r["credited_form"] is None and r["next"]["kind"] == "reteach"
-    assert r["next"]["form"] in FORMS and r["next"]["reteach"]["content"]
+    assert r["next"]["form"] in FORMS and r["next"]["reteach"]["content"] and r["next"]["reteach"]["artifact"]
     assert db.get_tally(lr["id"]) == {
         f: {"rescues": 0, "attempts": 0} for f in FORMS
     }  # no catch-up form: nothing scored

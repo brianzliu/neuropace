@@ -156,8 +156,10 @@ class MindwaveHeadset:
         replay_speed: float = 1.0,
         log_dir: str | None = None,
         fake_state: str = "easy",
+        on_raw: Callable[[dict], None] | None = None,
     ) -> None:
         self.on_frame = on_frame
+        self.on_raw = on_raw
         self.kind = "fake" if fake else ("replay" if replay_dir else "real")
         self.port = port or (f"replay:{replay_dir}" if replay_dir else "fake")
         self.replay_dir = replay_dir
@@ -188,8 +190,14 @@ class MindwaveHeadset:
             self.source = MindWaveSource(self.port)
         self.pipe = Pipeline(self.source, log_dir=(self.log_dir if self.kind == "real" else None))
         self.pipe.on_frame(self._frame_cb)
+        if self.on_raw is not None:
+            self.pipe.on_raw(self._raw_cb)
         self.pipe.start()
         log.info("mindwave headset started: %s", self.source.describe())
+
+    def _raw_cb(self, msg: dict) -> None:  # pipeline thread
+        if self._loop is not None and not self._loop.is_closed() and self.on_raw is not None:
+            self._loop.call_soon_threadsafe(self.on_raw, msg)
 
     def _frame_cb(self, frame) -> None:  # pipeline thread
         self.frames += 1
@@ -236,6 +244,7 @@ def make_headset(
     seed: int = 11,
     on_frame: Callable[[object], None] | None = None,
     log_dir: str | None = None,
+    on_raw: Callable[[dict], None] | None = None,
 ):
     """Routing (README "EEG bridge"):
     None/"auto" -> a paired MindWave through the mindwave pipeline if a port is found, else the simulator;
@@ -251,12 +260,12 @@ def make_headset(
         port = port or autodetect_headset_port()
         return SerialHeadset(port, on_events) if port else SimulatedHeadset(on_events, seed=seed)
     if setting == "fake":
-        return MindwaveHeadset(on_frame, fake=True)
+        return MindwaveHeadset(on_frame, fake=True, on_raw=on_raw)
     if setting.startswith("replay:"):
-        return MindwaveHeadset(on_frame, replay_dir=setting.split(":", 1)[1])
+        return MindwaveHeadset(on_frame, replay_dir=setting.split(":", 1)[1], on_raw=on_raw)
     if setting.startswith("serial:"):
         return SerialHeadset(setting.split(":", 1)[1], on_events)
     port = autodetect_headset_port() if setting == "auto" else setting
     if port:
-        return MindwaveHeadset(on_frame, port=port, log_dir=log_dir)
+        return MindwaveHeadset(on_frame, port=port, log_dir=log_dir, on_raw=on_raw)
     return SimulatedHeadset(on_events, seed=seed)

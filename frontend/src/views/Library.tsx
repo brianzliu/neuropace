@@ -1,3 +1,4 @@
+import { activeLearnerId } from "../lib/activeLearner";
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Link, Navigate, useLocation, useNavigate, useOutlet, useParams, useSearchParams } from "react-router-dom";
@@ -60,18 +61,13 @@ function useLibraryIndex() {
     let cancelled = false;
     (async () => {
       try {
-        let learnerId = "";
-        try {
-          learnerId = localStorage.getItem("reflow.learner") ?? "";
-        } catch {
-          learnerId = "";
-        }
+        const learnerId = await activeLearnerId();
         const [listed, lectures] = await Promise.all([
-          api.sessions(learnerId ? { learner_id: learnerId } : undefined),
+          api.sessions({ learner_id: learnerId }),
           api.lectures().catch(() => ({ lectures: [] as { id: string; title: string }[] })),
         ]);
         if (cancelled) return;
-        setSessions(listed.sessions);
+        setSessions(listed.sessions.filter(s => s.mode !== "review"));
         setTitles(Object.fromEntries(lectures.lectures.map((l) => [l.id, l.title])));
       } catch {
         if (!cancelled) setSessions([]);
@@ -202,7 +198,7 @@ function LibraryPicker() {
         <div className="panel library-empty">
           <p>No sessions yet.</p>
           <p className="muted small">
-            The <Link to="/">New session</Link> launcher on your dashboard starts one; it appears here when it ends.
+            The <Link to="/">Start session</Link> launcher on your dashboard starts one; it appears here when it ends.
           </p>
         </div>
       ) : null}

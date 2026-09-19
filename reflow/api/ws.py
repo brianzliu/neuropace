@@ -71,7 +71,7 @@ async def session_ws(websocket: WebSocket, session_id: str) -> None:
 async def handle_client_message(app, rt, data: dict) -> None:
     t = data.get("type")
     if t == "tap":
-        rt.tap(source="sim_tap")
+        rt.tap(source="key")
     elif t == "force_flag":
         rt.force_flag()
     elif t == "sim_headset":

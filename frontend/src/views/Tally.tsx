@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import type { Learner, TallySummary } from "../lib/types";
-import TallyPanel from "../components/TallyPanel";
 import { FORM_LABEL, FORMS } from "../lib/types";
 
 /** Card body shared by the Insights shell and the legacy /tally/:learnerId deep link.
@@ -10,7 +9,13 @@ import { FORM_LABEL, FORMS } from "../lib/types";
 export function TallyCard({ tally }: { tally: TallySummary }) {
   return (
     <>
-      <TallyPanel tally={tally} />
+      <section className="panel">
+        {FORMS.map(form => <div className="tally-row" key={form}>
+          <span>{FORM_LABEL[form]}</span><span className="small muted">{tally.forms[form].attempts} attempts</span>
+          <span>{tally.forms[form].rescues} rescues</span>
+        </div>)}
+        {!tally.enough_data && <p className="small muted">More review answers are needed before comparing explanation formats.</p>}
+      </section>
       <div className="panel">
         <h2>Population prior</h2>
         <div className="small muted">New learners start from the average across all learners (pseudo-count 2).</div>

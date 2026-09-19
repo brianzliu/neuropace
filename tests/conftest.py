@@ -17,7 +17,8 @@ def settings(tmp_path: Path) -> Settings:
         baseline_seconds=20,
         recap_period_seconds=5,
         headset_port="sim",
-        totem_port="sim",
+        totem_port="keyboard",
+        allow_offline_llm=True,  # the extractive generator is for tests; the product requires OpenAI
     )
     s.ensure_dirs()
     return s

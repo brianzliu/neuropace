@@ -61,11 +61,15 @@ async def run_doctor(s: Settings) -> dict:
         if s.headset_port == "sim"
         else (s.headset_port or await asyncio.to_thread(autodetect_headset_port))
     )
-    tp = "sim" if s.totem_port == "sim" else (s.totem_port or autodetect_totem_port(exclude=hp))
+    tp = (
+        "keyboard"
+        if s.totem_port in ("sim", "keyboard")
+        else (s.totem_port or autodetect_totem_port(exclude=hp))
+    )
     return {
         "keys": {"deepgram": bool(s.deepgram_api_key), "openai": bool(s.openai_api_key)},
         "deepgram": dg,
-        "openai": oa,
+        "openai": {**oa, "required": not s.allow_offline_llm},
         "headset": {
             "port": hp,
             "kind": "simulated" if not hp or hp == "sim" else "real",
@@ -74,7 +78,7 @@ async def run_doctor(s: Settings) -> dict:
         },
         "totem": {
             "port": tp,
-            "kind": "simulated" if not tp or tp == "sim" else "real",
+            "kind": "keyboard" if not tp or tp in ("sim", "keyboard") else "real",
             "setting": s.totem_port,
         },
         "platform": sys.platform,

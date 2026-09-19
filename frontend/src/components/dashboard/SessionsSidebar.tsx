@@ -17,7 +17,6 @@ export default function SessionsSidebar({ sessions }: SessionsSidebarProps) {
         <h2>Your sessions</h2>
         <span>{sessions?.length ?? 0}</span>
       </div>
-      <p className="small muted">Recent lectures and places to pick up.</p>
       {sessions === undefined ? (
         <p className="small muted" role="status">
           Loading your saved moments…
@@ -42,6 +41,7 @@ export default function SessionsSidebar({ sessions }: SessionsSidebarProps) {
                 <>
                   <Link to={`/notes/${session.id}`}>Notes</Link>
                   <Link to={`/review/${session.id}`}>Review</Link>
+                  <Link to={`/quiz/${session.id}`}>Quiz</Link>
                   <Link to={`/replay/${session.id}`}>Replay</Link>
                 </>
               )}

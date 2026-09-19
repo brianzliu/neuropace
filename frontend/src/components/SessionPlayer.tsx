@@ -1,6 +1,7 @@
 import { backendUrl } from "../lib/backend";
 import { useEffect, useRef, useState } from "react";
 import { mmss } from "../lib/format";
+import { Badge } from "./Badges";
 
 interface Props {
   lectureId: string | null;
@@ -21,7 +22,6 @@ export default function SessionPlayer({ lectureId, hasMedia, duration, onTime, p
   const [pausedByFlag, setPausedByFlag] = useState(false);
   const startRef = useRef<{ wall: number; t: number } | null>(null);
 
-  // report time at 4 Hz
   useEffect(() => {
     const id = window.setInterval(() => {
       if (hasMedia) {
@@ -49,7 +49,6 @@ export default function SessionPlayer({ lectureId, hasMedia, duration, onTime, p
     return () => window.clearInterval(id);
   }, [hasMedia, playing, vt, duration, onTime]);
 
-  // backend pause request
   useEffect(() => {
     if (pauseSeq === 0) return;
     if (hasMedia) videoRef.current?.pause();
@@ -81,14 +80,23 @@ export default function SessionPlayer({ lectureId, hasMedia, duration, onTime, p
   };
 
   return (
-    <div className="panel player">
+    <div className="player">
       {hasMedia && lectureId ? <video ref={videoRef} src={backendUrl(`/media/${lectureId}`, true)} controls preload="auto" /> : null}
-      {!hasMedia ? (
-        <span className="muted small">virtual player (no media file): the transcript is revealed on this clock</span>
-      ) : null}
-      <span className="vclock">{mmss(vt)}{duration ? ` / ${mmss(duration)}` : ""}</span>
-      {playing ? <button onClick={pause}>Pause</button> : <button className="primary" onClick={play}>{pausedByFlag ? "Resume" : "Play"}</button>}
-      {pausedByFlag ? <span className="badge accent">paused by a focus flag</span> : null}
+      {!hasMedia ? <span className="t-footnote label-2">virtual player (no media file): the transcript is revealed on this clock</span> : null}
+      <span className="clock">
+        {mmss(vt)}
+        {duration ? ` / ${mmss(duration)}` : ""}
+      </span>
+      {playing ? (
+        <button className="btn" onClick={pause}>
+          Pause
+        </button>
+      ) : (
+        <button className="btn btn-primary" onClick={play}>
+          {pausedByFlag ? "Resume" : "Play"}
+        </button>
+      )}
+      {pausedByFlag ? <Badge tone="accent">paused by a focus flag</Badge> : null}
     </div>
   );
 }

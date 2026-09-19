@@ -19,7 +19,7 @@ import numpy as np
 from ..clock import LiveClock, MediaClock
 from ..config import FORMS, Settings
 from ..ids import new_id
-from ..llm.client import LLMClient
+from ..llm.client import LLMClient, LLMUnavailable
 from ..llm.fallback import recap_forms as offline_recap
 from ..signal.features import DetectorEvent, FocusEngine
 from ..signal.headset import make_headset
@@ -35,6 +35,7 @@ from .recaps import Recap, RecapRing, RecapScheduler
 from .spans import eeg_span, merge_into_gaps, snap_end, tap_span
 
 log = logging.getLogger(__name__)
+UV_PER_RAW = 1.8 / 4096 / 2000 * 1e6  # ADC counts -> microvolts (approximate, matches the mindwave pipeline)
 
 
 class SessionRuntime:
@@ -80,6 +81,10 @@ class SessionRuntime:
         keyterms = (lecture or {}).get("keyterms") or []
         self.keyterms = keyterms
         self.recaps = RecapScheduler(s, llm, self.transcript, self.ring, self._on_recap, keyterms)
+        self.recaps.on_unavailable = lambda reason: self.notice(
+            "error",
+            f"Recaps unavailable ({reason}). Catch-ups show the verbatim transcript until it recovers.",
+        )
         self.flags: dict[str, dict] = {}
         self.open_eeg_flag: str | None = None
         self.best_form: str = session.get("best_form") or self._draw_best_form()
@@ -97,7 +102,9 @@ class SessionRuntime:
             seed=self.seed + 1,
             on_frame=self._on_frame,
             log_dir=str(s.data_dir / "eeg"),
+            on_raw=self._on_raw_chunk,
         )
+        self._totem_setting = totem_port
         self.totem = make_totem(
             totem_port, self._on_totem_tap, exclude_port=getattr(self.headset, "port", None)
         )
@@ -107,12 +114,18 @@ class SessionRuntime:
             relay = UnoQRelay(headset_port.split(":", 1)[1], self._on_totem_tap, self._on_frame)
             self.headset = relay.headset
             self.totem = relay
+
+
+        self._totem_probe_task: asyncio.Task | None = None
         self.transcriber: Any = None
         self.audio_sample_rate = 16000
         self._last_tick_t = -1.0
         self.catchups_shown = 0
         self.notices: list[dict] = []
         self._focus_hist: list[dict] = []
+        self.review_only = self.mode == "review"  # headset only: no transcript, no recaps, no gaps
+        self._raw_acc: list[float] = []
+        self._raw_chunk: list[float] = []
         if transcript_kind == "scripted" and lecture and lecture.get("words"):
             self.transcriber = ScriptedTranscript(
                 [Word(**w) for w in lecture["words"]], self._on_words, self.clock
@@ -234,16 +247,35 @@ class SessionRuntime:
             "notices": self.notices[-5:],
             "sim": {
                 "headset": self.headset.kind != "real",
-                "totem": self.totem.kind == "simulated",
+                "totem": False,  # the keyboard totem is a real input, not a simulation
                 "transcript": self.transcript_kind == "scripted",
             },
         }
 
     # ------------------------------------------------------------------ inputs
+    def _on_raw_chunk(self, msg: dict) -> None:
+        """A 64 Hz microvolt trace chunk from the mindwave pipeline: {"t", "fs", "uv": [...]}."""
+        if self.status == "running":
+            self.broadcast({"type": "raw", "fs": msg.get("fs", 64), "uv": msg.get("uv", [])})
+
+    def _decimate_raw(self, raws: list[int]) -> None:
+        """Reflow's own raw path (simulator, serial:<port>): average every 8 samples, send 8 at a time (64 Hz)."""
+        acc = self._raw_acc
+        for v in raws:
+            acc.append(v * UV_PER_RAW)
+            if len(acc) >= 8:
+                self._raw_chunk.append(round(sum(acc) / len(acc), 1))
+                acc.clear()
+                if len(self._raw_chunk) >= 8:
+                    self.broadcast({"type": "raw", "fs": self.engine.fs // 8, "uv": self._raw_chunk})
+                    self._raw_chunk = []
+
     def _on_headset_events(self, events: list[TGEvent]) -> None:
         raws = [e.value for e in events if e.kind == "raw"]
         if raws:
             self.engine.feed_raw(raws)
+            if self.status == "running":
+                self._decimate_raw(raws)
         for e in events:
             if e.kind == "poor_signal":
                 self.engine.feed_poor_signal(int(e.value))
@@ -267,6 +299,9 @@ class SessionRuntime:
             "calibrated": frame.calibrated,
             "cal_phase": frame.cal_phase,
             "attention": frame.attention,
+            "log_theta": frame.log_theta,
+            "log_alpha": frame.log_alpha,
+            "log_beta": frame.log_beta,
         }
         self.engine.feed_frame(frame.engagement, frame.quality, frame.valid, frame.blink_count, extra=extra)
         if frame.attention is not None:
@@ -394,13 +429,19 @@ class SessionRuntime:
     def _build_catchup(self, flag: dict, t: float) -> dict:
         recap = self.ring.lookup(t, flag["t_start"])
         if recap is None:
+            # nothing generated yet (first seconds, or the API is down): the verbatim transcript, never invented text
             span_text = self.transcript.text_between(flag["t_start"], t) or self._now_text(t)
-            if span_text.strip():
+            if span_text.strip() and self.llm.offline_allowed:
                 forms = offline_recap(span_text, self.transcript.text_between(0, t)).model_dump()
                 source = "offline"
+            elif span_text.strip():
+                words = span_text.split()
+                line = ("… " if len(words) > 30 else "") + " ".join(words[-30:])
+                forms = dict.fromkeys(FORMS, line)
+                source = "transcript"
             else:
-                forms = {f: "(nothing transcribed yet for this span)" for f in FORMS}
-                source = "offline"
+                forms = dict.fromkeys(FORMS, "(nothing transcribed yet for this span)")
+                source = "transcript"
             recap = Recap(flag["t_start"], t, forms, source)
         return {
             "type": "catchup",
@@ -467,14 +508,17 @@ class SessionRuntime:
             self.broadcast({"type": "chip", "flag_id": f["id"]})
         self.broadcast(card)
 
-    def tap(self, source: str = "sim_tap") -> dict:
+    def tap(self, source: str = "key") -> dict:
+        """A "lost me" from the pad (source "tap") or the keyboard / on-screen pad (source "key"). Both are real."""
+        if source == "sim_tap":
+            source = "key"
         t = self.clock.now()
         t_start, t_end = tap_span(self.transcript, t, self.s)
         linked = self._recent_eeg_flag(t)
         if linked is not None:
             # the tap confirms a lapse the EEG already saw: the span starts where focus dropped (capped)
             t_start = max(min(t_start, float(linked["t_start"])), t - self.s.tap_link_max_back, 0.0)
-        f = self._open_flag(source, t, t_start, t_end, simulated=(source != "tap"))
+        f = self._open_flag(source, t, t_start, t_end, simulated=False)
         if linked is not None:
             f["linked_eeg"] = linked["id"]
             self.broadcast({"type": "flag_open", "flag": self._flag_public(f)})
@@ -490,6 +534,8 @@ class SessionRuntime:
         return f
 
     def _offer_eeg_style(self, f: dict, t: float) -> None:
+        if self.review_only:
+            return  # restudy reacts to the flag itself (switches the explanation); there is no lecture to catch up on
         if self.mode == "recorded" and self.auto_pause:
             self.broadcast({"type": "pause_request", "flag_id": f["id"]})
             self._offer_catchup(f, t, auto_show=True, reason="video_pause")
@@ -542,6 +588,7 @@ class SessionRuntime:
         d["blinks_total"] = self.engine.blinks.count
         if self.engine.external and self.engine.extra:
             d["mw"] = self.engine.extra
+        d["bands"] = self.engine.bands
         if not self.engine.baseline.ready:
             fit = min(8, int(round(sample.baseline_progress * 8)))
             if self.totem.fit != fit:
@@ -549,7 +596,9 @@ class SessionRuntime:
         elif self.totem.fit != 8:
             self.totem.send("FIT 8")
         self._on_detector_events(events, t)
-        self.recaps.maybe_run(t)
+        self._maybe_attach_totem(t)
+        if not self.review_only:
+            self.recaps.maybe_run(t)
         self._focus_hist.append(d)
         if len(self._focus_hist) > 4000:
             self._focus_hist = self._focus_hist[-2000:]
@@ -560,6 +609,33 @@ class SessionRuntime:
         self.broadcast({"type": "focus", **d})
         self._last_tick_t = t
         return d
+
+    def _maybe_attach_totem(self, t: float) -> None:
+        """Hot-plug: on the keyboard fallback with an auto setting, look for an Arduino every 5 s and switch to it."""
+        if self.totem.kind != "keyboard" or (self._totem_setting or "auto") != "auto" or self.drive_manually:
+            return
+        if int(t) % 5 != 0 or (self._totem_probe_task is not None and not self._totem_probe_task.done()):
+            return
+        self._totem_probe_task = asyncio.create_task(
+            self._attach_totem_if_found(), name=f"totem-probe-{self.id}"
+        )
+
+    async def _attach_totem_if_found(self) -> None:
+        from ..totem import bridge
+
+        port = await asyncio.to_thread(bridge.autodetect_totem_port, getattr(self.headset, "port", None))
+        if not port or self.status != "running" or self.totem.kind != "keyboard":
+            return
+        old = self.totem
+        new = bridge.SerialTotem(port, self._on_totem_tap)
+        await new.start()
+        new.send("CLEAR")
+        new.send(f"FIT {old.fit}")
+        new.send(f"DOT {len(self.flags)}")
+        self.totem = new
+        self.db.update_session(self.id, totem_kind=new.kind)
+        self.notice("info", f"Arduino totem attached on {port}")
+        self.broadcast({"type": "totem", **new.status(), "pulse": False})
 
     async def _tick_loop(self) -> None:
         next_t = time.monotonic()
@@ -628,6 +704,9 @@ class SessionRuntime:
         return gaps
 
     async def _build_gaps(self) -> list[dict]:
+        if self.review_only:
+            self.db.replace_gaps(self.id, [])
+            return []
         lecture_end = max(self.transcript.end_time, self.clock.now())
         merged = merge_into_gaps(list(self.flags.values()), self.s, lecture_end=lecture_end)
         corpus = self.transcript.text_between(0, lecture_end + 1)
@@ -655,9 +734,18 @@ class SessionRuntime:
 
         async def fill(row: dict, i: int) -> None:
             async with sem:
-                pkg, source = await self.llm.gap_package(
-                    row["span_text"], row["context_text"], corpus, self.keyterms, seed=self.seed + i
-                )
+                try:
+                    pkg, source = await self.llm.gap_package(
+                        row["span_text"], row["context_text"], corpus, self.keyterms, seed=self.seed + i
+                    )
+                except LLMUnavailable as e:
+                    row["package"] = {"error": str(e)}
+                    row["package_source"] = "failed"
+                    self.notice(
+                        "error",
+                        f"Gap {row['ord'] + 1}: notes not generated ({e}). Retry from the notes page.",
+                    )
+                    return
                 row["package"] = pkg.model_dump()
                 row["package_source"] = source
 

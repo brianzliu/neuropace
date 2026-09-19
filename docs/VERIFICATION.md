@@ -6,7 +6,7 @@ What was checked, how, and what is still unverified. Re-run the commands before 
 
 | Check | Command | Result |
 |---|---|---|
-| Backend unit + integration tests (parser, features, blinks, spans, recaps, LLM client with a fake OpenAI, tally, review, loss map, session runtime, REST + WebSocket real-time flow, study analysis, Deepgram client parsing, mindwave bridge on `FakeSource` with a byte-level cross-check of both ThinkGear parsers, port detection on macOS and Windows listings with a fake serial module) | `uv run pytest -q` | 69 passed in about 22 s, no network, no hardware |
+| Backend unit + integration tests (parser, features, blinks, spans, recaps, LLM client with a fake OpenAI, tally, review, loss map, session runtime, REST + WebSocket real-time flow, study analysis, Deepgram client parsing, mindwave bridge on `FakeSource` with a byte-level cross-check of both ThinkGear parsers, port detection on macOS and Windows listings with a fake serial module) | `uv run pytest -q` | 79 passed in about 22 s, no network, no hardware |
 | Lint | `uv run ruff check reflow tests scripts` | clean (the spec's three sim scripts are kept verbatim and excluded from style rules) |
 | Frontend types + build | `cd frontend && pnpm typecheck && pnpm build` | 0 errors, 67 modules, `dist/` served by the backend |
 | Firmware | `arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi firmware/totem` and `:minima` | both compile (57 KB / 44 KB) |
@@ -22,6 +22,24 @@ What was checked, how, and what is still unverified. Re-run the commands before 
 | Bridge over the API | session with `headset: "fake"`, `POST /calibrate`, WS `calibrate`, `sim_headset: drifting` | `mw` extras on focus samples, `cal_phase` follows the commands, EEG flag 22 s after the switch, `headset_kind` stored as `fake` |
 | Live view on the fake headset | ego-browser: "fake headset" badge, calibration buttons, "calibrating: eyes_closed" chip | renders |
 | Real MindWave through the bridge | not verified: no headset on this machine | the pipeline itself was validated on a real head by its author (`EEG_PIPELINE.md`); `auto` picks it up when a `MindWave` serial port is present |
+
+## Generated content policy (no placeholder text)
+
+| Check | How | Result |
+|---|---|---|
+| No OpenAI key | `POST /api/sessions` with the default settings | refused with 400 "OPENAI_API_KEY is missing: recaps, gap notes and review cards need it"; `reflow doctor` prints REQUIRED |
+| OpenAI down mid-lecture | runtime test with a failing fake client | recaps skipped with one notice; the tap catch-up shows the verbatim transcript (`source: transcript`), all four forms identical, no "(offline)" text |
+| OpenAI down at session end | same test | gap package retried 3 times, stored as `package_source: failed` with the error; review refuses (409); `regenerate_packages` fills it once the API answers |
+| Real OpenAI call | not verified: no key on this machine | the client is exercised with a fake OpenAI (strict schema, cache, retries, reasoning-param fallback) |
+
+## Totem keyboard fallback
+
+| Check | How | Result |
+|---|---|---|
+| No Arduino → keyboard totem | unit tests on `make_totem` and `KeyboardTotem`; `reflow doctor` | kind `keyboard` with the hint "no Arduino: press Space or T, or use the on-screen pad" |
+| Terminal keys in `reflow serve` | server started under a pseudo-terminal, Space then L pressed in that terminal | flags `('key', simulated False)` then `('forced', simulated True)` on the running session |
+| Browser/API tap source | WebSocket `tap` and `POST /tap` | source `key`, `simulated: false` (a learner action, not a simulation) |
+| Arduino plugged in mid-session | unit test with a fake serial totem and a patched detector | the session switches from keyboard to the Arduino within one 5 s probe, replays FIT/DOT, records `totem_kind = real` |
 
 ## Platforms
 
@@ -41,7 +59,31 @@ What was checked, how, and what is still unverified. Re-run the commands before 
 | Deepgram prerecorded | `transcribe_file` on a 17.6 s wav synthesized with macOS `say` | 54 words with timestamps in 0.4 s |
 | Deepgram streaming | `DeepgramLive` fed 100 ms PCM frames at real-time pace, mic started 2 s into the lecture | 49 final words, interim results flowing, first word stamped at 2.12 s lecture time (offset correct) |
 | Microphone path through the server | WebSocket `audio_start` + binary PCM into a `transcript=deepgram` session | words broadcast on lecture time, tap produced a catch-up from the live transcript, gap built at session end |
-| OpenAI | not verified: no key on this machine yet | recaps and notes ran in the labelled `offline` fallback; the client is covered by tests with a fake OpenAI (strict schema, cache, retry, timeout, reasoning-param fallback) |
+| OpenAI | not verified: no key on this machine yet | sessions now refuse to start without the key; the client is covered by tests with a fake OpenAI (strict schema, cache, retry, timeout, reasoning-param fallback) |
+
+## Product v2, streamlined (19 Sep, night)
+
+After the user's note that the screens carried purposeless boxes and repeated content: Home is one button ("Start listening", or "Back to the lecture" while one runs, or "Try a practice lecture" when live is unavailable) plus at most one "Next up"; the practice lecture is a fallback link, not a peer choice; Lectures is the only history; a lecture leads with Restudy and lists its moments as expandable rows; Restudy is a single column (progress, card, brain waves only with a headset; preferences appear at the lesson end and on You); You is one column with one footer line for the device. Orphaned "running" sessions from a previous server process are closed at startup with their flags kept as moments. Verified in the browser: Home, Lectures, Lecture, Restudy, You.
+
+## Product v2 (19 Sep, night)
+
+Backend: four explanation families with a migration from the old form keys, the artifact catalogue (summary, key idea, analogy, diagram, chart with real numbers only, steps for processes, worked example) chosen inside a family by content, headset-only restudy sessions that stream brain waves and flag drifts, per-card focus ratio, profile and reset. `uv run pytest -q`: 83 passed, including the migration, artifact choice, the restudy stream and focus recording.
+
+Frontend: rebuilt as the consumer product in `docs/PRODUCT.md` with a Duolingo-derived design system: Listen (one decision, one button), Listening (transcript, live brain waves with theta/alpha/beta, focus ring, one "I'm lost" button, catch-up HUD, Details for the team), Lecture done, Lectures, one lecture's moments, Restudy as a lesson (progress bar, question, artifact explanation with progressive reveal, three in a row, lesson complete with what worked), You (streak, moments, how you learn best with rescued and held-attention bars, start fresh), For the team (readiness, technical session, replay, loss map, quiz). Verified with `pnpm typecheck`, `pnpm build` and ego-browser screenshots of every screen in light and dark.
+
+Not verified: a real OpenAI generation of the artifact catalogue (no key on this machine; the schema is tested with a fake client), a real headset in restudy.
+
+## Single learner per device (19 Sep, late evening)
+
+The learner picker is gone: every session belongs to this device's learner `lrn_me` ("you"), created on demand; `/api/learners/me` and `/tally/me` resolve to it. A study participant name can still be given under Advanced options (created on first use, reused case-insensitively) so the study keeps tallies apart. Verified: `uv run pytest -q` (79 passed, including the default and named-participant paths) and a browser run where Start listening with no learner produced a session on `lrn_me` and the tally page read "What works for you".
+
+## Consumer pass (19 Sep, late evening)
+
+After the user's note that the app read as a developer tool, the shell became a sidebar-and-content window and every student-facing screen was rebuilt around one decision at a time: Home is "Ready when you are" with learner chips, lecture cards and one "Start listening" button; the live screen is the transcript, a calm focus ring with a sentence, the catch-up HUD and one "Lost me" button; notes and review use plain-language copy ("What you missed", "Make it stick", "What works for you"). Ports, z-scores, headset and pad status, rolling recaps, calibration and the simulated-headset keys now live behind "Details" on the live screen and "Advanced options" under Setup on Home, so demos and judges can still see everything. Verified in the browser (ego-browser) in light and dark.
+
+## Design system pass (19 Sep, evening)
+
+The frontend was rebuilt on a macOS-style design system (tokens for light and dark, toolbar with segmented navigation and theme control, grouped inset lists, capsules, HUD catch-up card, notification-style chip, sheet review card). Verified with `pnpm typecheck`, `pnpm build`, and ego-browser screenshots of every view in light and dark: Home, Live (Space tap, HUD, chip, focus trace), Notes, Review (question, the four re-teach forms, diagram, done), Tally, Loss map, Replay, Quiz. Two fixes after review: the HUD now sits over the document column instead of covering the inspector, and the HUD and chip are more opaque so they stay legible over the trace in dark mode.
 
 ## In the browser (ego-browser, built frontend served by the backend)
 
@@ -90,3 +132,20 @@ the allowed origin. The old `reflow` command remains an alias for compatibility.
 - OpenAI structured outputs with a real key and the event's model id (`reflow doctor` reports availability and alternatives).
 - Browser microphone capture in the live view (getUserMedia + AudioWorklet): the server side of that path is verified; the browser side compiled and is exercised only by hand.
 - HackMIT's rule on pre-written code and AI assistance; the Deepgram and OpenAI booth requirements beyond the challenges PDF.
+
+### Pocket Studio and main integration, 19 Sep 2026
+
+The current product name is **NeuroPace**. Historical deployment URLs and CLI aliases
+remain compatible. Main's lecture, quiz, and restudy flow is merged with the Pocket
+Studio dashboard, syllabus, camera capture, and local device bridge.
+
+- Full backend suite: `uv run pytest -q`, **92 passed**.
+- `uv run ruff check reflow tests scripts` passed.
+- `npm --prefix frontend run build` passed, including TypeScript checking.
+- Safari preview used an isolated temporary server on port 8766 with synthetic
+  sessions, simulated EEG, keyboard input, and explicitly enabled offline fixtures.
+  Dashboard concepts, activity, syllabus progress, Library, quiz questions and selection,
+  restudy, and the prominent Start session page were checked visually.
+- This verification did not exercise physical hardware, microphone/camera permissions,
+  external model generation, or production deployment. The existing local data and
+  backend on port 8765 were left untouched.

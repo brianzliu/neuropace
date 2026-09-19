@@ -16,6 +16,7 @@ def test_health_doctor_learners_lectures(app):
         assert c.get("/api/health").json()["ok"] is True
         d = c.get("/api/doctor").json()
         assert d["keys"] == {"deepgram": False, "openai": False} and d["headset"]["kind"] == "simulated"
+        assert d["totem"]["kind"] == "keyboard"
         lr = c.post("/api/learners", json={"name": "Judge"}).json()
         assert lr["id"].startswith("lrn_") and c.get("/api/learners").json()["learners"][0]["id"] == lr["id"]
         lecs = c.get("/api/lectures").json()["lectures"]
@@ -69,10 +70,11 @@ def test_full_flow_over_http_and_ws_realtime(app):
             hello = ws.receive_json()
             assert hello["type"] == "hello" and hello["sim"] == {
                 "headset": True,
-                "totem": True,
+                "totem": False,
                 "transcript": True,
             }
             assert hello["lecture"]["id"] == "lec_demo0001" and hello["config"]["baseline_seconds"] == 5
+            assert hello["totem"]["kind"] == "keyboard" and "Space" in hello["totem"]["hint"]
             f = _read_until(ws, "focus")
             assert f["sim"] is True and f["quality"] == "good"
             time.sleep(6.5)  # baseline (5 s) + a few words
@@ -173,3 +175,49 @@ def test_lossmap_ready_with_two_sessions(app):
         lm = c.get("/api/lectures/lec_demo0001/lossmap").json()
         assert lm["ready"] is True and lm["n"] == 2 and lm["peak"]["t_end"] - lm["peak"]["t_start"] <= 40
         assert lm["segments"] and lm["ranking"]
+
+
+def test_sessions_default_to_the_single_device_learner(app):
+    with TestClient(app) as c:
+        r = c.post(
+            "/api/sessions",
+            json={
+                "lecture_id": "lec_demo0001",
+                "mode": "live",
+                "baseline_seconds": 5,
+                "headset": "sim",
+                "totem": "keyboard",
+            },
+        )
+        assert r.status_code == 200, r.text
+        sess = r.json()
+        assert sess["learner_id"] == "lrn_me"
+        me = c.get("/api/learners/me").json()
+        assert me["id"] == "lrn_me" and me["name"] == "you"
+        assert c.get("/api/learners/me/tally").json()["total_attempts"] == 0
+        # the study can still name a participant, created on first use and reused after
+        r2 = c.post(
+            "/api/sessions",
+            json={
+                "lecture_id": "lec_demo0001",
+                "mode": "live",
+                "baseline_seconds": 5,
+                "headset": "sim",
+                "totem": "keyboard",
+                "learner_name": "P07",
+            },
+        )
+        r3 = c.post(
+            "/api/sessions",
+            json={
+                "lecture_id": "lec_demo0001",
+                "mode": "live",
+                "baseline_seconds": 5,
+                "headset": "sim",
+                "totem": "keyboard",
+                "learner_name": "p07",
+            },
+        )
+        assert r2.json()["learner_id"] == r3.json()["learner_id"] != "lrn_me"
+        for sid in (sess["id"], r2.json()["id"], r3.json()["id"]):
+            c.post(f"/api/sessions/{sid}/end")

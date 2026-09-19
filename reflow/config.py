@@ -8,7 +8,27 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-FORMS: tuple[str, ...] = ("plain", "keyterm", "analogy", "sketch")
+# The four explanation families the preference model learns over (docs/PRODUCT.md §4).
+FORMS: tuple[str, ...] = ("words", "analogy", "visual", "doing")
+FORM_LABELS: dict[str, str] = {
+    "words": "in words",
+    "analogy": "by comparison",
+    "visual": "as a picture",
+    "doing": "by doing",
+}
+# keys used before v2 (tally rows, flags, sessions); mapped on read and by the migration
+LEGACY_FORMS: dict[str, str] = {
+    "plain": "words",
+    "keyterm": "words",
+    "analogy": "analogy",
+    "sketch": "visual",
+}
+
+
+def canonical_form(form: str | None) -> str | None:
+    if form is None:
+        return None
+    return LEGACY_FORMS.get(form, form) if form not in FORMS else form
 
 
 def _env(name: str, default: str | None = None) -> str | None:
@@ -46,6 +66,8 @@ class Settings:
     deepgram_model: str = "nova-3"
     openai_api_key: str | None = None
     openai_model: str = "gpt-5-mini"
+    # The product needs OpenAI. The extractive offline generator is for automated tests only.
+    allow_offline_llm: bool = False
 
     headset_port: str | None = None  # None = auto-detect, "sim" = simulate
     totem_port: str | None = None
@@ -149,6 +171,7 @@ def load_settings(env_file: str | os.PathLike | None = None) -> Settings:
     s.openai_api_key = _env("OPENAI_API_KEY")
     s.openai_model = _env("OPENAI_MODEL", s.openai_model) or s.openai_model
     s.headset_port = _env("REFLOW_HEADSET_PORT")
+    s.allow_offline_llm = (_env("REFLOW_ALLOW_OFFLINE_LLM", "0") or "0").lower() in ("1", "true", "yes")
     s.totem_port = _env("REFLOW_TOTEM_PORT")
     s.baseline_seconds = _env_float("REFLOW_BASELINE_SECONDS", s.baseline_seconds)
     s.drop_enter_z = _env_float("REFLOW_DROP_ENTER_Z", s.drop_enter_z)

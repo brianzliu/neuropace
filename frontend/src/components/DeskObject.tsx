@@ -10,7 +10,7 @@ export default function DeskObject() {
         <div className="desk-note" aria-hidden="true"><span>One moment<br />at a time.</span><i /><i /><i /></div>
         <div className="desk-device">
           <div className="device-face">
-            <span className="device-wordmark" aria-hidden="true">neurospace</span>
+            <span className="device-wordmark" aria-hidden="true">NeuroPace</span>
             <div className="device-leds" aria-hidden="true"><i /><i /><i /></div>
             <button className="physical-button" aria-pressed={pressed} aria-describedby="button-practice" onClick={() => setPressed(!pressed)}>
               <span className="button-symbol" aria-hidden="true">{pressed ? "✓" : "+"}</span>

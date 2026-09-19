@@ -9,7 +9,7 @@
 5. Loss map ready: `/lossmap/:lectureId` shows n ≥ 2 and a ranking. Do not click "reveal" until the beat.
 6. Study number ready: `uv run reflow study-analyze --lecture LEC_ID` output copied onto the slide, with its interval.
 7. Browser: one window, zoom so the transcript is readable at 3 m, mic permission already granted for the site, `/live` open on the demo learner.
-8. Rehearse the script below ten times. Say "simulated" out loud whenever `T`, `L`, `1`/`2`/`3` or a `sim` device is used.
+8. Rehearse the script below ten times. Say "simulated" out loud whenever `L`, `1`/`2`/`3` or a simulated headset is used. Space or `T` is the keyboard pad: a real tap, say "keyboard instead of the pad".
 
 ## Script
 
@@ -28,8 +28,9 @@
 |---|---|
 | No transcript in the live beat | Say "scripted transcript" and start a session on the demo lecture (`lecture = How GPS finds you`); the pad still works |
 | No EEG flag fires in 60 s | Say so. The judge's tap carries the beat. Never press `L` without saying "simulated" |
+| No OpenAI key or the API is down | The app refuses to start a session without a key; mid-lecture the card shows the verbatim transcript (labelled) and failed notes offer a retry. Check `reflow doctor` before the slot |
 | Headset poor signal | Reseat, check the ear clip, wait for the quality chip to go green; otherwise headset `sim` and say "simulated headset" |
-| Totem not detected | Reconnect USB (the app reconnects every 2 s) or press `T` and say "simulated tap" |
+| Totem not detected | Reconnect USB (a running session picks it up within 5 s) or use the keyboard fallback: Space/`T` or the on-screen pad. A key tap is a real tap; say "keyboard instead of the pad" |
 | OpenAI down | Cards carry the `offline` badge; say "offline recap, extractive". The flow is the same |
 | Browser mic blocked | Reload, allow mic, or switch to the scripted lecture |
 

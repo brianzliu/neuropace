@@ -59,7 +59,7 @@ def _seed_session(db, s, lecture, learner, flagged_items, correct_items, policy=
             {
                 "id": f"flag_{sess['id']}_{i}",
                 "session_id": sess["id"],
-                "source": "sim_tap",
+                "source": "key",
                 "t_trigger": q["t_end"] - 1,
                 "t_start": q["t_start"],
                 "t_end": q["t_end"],
@@ -127,4 +127,4 @@ def test_study_analysis_four_numbers_on_synthetic_sessions(tmp_path):
         "mean_diff" in res["catchup"]["benefit_on_missed_span"]
         or "note" in res["catchup"]["benefit_on_missed_span"]
     )
-    assert set(res["rescues_per_form"]["pooled"]) == {"plain", "keyterm", "analogy", "sketch"}
+    assert set(res["rescues_per_form"]["pooled"]) == {"words", "analogy", "visual", "doing"}

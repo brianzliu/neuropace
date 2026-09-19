@@ -1,0 +1,72 @@
+/* Unified Pocket Studio tokens for main's recording, artifact and quiz screens. */
+:root[data-theme="pocket"] {
+  color-scheme: light;
+  --surface: var(--bg-2); --surface-2: var(--bg-3);
+  --separator: var(--line); --line-2: var(--surface-edge);
+  --label: var(--text); --label-2: var(--muted); --label-3: var(--dim);
+  --brand: #796021; --brand-dark: #655019; --on-accent: #493e20;
+  --green: #387a56; --green-dark: #286141; --success: #387a56;
+  --red: #b53c49; --red-dark: #962f3a; --danger: #b53c49;
+  --orange: #976522; --orange-dark: #78501b; --warning: #976522;
+  --purple: #8663a6; --wave: #796021;
+  --font: var(--sans); --fs-large: 34px;
+}
+body { color: var(--text); font-family: var(--sans); }
+h1, .t-large, .t-title1 { font-family: var(--display); font-weight: 400; letter-spacing: -.035em; }
+a { font-weight: 500; }
+.btn { text-transform: none; letter-spacing: 0; font-weight: 500; border-width: 1px; border-bottom-width: 3px; white-space: normal; }
+.btn-primary, .btn-blue { background: #f4d76a; border-color: #e1c355; border-bottom-color: #b9a046; color: #493e20; }
+.btn-primary:hover, .btn-blue:hover { background: #f8e18e; }
+.btn-primary .kbd, .btn-blue .kbd { color: #493e20; background: #ffffff66; border-color: #b9a046; }
+.btn:disabled { cursor: not-allowed; }
+.btn-plain, .linklike { color: var(--accent); }
+.topbar { max-width: 1360px; padding-inline: 4%; margin: 0 auto; }
+.brand { font-family: var(--display); font-weight: 400; font-size: 1.8rem; }
+.main { position: relative; }
+.main > .page { padding: 1.5rem 0; }
+.page.narrow { max-width: 780px; }
+.app-compact .main { max-width: 1440px; }
+.dashboard-toolbar h1 { font-size: clamp(2rem, 3.5vw, 3rem); }
+.dashboard-toolbar .new-session { min-width: 200px; min-height: 62px; font-size: 1.2rem; font-weight: 500; }
+.quick-start { max-width: 480px; margin: 5vh auto; display: flex; flex-direction: column; align-items: stretch; gap: 1.25rem; text-align: center; }
+.quick-start h1 { font-size: 2.6rem; margin: .7rem 0 0; }
+.quick-start > p { margin: 0; color: var(--muted); line-height: 1.6; }
+.quick-start .advanced-link { font-size: .82rem; margin-top: 1rem; }
+.recording-object { width: 160px; height: 110px; margin: 0 auto 1rem; border-radius: 28px; background: linear-gradient(135deg,#fff3b5,#f4d76a); box-shadow: inset 2px 2px 1px #ffffffaa, 0 8px 0 #b9a046, 6px 18px 22px #68603322; transform: rotate(-6deg); display: flex; align-items: center; justify-content: center; gap: 6px; }
+.recording-object span { width: 36px; height: 36px; border-radius: 50%; background: #fffdf6; box-shadow: 0 3px 0 #c6ac4d; margin-right: 12px; }
+.recording-object i { width: 5px; height: 25px; border-radius: 8px; background: #796021; }
+.recording-object i:nth-last-child(2) { height: 42px; }
+.session-activity { margin: 2rem 0; padding: 1.25rem 1.5rem; border: 1px solid var(--line); border-radius: 18px; }
+.session-activity h2 { font-family: var(--display); font-weight: 400; font-size: 1.35rem; }
+.session-activity p { color: var(--muted); font-size: .8rem; }
+.activity-chart { display: flex; gap: 12px; align-items: flex-end; padding-top: 1.2rem; }
+.activity-day { flex: 1; display: flex; flex-direction: column; align-items: center; gap: .35rem; font-size: .73rem; color: var(--muted); }
+.activity-track { height: 80px; width: 100%; max-width: 42px; display: flex; align-items: flex-end; background: var(--bg-3); border-radius: 7px; }
+.activity-bar { width: 100%; background: #efd26c; border-radius: 7px; }
+.activity-count { min-height: 1.4em; font-variant-numeric: tabular-nums; }
+.concept-source { display: inline-block; color: var(--muted); font-size: .77rem; margin-top: .3rem; }
+.review-overview { min-height: 0; padding: 1.2rem 1.5rem; }
+.review-overview .idea-sculpture { width: 105px; height: 120px; transform: scale(.8); transform-origin: right center; }
+.review-overview h2 { margin: 0; }
+.quiz-item, .question-card { background: var(--bg-2); color: var(--text); }
+.lesson-wrap .progress { min-height: 10px; }
+.lesson-wrap .options button { font-weight: 400; }
+.lesson-wrap .card { min-height: auto; }
+.library-body .page { padding-inline: 0; }
+.library-title { font-family: var(--display); font-weight: 400; }
+.library-head .mono { display: none; }
+@media (max-width: 640px) {
+  .quick-start { margin: 2rem auto; }
+  .dashboard-toolbar .new-session { width: 100%; }
+  .session-activity { padding: 1rem; }
+  .activity-chart { gap: 8px; }
+  .main > .page { padding: 1rem 0; }
+  .btn-lg { height: auto; min-height: 56px; padding-block: .7rem; }
+}
+
+.topbar .toptabs { width: auto; max-width: none; margin: 0; }
+input[type="radio"], input[type="checkbox"] { width: 18px; height: 18px; min-height: 0; padding: 0; flex: 0 0 18px; accent-color: #b78b17; }
+.quiz-item .q { padding: 1rem 1.25rem; }
+.quiz-item .group-row { justify-content: flex-start; }
+.quiz-item .group-row .row { flex-wrap: nowrap; }
+.quiz-item label.group-row { flex-direction: row; font-weight: 400; }

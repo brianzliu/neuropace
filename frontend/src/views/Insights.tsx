@@ -92,7 +92,7 @@ export default function Insights({ learnerId: learnerProp, lectureId: lecturePro
     <div className="dashboard">
       <div className="dashboard-toolbar">
         <div>
-          <span className="workspace-label"><span aria-hidden="true">✳</span> Insights</span>
+
           <h1>What lands for you.</h1>
           <p className="muted">Your review preferences are learner-scoped. Lecture overviews pool the room and stay anonymous.</p>
         </div>

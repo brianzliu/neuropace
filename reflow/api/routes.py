@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 from .. import __version__
 from ..config import FORMS
 from ..core import tally as tallymod
+from ..core.gaps import regenerate_packages
 from ..core.lossmap import compute_lossmap
 from ..core.review import ReviewEngine
 from ..core.session import SessionRuntime
@@ -83,7 +84,8 @@ def create_learner(body: LearnerIn, request: Request):
 
 @router.get("/learners/{learner_id}")
 def get_learner(learner_id: str, request: Request):
-    lr = _db(request).get_learner(learner_id)
+    db = _db(request)
+    lr = db.default_learner() if learner_id == "me" else db.get_learner(learner_id)
     if not lr:
         raise HTTPException(404, "unknown learner")
     return lr
@@ -92,10 +94,16 @@ def get_learner(learner_id: str, request: Request):
 @router.get("/learners/{learner_id}/tally")
 def learner_tally(learner_id: str, request: Request):
     db = _db(request)
+    if learner_id == "me":
+        learner_id = db.default_learner()["id"]
     if not db.get_learner(learner_id):
         raise HTTPException(404, "unknown learner")
     return tallymod.summary(
-        db.get_tally(learner_id), db.population_tally(), _s(request), np.random.default_rng()
+        db.get_tally(learner_id),
+        db.population_tally(),
+        _s(request),
+        np.random.default_rng(),
+        focus=db.card_focus_by_form(learner_id),
     )
 
 
@@ -184,6 +192,34 @@ def save_curriculum(learner_id: str, body: CurriculumIn, request: Request):
         raise HTTPException(404, "unknown learner")
     _db(request).set_curriculum(learner_id, body.model_dump())
     return body
+
+
+@router.get("/me/profile")
+def me_profile(request: Request, learner_id: str | None = None):
+    """The device learner's profile: streak, moments, and how they learn best (docs/PRODUCT.md §5)."""
+    db = _db(request)
+    me = db.get_learner(learner_id) if learner_id else db.default_learner()
+    if not me:
+        raise HTTPException(404, "unknown learner")
+    stats = db.profile_stats(me["id"])
+    tally = tallymod.summary(
+        db.get_tally(me["id"]),
+        db.population_tally(),
+        _s(request),
+        np.random.default_rng(),
+        focus=db.card_focus_by_form(me["id"]),
+    )
+    return {"learner": me, "stats": stats, "tally": tally, "calibrated": me.get("baseline_mu") is not None}
+
+
+@router.post("/me/reset")
+def me_reset(request: Request, learner_id: str | None = None):
+    db = _db(request)
+    me = db.get_learner(learner_id) if learner_id else db.default_learner()
+    if not me:
+        raise HTTPException(404, "unknown learner")
+    db.reset_profile(me["id"])
+    return {"ok": True, "learner": db.get_learner(me["id"])}
 
 
 # ---------------------------------------------------------------- lectures
@@ -285,7 +321,8 @@ def lecture_study(lecture_id: str, request: Request):
 
 # ---------------------------------------------------------------- sessions
 class SessionIn(BaseModel):
-    learner_id: str
+    learner_id: str | None = None  # default: this device's single learner ("me")
+    learner_name: str | None = None  # study only: a participant name, created on first use
     lecture_id: str | None = None
     mode: str = "live"
     catchup_policy: str = "always"
@@ -293,7 +330,7 @@ class SessionIn(BaseModel):
     use_stored_baseline: bool = False
     auto_pause: bool = True
     headset: str = "auto"  # auto | sim | fake | replay:<dir> | serial:<port> | <device path>
-    totem: str = "auto"
+    totem: str = "auto"  # auto | keyboard | <serial port>
     transcript: str = "auto"  # auto | scripted | deepgram | recorded
     seed: int | None = None
 
@@ -328,26 +365,41 @@ def list_sessions(request: Request, lecture_id: str | None = None, learner_id: s
 async def create_session(body: SessionIn, request: Request):
     app = request.app
     s, db = _s(request), _db(request)
-    learner = db.get_learner(body.learner_id)
-    if not learner:
-        raise HTTPException(404, "unknown learner")
+    if body.learner_name and body.learner_name.strip():
+        learner = db.learner_by_name(body.learner_name) or db.create_learner(body.learner_name)
+    elif body.learner_id:
+        learner = db.get_learner(body.learner_id)
+        if not learner:
+            raise HTTPException(404, "unknown learner")
+    else:
+        learner = db.default_learner()
     lecture = db.get_lecture(body.lecture_id, full=True) if body.lecture_id else None
     if body.lecture_id and not lecture:
         raise HTTPException(404, "unknown lecture")
-    if body.mode not in ("live", "recorded"):
-        raise HTTPException(400, "mode must be live or recorded")
+    if body.mode not in ("live", "recorded", "review"):
+        raise HTTPException(400, "mode must be live, recorded or review")
+    if not app.state.llm.enabled and not s.allow_offline_llm:
+        raise HTTPException(
+            400,
+            "OPENAI_API_KEY is missing: recaps, gap notes and review cards need it. Add it to .env and restart "
+            "(REFLOW_ALLOW_OFFLINE_LLM=1 is for automated tests only).",
+        )
     if body.catchup_policy not in ("always", "randomized"):
         raise HTTPException(400, "catchup_policy must be always or randomized")
     # transcript kind
     tk = body.transcript
-    if tk == "auto":
+    if body.mode == "review":
+        tk = "none"  # restudy: headset only, so focus can be measured card by card
+    elif tk == "auto":
         if body.mode == "recorded":
             tk = "recorded"
         elif lecture and lecture.get("words"):
             tk = "scripted"
         else:
             tk = "deepgram"
-    if tk in ("scripted", "recorded") and not (lecture and lecture.get("words")):
+    if body.mode == "review":
+        pass
+    elif tk in ("scripted", "recorded") and not (lecture and lecture.get("words")):
         raise HTTPException(400, f"transcript={tk} needs a lecture with words")
     if tk == "deepgram" and not s.deepgram_api_key:
         raise HTTPException(400, "live microphone needs DEEPGRAM_API_KEY; pick a scripted lecture instead")
@@ -372,7 +424,7 @@ async def create_session(body: SessionIn, request: Request):
     hp = await asyncio.to_thread(
         resolve_headset, settings.headset_port if body.headset == "auto" else body.headset
     )
-    tp = "sim" if body.totem == "sim" else settings.totem_port
+    tp = (settings.totem_port or "auto") if body.totem == "auto" else body.totem
     rt = SessionRuntime(
         settings, db, app.state.llm, sess, learner, lecture, tk, headset_port=hp, totem_port=tp
     )
@@ -433,7 +485,7 @@ def session_tap(session_id: str, request: Request):
     rt = request.app.state.runtimes.get(session_id)
     if not rt:
         raise HTTPException(404, "session is not running")
-    return rt._flag_public(rt.tap(source="sim_tap"))
+    return rt._flag_public(rt.tap(source="key"))
 
 
 class SimHeadsetIn(BaseModel):
@@ -499,8 +551,15 @@ def _gap_public(g: dict) -> dict:
         "flag_ids": g.get("flag_ids", []),
         "status": g["status"],
         "note": pkg.get("note"),
+        "summary": (pkg.get("artifacts") or {}).get("summary"),
+        "artifacts_available": sorted(
+            k
+            for k, v in (pkg.get("artifacts") or {}).items()
+            if v and not (isinstance(v, dict) and v.get("applicable") is False)
+        ),
         "question": q,
         "package_source": g.get("package_source"),
+        "error": pkg.get("error"),
         "forms_available": [f for f in FORMS if (pkg.get("forms") or {}).get(f)],
     }
 
@@ -519,6 +578,22 @@ def session_notes(session_id: str, request: Request):
     }
 
 
+@router.post("/sessions/{session_id}/regenerate")
+async def session_regenerate(session_id: str, request: Request, only_failed: int = 1):
+    """Re-run gap note generation (after an OpenAI outage, or with a new key)."""
+    db = _db(request)
+    if not db.get_session(session_id):
+        raise HTTPException(404, "unknown session")
+    if request.app.state.runtimes.get(session_id):
+        raise HTTPException(409, "end the session first")
+    gaps = await regenerate_packages(db, request.app.state.llm, session_id, only_failed=bool(only_failed))
+    request.app.state.reviews.pop(session_id, None)
+    return {
+        "gaps": [_gap_public(g) for g in gaps],
+        "failed": sum(1 for g in gaps if g.get("package_source") == "failed"),
+    }
+
+
 # ---------------------------------------------------------------- review
 def _review(request: Request, session_id: str) -> ReviewEngine:
     app = request.app
@@ -530,6 +605,14 @@ def _review(request: Request, session_id: str) -> ReviewEngine:
             raise HTTPException(404, "unknown session")
         if sess["status"] == "running":
             raise HTTPException(409, "end the session first")
+        missing = [
+            g for g in db.get_gaps(session_id) if not g.get("package") or g.get("package_source") == "failed"
+        ]
+        if missing:
+            raise HTTPException(
+                409,
+                f"{len(missing)} gap(s) have no generated notes yet: retry generation from the notes page",
+            )
         eng = ReviewEngine(db, _s(request), session_id, sess["learner_id"], seed=int(sess.get("seed") or 0))
         app.state.reviews[session_id] = eng
     return eng
@@ -538,10 +621,14 @@ def _review(request: Request, session_id: str) -> ReviewEngine:
 class AnswerIn(BaseModel):
     card_id: str
     choice: int
+    focus_ratio: float | None = (
+        None  # fraction of the card's seconds not in a drop (headset on), client-measured
+    )
 
 
 class CardIn(BaseModel):
     card_id: str
+    focus_ratio: float | None = None
 
 
 @router.post("/sessions/{session_id}/review/start")
@@ -562,7 +649,7 @@ def review_state(session_id: str, request: Request):
 def review_answer(session_id: str, body: AnswerIn, request: Request):
     eng = _review(request, session_id)
     try:
-        out = eng.answer(body.card_id, body.choice)
+        out = eng.answer(body.card_id, body.choice, body.focus_ratio)
     except ValueError as e:
         raise HTTPException(400, str(e)) from e
     if out["done"]:
@@ -574,7 +661,7 @@ def review_answer(session_id: str, body: AnswerIn, request: Request):
 def review_drop(session_id: str, body: CardIn, request: Request):
     eng = _review(request, session_id)
     try:
-        out = eng.drop(body.card_id)
+        out = eng.drop(body.card_id, body.focus_ratio)
     except ValueError as e:
         raise HTTPException(400, str(e)) from e
     if out["done"]:
@@ -586,7 +673,7 @@ def review_drop(session_id: str, body: CardIn, request: Request):
 def review_advance(session_id: str, body: CardIn, request: Request):
     eng = _review(request, session_id)
     try:
-        return eng.advance(body.card_id)
+        return eng.advance(body.card_id, body.focus_ratio)
     except ValueError as e:
         raise HTTPException(400, str(e)) from e
 

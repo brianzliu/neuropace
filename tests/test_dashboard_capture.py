@@ -174,3 +174,21 @@ def test_relay_fragmentation_deduplication_quality_and_disconnect():
     assert not hub._buffer
     hub.connected = False
     assert not hub.headset.connected
+
+
+def test_profile_and_reset_follow_selected_learner(app, db):
+    first = db.default_learner()
+    selected = db.create_learner("Synthetic selected learner")
+    db.set_learner_baseline(first["id"], 1.0, 2.0)
+    db.set_learner_baseline(selected["id"], 3.0, 4.0)
+    make_session(db, selected["id"])
+    with TestClient(app) as client:
+        profile = client.get("/api/me/profile", params={"learner_id": selected["id"]}).json()
+        assert profile["learner"]["id"] == selected["id"]
+        assert profile["stats"]["streak_days"] == 1
+        assert client.get("/api/me/profile").json()["learner"]["id"] == first["id"]
+        assert client.get("/api/me/profile?learner_id=missing").status_code == 404
+        assert client.post("/api/me/reset?learner_id=missing").status_code == 404
+        assert client.post("/api/me/reset", params={"learner_id": selected["id"]}).status_code == 200
+        assert db.get_learner(selected["id"])["baseline_mu"] is None
+        assert db.get_learner(first["id"])["baseline_mu"] == 1.0

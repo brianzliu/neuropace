@@ -69,7 +69,7 @@ async def test_live_session_tap_catchup_eeg_flag_notes_and_log(settings, db, llm
         words,
         110,
         {
-            35: lambda: rt.tap("sim_tap"),
+            35: lambda: rt.tap("key"),
             50: lambda: rt.set_sim_headset("drifting"),
             95: lambda: rt.set_sim_headset("focused"),
         },
@@ -91,8 +91,8 @@ async def test_live_session_tap_catchup_eeg_flag_notes_and_log(settings, db, llm
     assert pulses, "totem pulses on an EEG flag"
     flags = list(rt.flags.values())
     assert (
-        flags[0]["source"] == "sim_tap"
-        and flags[0]["simulated"] is True
+        flags[0]["source"] == "key"
+        and flags[0]["simulated"] is False
         and flags[0]["t_start"] <= 35 - 8 + 0.25
     )
     eeg = [f for f in flags if f["source"] == "eeg"]
@@ -102,7 +102,10 @@ async def test_live_session_tap_catchup_eeg_flag_notes_and_log(settings, db, llm
     assert gaps and all(
         g["package"]["question"]["options"] and len(g["package"]["question"]["options"]) == 4 for g in gaps
     )
-    assert all(g["package"]["forms"]["sketch"]["diagram"]["nodes"] for g in gaps)
+    assert all(
+        g["package"]["artifacts"]["diagram"]["nodes"] and g["package"]["artifacts"]["example"]["lines"]
+        for g in gaps
+    )
     sess = db.get_session(rt.id)
     assert sess["status"] == "ended" and sess["baseline"]["ready"] and sess["headset_kind"] == "simulated"
     assert db.get_learner(lrn["id"])["baseline_mu"] is not None
@@ -119,7 +122,7 @@ async def test_randomized_policy_logs_coin_and_withholds(settings, db, llm):
     await rt.start()
     q = rt.subscribe()
     words = [Word(**w) for w in lec["words"]]
-    taps = {t: (lambda: rt.tap("sim_tap")) for t in (20, 30, 40, 50, 60, 70, 80, 90)}
+    taps = {t: (lambda: rt.tap("key")) for t in (20, 30, 40, 50, 60, 70, 80, 90)}
     await _drive(rt, words, 95, taps)
     msgs = _drain(q)
     shown = [f for f in rt.flags.values() if f["catchup_shown"]]
@@ -194,7 +197,7 @@ async def test_tap_during_an_eeg_flag_inherits_the_drop_start(settings, db, llm)
     for _ in range(12):
         t += 1
         await _drive_one(rt, words, t)
-    tap = rt.tap("sim_tap")
+    tap = rt.tap("key")
     assert tap["linked_eeg"] == eeg["id"]
     assert tap["t_start"] == max(eeg["t_start"], t - settings.tap_link_max_back)
     assert tap["t_start"] < t - 8.5, "the linked tap reaches further back than the plain 8 s lead-in"
@@ -210,7 +213,7 @@ async def test_tap_during_an_eeg_flag_inherits_the_drop_start(settings, db, llm)
     for _ in range(int(settings.tap_link_eeg_seconds) + 2):
         t += 1
         await _drive_one(rt, words, t)
-    tap2 = rt.tap("sim_tap")
+    tap2 = rt.tap("key")
     assert tap2["linked_eeg"] is None and tap2["t_start"] >= t - 20.5
     await rt.end()
 

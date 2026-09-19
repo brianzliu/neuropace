@@ -18,18 +18,35 @@ def cmd_serve(args: argparse.Namespace) -> int:
     s = load_settings()
     host = args.host or s.host
     port = args.port or s.port
-    print(f"Neurospace on http://{host}:{port}  (data: {s.data_dir.resolve()})")
+    print(f"NeuroPace on http://{host}:{port}  (data: {s.data_dir.resolve()})")
     if args.reload:
         uvicorn.run(
             "reflow.api.app:create_app", factory=True, host=host, port=port, reload=True, log_level="info"
         )
     else:
         from .api.app import create_app
+        from .keys import start_key_listener
 
         app = create_app(s)
         print(f"Hosted UI pairing code: {app.state.pairing_token}", flush=True)
         print(f"Allowed websites: {', '.join(s.ui_origins)}", flush=True)
-        uvicorn.run(app, host=host, port=port, log_level="info", access_log=False)
+
+        def _on_loop(fn):
+            loop = getattr(app.state, "loop", None)
+            if loop is not None:
+                loop.call_soon_threadsafe(fn)
+
+        stop = start_key_listener(lambda: _on_loop(app.state.tap_all), lambda: _on_loop(app.state.force_all))
+        if stop is not None:
+            print(
+                "terminal keys: SPACE or T = lost me (keyboard totem), L = force an EEG-style flag (simulated)"
+            )
+        try:
+            uvicorn.run(app, host=host, port=port, log_level="info", access_log=False)
+        finally:
+            if stop is not None:
+                stop.set()
+
     return 0
 
 
@@ -50,15 +67,16 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     print(
         "deepgram    :", "ok" if res["deepgram"].get("ok") else res["deepgram"].get("reason", res["deepgram"])
     )
+    oa = res["openai"]
     print(
         "openai model:",
-        res["openai"].get("model"),
-        "ok" if res["openai"].get("ok") else res["openai"].get("reason", ""),
+        oa.get("model"),
+        "ok" if oa.get("ok") else ("REQUIRED, " if oa.get("required") else "") + str(oa.get("reason", "")),
     )
     if res["openai"].get("alternatives"):
         print("   available:", ", ".join(res["openai"]["alternatives"]))
     print("headset     :", res["headset"]["kind"], res["headset"]["port"] or "(none found -> simulated)")
-    print("totem       :", res["totem"]["kind"], res["totem"]["port"] or "(none found -> simulated)")
+    print("totem       :", res["totem"]["kind"], res["totem"]["port"] or "(none found -> keyboard fallback)")
     print("frontend    :", "built" if ok else "NOT built: cd frontend && pnpm install && pnpm build")
     return 0
 
@@ -208,7 +226,7 @@ def cmd_kaggle(args: argparse.Namespace) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
-        prog="neurospace", description="Neurospace: catch-ups, gap notes and adaptive review for lectures."
+        prog="neuropace", description="NeuroPace: catch-ups, gap notes and adaptive review for lectures."
     )
     sub = p.add_subparsers(dest="cmd", required=True)
     sp = sub.add_parser("serve", help="start the API and the built frontend")

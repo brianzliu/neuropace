@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { FORM_LABEL, FORMS, type Form } from "../lib/types";
-import { mmss } from "../lib/format";
 import type { VisibleCatchup } from "../lib/sessionState";
-import { SourceBadge } from "./Badges";
+import { Badge, SourceBadge } from "./Badges";
+import { mmss } from "../lib/format";
 
 interface Props {
   card: VisibleCatchup | null;
@@ -36,27 +36,29 @@ export default function CatchupOverlay({ card, onExpire, onDismiss, cycleToken, 
   if (!card) return null;
   const f = form ?? card.form;
   const line = card.forms[f] ?? card.line;
+  const since = card.since !== undefined && (card.linked_eeg || (card.span_seconds ?? 0) >= 15) ? ` since ${mmss(card.since)}` : "";
   return (
-    <div className={"catchup" + (freeze ? "" : " fading")} style={{ ["--ttl" as string]: `${card.ttl_s}s` }} onClick={onDismiss}>
-      <div>
-        <span className="lbl">
-          You missed{card.since !== undefined && (card.linked_eeg || (card.span_seconds ?? 0) >= 15) ? ` since ${mmss(card.since)}` : ""}
-        </span>
+    <div className={"hud" + (freeze ? "" : " fading")} style={{ ["--ttl" as string]: `${card.ttl_s}s` }} onClick={onDismiss} role="status">
+      <div className="line">
+        <span className="lbl">You missed{since}</span>
         {line}
         {card.now_text ? (
           <>
             <span className="sep">·</span>
             <span className="lbl">Now</span>
-            <span className="muted">{card.now_text}</span>
+            <span className="now">{card.now_text}</span>
           </>
         ) : null}
       </div>
       <div className="meta">
-        <span>form: {FORM_LABEL[f]}{f !== card.form ? " (F to cycle)" : " (best for this learner)"}</span>
+        <span>
+          {FORM_LABEL[f]}
+          {f !== card.form ? " · press F to cycle" : " · best for this learner"}
+        </span>
         <SourceBadge source={card.source} />
-        {card.reason === "video_pause" ? <span className="badge accent">video paused</span> : null}
-        {card.reason === "eeg" ? <span className="badge">eeg flag</span> : null}
-        {card.linked_eeg ? <span className="badge">tap confirms an eeg flag · {Math.round(card.span_seconds ?? 0)} s</span> : null}
+        {card.reason === "video_pause" ? <Badge tone="accent">video paused</Badge> : null}
+        {card.reason === "eeg" ? <Badge>eeg flag</Badge> : null}
+        {card.linked_eeg ? <Badge tone="accent">tap confirms an eeg flag · {Math.round(card.span_seconds ?? 0)} s</Badge> : null}
       </div>
     </div>
   );

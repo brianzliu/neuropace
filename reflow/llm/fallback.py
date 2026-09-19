@@ -12,17 +12,19 @@ from collections import Counter
 import numpy as np
 
 from .schemas import (
+    Artifacts,
+    Chart,
     CheckQuestion,
-    FullForms,
     GapNote,
     GapPackage,
-    KeyTermForm,
+    KeyIdea,
     RecapForms,
     SceneEdge,
     SceneGraph,
     SceneNode,
     SceneStep,
-    SketchForm,
+    Steps,
+    WorkedExample,
 )
 
 STOP = set(
@@ -72,7 +74,9 @@ def recap_forms(window_text: str, corpus_text: str) -> RecapForms:
     plain = tail(window_text, 22)
     term = rare_terms(window_text, corpus_text, 1)[0]
     kt = f"{term}: {tail(sentence_with(term, window_text), 16)}"
-    return RecapForms(plain=plain, keyterm=kt, analogy="(offline) " + plain, sketch="(offline) " + plain)
+    return RecapForms(
+        words=kt, analogy="(offline) " + plain, visual="(offline) " + plain, doing="(offline) " + plain
+    )
 
 
 def _phrases(text: str, length: int, rng: np.random.Generator, n: int, avoid: set[str]) -> list[str]:
@@ -139,10 +143,21 @@ def gap_package(span_text: str, context_text: str, corpus_text: str, seed: int =
         cap = sents[i] if i < len(sents) else f"{n.label} is part of this idea."
         steps.append(SceneStep(highlight=[m.id for m in nodes[: i + 1]], caption=" ".join(cap.split()[:20])))
     diagram = SceneGraph(title=f"(offline) {term}", nodes=nodes, edges=edges, steps=steps)
-    forms = FullForms(
-        plain=tail(span_text, 80),
-        keyterm=KeyTermForm(term=term, definition=definition, example=tail(span_text, 30)),
+    artifacts = Artifacts(
+        summary=tail(span_text, 60),
+        key_idea=KeyIdea(term=term, definition=definition, example=tail(span_text, 30)),
         analogy="(offline) " + tail(span_text, 60),
-        sketch=SketchForm(line="(offline) " + " -> ".join(n.label for n in nodes), diagram=diagram),
+        diagram=diagram,
+        chart=Chart(applicable=False, kind="bar", title="", unit="", points=[], takeaway=""),
+        steps=Steps(
+            applicable=len(sents) >= 2,
+            title=f"(offline) {term}",
+            steps=[" ".join(s.split()[:15]) for s in sents[:6]],
+        ),
+        example=WorkedExample(
+            title=f"(offline) {term}",
+            lines=[" ".join(s.split()[:15]) for s in sents[:4]] or [tail(span_text, 15)],
+            result=tail(span_text, 12),
+        ),
     )
-    return GapPackage(note=note, question=question, forms=forms)
+    return GapPackage(note=note, question=question, artifacts=artifacts)

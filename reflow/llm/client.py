@@ -20,6 +20,10 @@ log = logging.getLogger(__name__)
 T = TypeVar("T", bound=BaseModel)
 
 
+class LLMUnavailable(RuntimeError):
+    """No key, or the API kept failing, and offline placeholders are not allowed (the default)."""
+
+
 def _is_reasoning_model(model: str) -> bool:
     m = model.lower()
     return m.startswith("gpt-5") or m.startswith("o1") or m.startswith("o3") or m.startswith("o4")
@@ -36,8 +40,25 @@ class LLMClient:
             from openai import AsyncOpenAI
 
             self._client = AsyncOpenAI(api_key=settings.openai_api_key)
-        self.stats = {"calls": 0, "cache_hits": 0, "fallbacks": 0, "errors": 0, "timeouts": 0}
+        self.stats = {
+            "calls": 0,
+            "cache_hits": 0,
+            "fallbacks": 0,
+            "errors": 0,
+            "timeouts": 0,
+            "unavailable": 0,
+        }
         self._use_reasoning = _is_reasoning_model(self.model)
+        self.last_error: str | None = None
+
+    @property
+    def offline_allowed(self) -> bool:
+        return bool(self.s.allow_offline_llm)
+
+    def _unavailable(self, task: str) -> LLMUnavailable:
+        self.stats["unavailable"] += 1
+        reason = "no OPENAI_API_KEY" if not self.enabled else (self.last_error or "OpenAI call failed")
+        return LLMUnavailable(f"{task}: {reason}")
 
     # ---- public tasks ----
     async def recap(
@@ -48,6 +69,8 @@ class LLMClient:
             "recap", RECAP_INSTRUCTIONS, payload, RecapForms, self.s.recap_timeout_seconds, 400
         )
         if obj is None:
+            if not self.offline_allowed:
+                raise self._unavailable("recap")
             self.stats["fallbacks"] += 1
             return fallback.recap_forms(window_text, corpus_text), "offline"
         return obj, source
@@ -61,10 +84,20 @@ class LLMClient:
         seed: int = 0,
     ) -> tuple[GapPackage, str]:
         payload = {"missed_span": span_text, "context_before_span": context_text, "key_terms": keyterms or []}
-        obj, source = await self._structured(
-            "package", PACKAGE_INSTRUCTIONS, payload, GapPackage, self.s.package_timeout_seconds, 2500
-        )
+        obj: GapPackage | None = None
+        source = "offline"
+        attempts = 3 if self.enabled else 1
+        for attempt in range(attempts):
+            if attempt:
+                await asyncio.sleep(2.0 * attempt)
+            obj, source = await self._structured(
+                "package", PACKAGE_INSTRUCTIONS, payload, GapPackage, self.s.package_timeout_seconds, 2500
+            )
+            if obj is not None:
+                break
         if obj is None:
+            if not self.offline_allowed:
+                raise self._unavailable("gap package")
             self.stats["fallbacks"] += 1
             return fallback.gap_package(span_text, context_text, corpus_text, seed=seed), "offline"
         return obj, source
@@ -138,10 +171,12 @@ class LLMClient:
             )
         except TimeoutError:
             self.stats["timeouts"] += 1
+            self.last_error = f"timed out after {timeout:.0f}s"
             log.warning("llm %s timed out after %.0fs", task, timeout)
             return None, "offline"
         except Exception as e:  # noqa: BLE001
             self.stats["errors"] += 1
+            self.last_error = str(e)[:300]
             log.warning("llm %s failed: %s", task, e)
             return None, "offline"
         if obj is None:

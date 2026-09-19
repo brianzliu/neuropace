@@ -18,10 +18,12 @@ class Strict(BaseModel):
 
 
 class RecapForms(Strict):
-    plain: str
-    keyterm: str
+    """One glance line per family: the live catch-up shows the learner's best one."""
+
+    words: str
     analogy: str
-    sketch: str
+    visual: str
+    doing: str
 
     @model_validator(mode="after")
     def _nonempty(self) -> RecapForms:
@@ -74,22 +76,75 @@ class SceneGraph(Strict):
         return self
 
 
-class KeyTermForm(Strict):
+class KeyIdea(Strict):
     term: str
     definition: str
     example: str
 
 
-class SketchForm(Strict):
-    line: str
-    diagram: SceneGraph
+class ChartPoint(Strict):
+    label: str
+    value: float
 
 
-class FullForms(Strict):
-    plain: str
-    keyterm: KeyTermForm
+class Chart(Strict):
+    """Only numbers the lecturer actually said. applicable=false when the moment has no quantities."""
+
+    applicable: bool
+    kind: str  # bar | line
+    title: str
+    unit: str
+    points: list[ChartPoint]
+    takeaway: str
+
+    @model_validator(mode="after")
+    def _shape(self) -> Chart:
+        self.kind = "line" if self.kind.strip().lower() == "line" else "bar"
+        if self.applicable and not (2 <= len(self.points) <= 8):
+            self.applicable = False
+        return self
+
+
+class Steps(Strict):
+    """The idea as an ordered procedure; applicable when the moment describes a process or method."""
+
+    applicable: bool
+    title: str
+    steps: list[str]
+
+    @model_validator(mode="after")
+    def _shape(self) -> Steps:
+        self.steps = [x.strip() for x in self.steps if x.strip()][:8]
+        if len(self.steps) < 2:
+            self.applicable = False
+        return self
+
+
+class WorkedExample(Strict):
+    """A concrete instance carried through to its result, one line per beat. Always produced."""
+
+    title: str
+    lines: list[str]
+    result: str
+
+    @model_validator(mode="after")
+    def _shape(self) -> WorkedExample:
+        self.lines = [x.strip() for x in self.lines if x.strip()][:8]
+        if not self.lines:
+            raise ValueError("example needs lines")
+        return self
+
+
+class Artifacts(Strict):
+    """Every way of explaining one moment, produced together so restudy never waits (docs/PRODUCT.md §4)."""
+
+    summary: str
+    key_idea: KeyIdea
     analogy: str
-    sketch: SketchForm
+    diagram: SceneGraph
+    chart: Chart
+    steps: Steps
+    example: WorkedExample
 
 
 class CheckQuestion(Strict):
@@ -119,7 +174,33 @@ class GapNote(Strict):
 class GapPackage(Strict):
     note: GapNote
     question: CheckQuestion
-    forms: FullForms
+    artifacts: Artifacts
+
+
+FAMILY_ARTIFACTS: dict[str, tuple[str, ...]] = {
+    "words": ("summary", "key_idea"),
+    "analogy": ("analogy",),
+    "visual": ("chart", "diagram"),
+    "doing": ("steps", "example"),
+}
+
+
+def pick_artifact(artifacts: dict, family: str) -> tuple[str, dict | str]:
+    """The artifact a family shows for this moment: content decides inside the family (chart only with numbers,
+    steps only for a process). Returns (kind, content)."""
+    if family == "words":
+        return "words", {"summary": artifacts.get("summary", ""), "key_idea": artifacts.get("key_idea", {})}
+    if family == "analogy":
+        return "analogy", artifacts.get("analogy", "")
+    if family == "visual":
+        chart = artifacts.get("chart") or {}
+        if chart.get("applicable"):
+            return "chart", chart
+        return "diagram", artifacts.get("diagram", {})
+    steps = artifacts.get("steps") or {}
+    if steps.get("applicable"):
+        return "steps", steps
+    return "example", artifacts.get("example", {})
 
 
 def strict_schema(model: type[BaseModel]) -> dict[str, Any]:

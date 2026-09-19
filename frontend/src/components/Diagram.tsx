@@ -85,7 +85,7 @@ export default function Diagram({ graph, step }: Props) {
     <svg className="diagram" viewBox={`0 0 ${W} ${height}`} role="img" aria-label={graph.title}>
       <defs>
         <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#8b95a7" />
+          <path d="M 0 0 L 10 5 L 0 10 z" style={{ fill: "var(--label-3)" }} />
         </marker>
       </defs>
       <text className="title" x={12} y={18}>

@@ -96,9 +96,11 @@ Session end → `GapBuilder` merges flags into gaps → one LLM call per gap (pa
 | Missing | Replacement | Label shown |
 |---|---|---|
 | Headset | `SimulatedHeadset` (state set from UI: focused / drifting / poor) | "SIMULATED HEADSET" |
-| Totem | `SimulatedTotem` (taps from `T` key / button) | "SIMULATED TOTEM"; taps carry `source: "sim_tap"` |
+| Totem | `KeyboardTotem` (Space/T in the browser or terminal, on-screen pad) | "keyboard fallback"; taps carry `source: "key"` and are real learner actions |
 | Deepgram key or connection | `ScriptedTranscript` (word-timed script replayed in real time) or, in recorded mode, a cached transcript | "SCRIPTED TRANSCRIPT" |
-| OpenAI key or a failed call | `fallback.py` extractive recap / note / question | `source: "offline"` badge |
+| OpenAI key missing | session creation refused (400) unless `allow_offline_llm` (tests only) | doctor row "required" |
+| OpenAI call fails mid-lecture | recap skipped, catch-up shows the verbatim transcript of the span | `source: "transcript"` capsule |
+| OpenAI fails at session end | gap package retried 3 times, then stored as `package_source: "failed"` with the error; `POST /sessions/{id}/regenerate` retries; review refuses (409) until notes exist | notes page shows the error and a retry button |
 | Frontend build | `reflow serve` prints the `pnpm build` command and still serves the API | n/a |
 
 ## 3. Signal engine (FR-L5, FR-L6, FR-L7)
@@ -169,7 +171,9 @@ Serial line protocol, 115200 baud, `\n` terminated ASCII.
 | laptop → totem | `PULSE` | Sweep row 7 for 2 s (the "catch-up ready" pulse) |
 | laptop → totem | `CLEAR` | Clear matrix |
 
-Port: `REFLOW_TOTEM_PORT`, else the first port whose name contains `usbmodem` and is not the headset. `sim` forces the simulator. Auto-reconnect every 2 s. Firmware falls back to a pushbutton on D2 (INPUT_PULLUP) when `USE_CAPTOUCH` is 0.
+Port: `REFLOW_TOTEM_PORT`, else an Arduino found by USB vendor id or name that is not the headset. Auto-reconnect every 2 s. Firmware falls back to a pushbutton on D2 (INPUT_PULLUP) when `USE_CAPTOUCH` is 0.
+
+**Keyboard fallback (no Arduino).** `KeyboardTotem` (kind `keyboard`) replaces the pad: Space or T in the browser, the on-screen pad button, or Space/T in the terminal running `reflow serve` (`reflow/keys.py`, msvcrt on Windows, termios elsewhere) all produce a tap with `source: "key"`, `simulated: false`. A key tap is a learner action, so it is not labelled simulated; only `L` (forced EEG-style flag) is. Session option `totem`: `auto` (Arduino if present, else keyboard), `keyboard`, or a port. On `auto`, a running session probes for an Arduino every 5 s and switches to it when one appears (hot-plug).
 
 ## 5. Transcription (FR-L2, FR-L3)
 
@@ -217,7 +221,7 @@ GapPackage      {note: GapNote, question: CheckQuestion, forms: FullForms}
 ```
 
 - Grounding rule in every prompt: use only the given transcript text; quote it; never introduce facts that are not in it; if the span is too thin, say so inside the field rather than inventing.
-- Fallback (`fallback.py`): plain = last ~22 words of the span; keyterm = the rarest non-stopword token ≥ 6 letters (by frequency in the whole transcript) with the sentence it appears in; analogy and sketch = the plain line prefixed `(offline)`; question = "Which phrase was said in this part of the lecture?" with three distractor phrases from elsewhere in the transcript; diagram = nodes from the top 4 terms in a chain.
+- Fallback (`fallback.py`, automated tests only, `allow_offline_llm`): plain = last ~22 words of the span; keyterm = the rarest non-stopword token ≥ 6 letters (by frequency in the whole transcript) with the sentence it appears in; analogy and sketch = the plain line prefixed `(offline)`; question = "Which phrase was said in this part of the lecture?" with three distractor phrases from elsewhere in the transcript; diagram = nodes from the top 4 terms in a chain.
 
 ## 8. Core state
 
@@ -231,7 +235,7 @@ sessions(id PK, learner_id FK, lecture_id FK NULL, mode ('live'|'recorded'), cat
          started_at, ended_at, baseline_json, seed)
 focus_samples(session_id, t, e, x, z, w15, quality, state, artifact, blink, paused)    index (session_id, t)
 words(session_id, idx, w, start, end)                                                index (session_id, start)
-flags(id PK, session_id, source ('tap'|'sim_tap'|'eeg'|'forced'), t_trigger, t_start, t_end,
+flags(id PK, session_id, source ('tap'|'key'|'eeg'|'forced'), t_trigger, t_start, t_end,
       catchup_shown, catchup_form, opened, created_at)
 recaps(session_id, t_from, t_to, forms_json, source)
 gaps(id PK, session_id, ord, t_start, t_end, span_text, context_text, flag_ids_json, package_json, package_source,
@@ -301,7 +305,7 @@ Requires ≥ 2 sessions; otherwise returns `{n, ready: false}`.
 |---|---|
 | `GET /health` | `{ok, version}` |
 | `GET /doctor` | `{keys:{deepgram, openai}, openai_model:{name, available, alternatives}, headset:{port, kind}, totem:{port, kind}, frontend_built}` |
-| `GET/POST /learners` | `{name}` → learner |
+| `GET/POST /learners` | `{name}` → learner. One device has one learner, `lrn_me` ("you"), created on demand; `me` is accepted wherever a learner id is; sessions without `learner_id` use it, and the study can pass `learner_name` to keep a participant's tally separate |
 | `GET /learners/{id}/tally` | `{forms:{form:{rescues, attempts, rate, posterior_mean}}, pick, enough_data, total_attempts}` |
 | `GET/POST /lectures` | `POST` multipart `{title, file?, script?, segments?, quiz?, keyterms?}` → lecture (media is transcribed via Deepgram prerecorded when a key exists) |
 | `GET /lectures/{id}` | lecture without transcript words; `?full=1` includes them |
@@ -309,7 +313,8 @@ Requires ≥ 2 sessions; otherwise returns `{n, ready: false}`.
 | `POST /sessions` | `{learner_id, lecture_id?, mode, catchup_policy?, baseline_seconds?, use_stored_baseline?, auto_pause?}` → session |
 | `GET /sessions/{id}` | session + counts + best_form + flags + gaps summary |
 | `GET /sessions/{id}/events` | the JSONL as a JSON array (replay) |
-| `POST /sessions/{id}/end` | ends the runtime, builds gaps and packages → `{gaps:[…]}` |
+| `POST /sessions/{id}/end` | ends the runtime, builds gaps and packages → `{gaps:[…]}` (a gap whose generation failed carries `package_source: "failed"` and `error`) |
+| `POST /sessions/{id}/regenerate?only_failed=1` | re-runs gap generation → `{gaps, failed}` |
 | `GET /sessions/{id}/notes` | `{gaps:[{id, t_start, t_end, span_text, note, question(without correct_index)}]}` |
 | `POST /sessions/{id}/review/start` | → `{card, progress}` |
 | `POST /sessions/{id}/review/answer` | `{card_id, choice}` → `{outcome, correct_index, explanation, next: card or null, done, streak, tally}` |
@@ -345,7 +350,7 @@ Client → server:
 
 | type | payload |
 |---|---|
-| `tap` | `{}` (server stamps `source: "sim_tap"`; a real totem tap never comes from the client) |
+| `tap` | `{}` (server stamps `source: "key"`; a pad tap comes from the Arduino bridge with `source: "tap"`) |
 | `force_flag` | `{}` (opens an EEG-style flag with `source: "forced"`, labelled simulated) |
 | `sim_headset` | `{state: "focused"|"drifting"|"poor"}` |
 | `media_time` | `{t, playing}` |

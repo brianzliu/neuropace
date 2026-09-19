@@ -25,9 +25,9 @@ ROOT = Path(__file__).resolve().parents[2]
 FRONTEND_DIST = ROOT / "frontend" / "dist"
 DEMO_SCRIPT = ROOT / "data" / "lectures" / "demo" / "script.json"
 
-NO_BUILD_HTML = """<!doctype html><meta charset=utf-8><title>Neurospace</title>
+NO_BUILD_HTML = """<!doctype html><meta charset=utf-8><title>NeuroPace</title>
 <body style="font-family:system-ui;padding:2rem;background:#0f1115;color:#e6e6e6">
-<h1>Neurospace API is running</h1><p>The frontend is not built yet. Run:</p>
+<h1>NeuroPace API is running</h1><p>The frontend is not built yet. Run:</p>
 <pre>cd frontend && pnpm install && pnpm build</pre><p>then reload. API docs: <a href="/docs" style="color:#8ab4f8">/docs</a></p></body>"""
 
 
@@ -59,15 +59,23 @@ def create_app(
     db = db or DB(s.db_path)
     llm = llm or LLMClient(s, db)
     ensure_demo_lecture(db)
+    from ..core.gaps import recover_orphaned_sessions
+
+    orphans = recover_orphaned_sessions(db, s)
+    if orphans:
+        log.info("closed %d session(s) left running by a previous process", len(orphans))
 
     @contextlib.asynccontextmanager
     async def lifespan(app: FastAPI):
+        import asyncio
+
+        app.state.loop = asyncio.get_running_loop()
         yield
         for rt in list(app.state.runtimes.values()):
             with contextlib.suppress(Exception):
                 await rt.abort()
 
-    app = FastAPI(title="Neurospace", version=__version__, lifespan=lifespan)
+    app = FastAPI(title="NeuroPace", version=__version__, lifespan=lifespan)
     app.state.pairing_token = secrets.token_urlsafe(24)
     app.add_middleware(LocalBridgeGuard, origins=s.ui_origins, token=app.state.pairing_token)
     app.add_middleware(
@@ -82,6 +90,22 @@ def create_app(
     app.state.llm = llm
     app.state.runtimes = {}
     app.state.reviews = {}
+    app.state.loop = None
+
+    def _each_running(fn):
+        for rt in list(app.state.runtimes.values()):
+            if rt.status == "running":
+                fn(rt)
+
+    def tap_all() -> None:
+        """Keyboard totem from the terminal: a "lost me" on every running session."""
+        _each_running(lambda rt: rt.tap(source="key"))
+
+    def force_all() -> None:
+        _each_running(lambda rt: rt.force_flag())
+
+    app.state.tap_all = tap_all
+    app.state.force_all = force_all
     app.include_router(routes.router, prefix="/api")
     app.include_router(ws.router)
 

@@ -92,7 +92,6 @@ export default function CurriculumSection({ curriculum, learnerId, onSave }: Cur
     <section className="curriculum-section" aria-label="Curriculum">
       <div className="dashboard-section-heading">
         <div>
-          <span className="section-kicker">The bigger picture</span>
           <h2>{curriculum?.title ?? "Your curriculum"}</h2>
         </div>
         <button className="ghost" disabled={!curriculum} onClick={startEditing}>

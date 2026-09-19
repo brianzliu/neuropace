@@ -1,20 +1,36 @@
 import LiveCapture, { type CaptureStatus } from "../components/LiveCapture";
 import type { BoardExplanation } from "../lib/types";
+import { backendFetch } from "../lib/backend";
+import { ConnectionPills, type ConnectionPill } from "../components/StudioChrome";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../lib/api";
-import { backendFetch } from "../lib/backend";
 import { SessionSocket, type SocketStatus } from "../lib/ws";
 import { startMicStream, type MicStream } from "../lib/audio";
 import { clearCatchup, dismissChip, initialState, openChip, reduce, type SessionState } from "../lib/sessionState";
-import { useSimBadge } from "../lib/useSimBadge";
-import { SimFlash } from "../components/Badges";
+import { flash } from "../lib/flash";
+import { Badge } from "../components/Badges";
 import LiveStage from "../components/LiveStage";
 import SessionPlayer from "../components/SessionPlayer";
-import { ConnectionPills, StudioBackLink, StudioSteps, type ConnectionPill } from "../components/StudioChrome";
 import { mmss } from "../lib/format";
 
 const BOARD_EXPLANATION_TIMEOUT_MS = 12000;
+
+type SimState = "focused" | "drifting" | "poor";
+type CalPhase = "eyes_closed" | "easy" | "hard" | "done" | "reset";
+const CAL: { k: CalPhase; label: string }[] = [
+  { k: "eyes_closed", label: "eyes closed" },
+  { k: "easy", label: "easy" },
+  { k: "hard", label: "hard" },
+  { k: "done", label: "done" },
+  { k: "reset", label: "reset" },
+];
+
+function inField(ev: KeyboardEvent): boolean {
+  const el = ev.target as HTMLElement | null;
+  const tag = el?.tagName;
+  return tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || tag === "BUTTON" || tag === "A" || !!el?.isContentEditable;
+}
 
 export default function Live() {
   const { sessionId = "" } = useParams();
@@ -34,8 +50,26 @@ export default function Live() {
   const micGeneration = useRef(0);
   const [micStarting, setMicStarting] = useState(false);
   useEffect(() => () => { micGeneration.current++; void micRef.current?.stop(); micRef.current = null; }, []);
+  const [simState, setSimState] = useState<SimState>("focused");
+  const [calPhase, setCalPhase] = useState<CalPhase | null>(null);
+  const [details, setDetails] = useState<boolean>(() => {
+    try {
+      return new URLSearchParams(window.location.search).get("details") === "1" || localStorage.getItem("reflow.details") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const toggleDetails = useCallback(() => {
+    setDetails((v) => {
+      try {
+        localStorage.setItem("reflow.details", v ? "0" : "1");
+      } catch {
+        // ignore
+      }
+      return !v;
+    });
+  }, []);
   const sockRef = useRef<SessionSocket | null>(null);
-  const sim = useSimBadge();
   const stateRef = useRef(state);
   stateRef.current = state;
 
@@ -48,7 +82,7 @@ export default function Live() {
           // catch-up. They can only arrive when randomized withholding allowed it.
           setBoard(m);
           setBoardUnavailable(false);
-          setBoardAwaiting((a) => (a && a.flagId === m.flag_id ? null : a));
+          setBoardAwaiting((a) => (m.status !== "pending" && a && a.flagId === m.flag_id ? null : a));
           return;
         }
         if (m.type === "catchup_withheld") {
@@ -96,21 +130,24 @@ export default function Live() {
 
   const doTap = useCallback(() => {
     send({ type: "tap" });
-    sim.flash("SIMULATED TAP");
-  }, [send, sim]);
+    flash("Catching you up", "neutral");
+  }, [send]);
   const doForce = useCallback(() => {
     send({ type: "force_flag" });
-    sim.flash("SIMULATED FLAG");
-  }, [send, sim]);
+    flash("SIMULATED FLAG");
+  }, [send]);
   const doSim = useCallback(
-    (st: "focused" | "drifting" | "poor") => {
+    (st: SimState) => {
+      setSimState(st);
       send({ type: "sim_headset", state: st });
-      sim.flash(`${(stateRef.current.headset?.kind ?? "simulated").toUpperCase()} HEADSET: ${st.toUpperCase()}`);
+      const kind = (stateRef.current.headset?.kind ?? "simulated").toUpperCase();
+      flash(`${kind} HEADSET: ${st.toUpperCase()}`);
     },
-    [send, sim],
+    [send],
   );
   const doCal = useCallback(
-    (phase: "eyes_closed" | "easy" | "hard" | "done" | "reset") => {
+    (phase: CalPhase) => {
+      setCalPhase(phase === "done" || phase === "reset" ? null : phase);
       send({ type: "calibrate", phase });
     },
     [send],
@@ -125,8 +162,9 @@ export default function Live() {
       setMic(null);
       // Clear the ephemeral board buffer at end, alongside LiveCapture's own stop/unmount cleanup.
       void backendFetch(`/api/sessions/${sessionId}/board`, { method: "DELETE", keepalive: true }).catch(() => {});
+
       await api.endSession(sessionId);
-      nav(`/notes/${sessionId}`);
+      nav(`/done/${sessionId}`);
     } catch (e) {
       setWsError(String(e));
       setEnding(false);
@@ -135,10 +173,9 @@ export default function Live() {
 
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => {
-      const tag = (ev.target as HTMLElement | null)?.tagName;
-      if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
+      if (inField(ev) || ev.metaKey || ev.ctrlKey || ev.altKey) return;
       const k = ev.key.toLowerCase();
-      if (k === "t") doTap();
+      if (k === " " || k === "t") doTap();
       else if (k === "l") doForce();
       else if (k === "f") setCycleToken((x) => x + 1);
       else if (k === "1") doSim("focused");
@@ -164,7 +201,7 @@ export default function Live() {
     send({ type: "open_catchup", flag_id: id });
     setState((s) => openChip(s, id));
   }, [send]);
-  const onIgnoreChips = useCallback(() => {
+  const onIgnoreChip = useCallback(() => {
     for (const id of stateRef.current.chipIds) setState((s) => dismissChip(s, id));
   }, []);
 
@@ -196,6 +233,11 @@ export default function Live() {
   const hello = state.hello;
   const recorded = hello?.mode === "recorded";
   const freeze = recorded && !!state.catchup && state.catchup.reason === "video_pause";
+  const hsKind = state.headset?.kind;
+  const showSim = hsKind === "simulated" || hsKind === "fake";
+  const showCal = !!state.headset && hsKind !== "simulated";
+  const totemKeyboard = state.totem ? state.totem.kind !== "real" : true;
+
   const hs = state.headset;
   const tot = state.totem;
   const pills: ConnectionPill[] = [
@@ -209,7 +251,7 @@ export default function Live() {
     !tot
       ? { key: "button", label: "Button", state: "pending", detail: "waiting for the session snapshot" }
       : tot.kind !== "real" || hello?.sim.totem
-        ? { key: "button", label: "Button", state: "simulated", detail: "simulated button (labelled in session)" }
+        ? { key: "button", label: "Button", state: "off", detail: "on-screen or keyboard button; no physical pad connected" }
         : tot.connected
           ? { key: "button", label: "Button", state: "connected", detail: `button device${tot.port ? ` · ${tot.port}` : ""}` }
           : { key: "button", label: "Button", state: "pending", detail: "button detected, not connected yet" },
@@ -233,80 +275,78 @@ export default function Live() {
         : null;
   const controls = useMemo(
     () => (
-      <div className="panel">
-        <div className="controls">
-          <button onClick={doTap} title="Simulated pad tap">
-            <kbd>T</kbd>I’m confused · simulated button
-          </button>
-          <button onClick={doForce} title="Simulated EEG flag">
-            <kbd>L</kbd>force flag
-          </button>
-          <button onClick={() => setCycleToken((x) => x + 1)} disabled={!state.catchup}>
-            <kbd>F</kbd>other form
-          </button>
-          {state.headset?.kind === "simulated" || state.headset?.kind === "fake" ? (
-            <>
-              <button onClick={() => doSim("focused")}>
-                <kbd>1</kbd>focused
+      <>
+        <button className="btn btn-primary btn-lg pad-btn" onClick={doTap} title={totemKeyboard ? "No pad connected: Space works the same" : "Same as the pad"}>
+          I’m confused <span className="kbd">space</span>
+        </button>
+        {hello?.transcript_kind === "deepgram" ? (
+          <div className="grp">
+            {mic ? (
+              <button className="btn" onClick={() => void stopMic()}>
+                Stop microphone
               </button>
-              <button onClick={() => doSim("drifting")}>
-                <kbd>2</kbd>drifting
-              </button>
-              <button onClick={() => doSim("poor")}>
-                <kbd>3</kbd>poor signal
-              </button>
-            </>
-          ) : null}
-          {state.headset && state.headset.kind !== "simulated" ? (
-            <span className="row" style={{ gap: "0.3rem" }} title="mindwave pipeline three-anchor calibration">
-              <span className="dim small">calibrate:</span>
-              <button className="ghost" onClick={() => doCal("eyes_closed")}>eyes closed</button>
-              <button className="ghost" onClick={() => doCal("easy")}>easy</button>
-              <button className="ghost" onClick={() => doCal("hard")}>hard</button>
-              <button className="ghost" onClick={() => doCal("done")}>done</button>
-              <button className="ghost" onClick={() => doCal("reset")}>reset</button>
-            </span>
-          ) : null}
-          {state.chipIds.length ? (
-            <button className="ghost" onClick={onIgnoreChips}>
-              ignore chips
-            </button>
-          ) : null}
-          {hello?.transcript_kind === "deepgram" ? (
-            mic ? (
-              <button onClick={() => void stopMic()}>stop mic ({mic.sampleRate} Hz)</button>
             ) : (
-              <button className="primary" disabled={micStarting || status !== "open"} onClick={() => void startMic()}>
+              <button className="btn btn-primary" disabled={micStarting || status !== "open"} onClick={() => void startMic()}>
                 {micStarting ? "Starting microphone…" : "Start microphone"}
               </button>
-            )
-          ) : null}
-          <button className="danger" onClick={() => void doEnd()} disabled={ending}>
-            <kbd>E</kbd>{ending ? "ending…" : "end lecture"}
-          </button>
-        </div>
-        {micError ? <div className="error small">{micError}</div> : null}
-      </div>
+            )}
+            {micError ? <span className="t-footnote error-text">{micError}</span> : null}
+          </div>
+        ) : null}
+        {details ? (
+          <>
+            <span className="sep" />
+            <span className="cap">demo</span>
+            <button className="btn btn-sm" onClick={doForce} title="Opens an EEG-style flag without the headset (labelled simulated)">
+              Force flag <span className="kbd">L</span>
+            </button>
+            <button className="btn btn-sm" onClick={() => setCycleToken((x) => x + 1)} disabled={!state.catchup}>
+              Other form <span className="kbd">F</span>
+            </button>
+            {showSim ? (
+              <div className="segmented sm">
+                {(["focused", "drifting", "poor"] as SimState[]).map((st, i) => (
+                  <button key={st} className={simState === st ? "is-active" : ""} onClick={() => doSim(st)}>
+                    {st} <span className="kbd">{i + 1}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            {showCal ? (
+              <div className="segmented sm">
+                {CAL.map((c) => (
+                  <button key={c.k} className={calPhase === c.k ? "is-active" : ""} onClick={() => doCal(c.k)}>
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </>
+        ) : null}
+        <button className="btn btn-danger right" onClick={() => void doEnd()} disabled={ending}>
+          {ending ? "Ending…" : "End lecture"} <span className="kbd">E</span>
+        </button>
+      </>
     ),
-    [doTap, doForce, doSim, doCal, state.catchup, state.headset, state.chipIds.length, hello?.transcript_kind, mic, micStarting, status, ending, micError, onIgnoreChips, doEnd],
+    [doTap, doForce, doSim, doCal, state.catchup, showSim, showCal, simState, calPhase, hello?.transcript_kind, mic, micStarting, status, ending, micError, doEnd, totemKeyboard, details],
   );
 
-  const above = (
-    <div className="col" style={{ gap: "0.6rem" }}>
-      <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-        <StudioSteps current="live" />
-        <StudioBackLink leaveNote="Leaves the studio; press “end lecture” to build notes" />
+  const listening = status === "open" && !state.ended && (hello?.transcript_kind !== "deepgram" || !!mic);
+  const head = (
+    <div className="stage-head">
+      <div className="row">
+        <span className="t-title2">{hello?.lecture?.title ?? (hello?.transcript_kind === "deepgram" ? "Live lecture" : "Lecture")}</span>
+        <span className={"pill " + (listening ? "live" : "")}>
+          <span className="dot" /> {state.ended ? "ended" : listening ? "listening" : status === "open" ? "microphone off" : status}
+        </span>
+        <span className="t-subhead label-2 mono">{mmss(state.t)}</span>
+        {(state.headset && state.headset.kind !== "real") || hello?.transcript_kind === "scripted" ? (
+          <Badge tone="warning" title={[state.headset && state.headset.kind !== "real" ? "simulated headset" : "", hello?.transcript_kind === "scripted" ? "practice transcript" : ""].filter(Boolean).join(", ")}>
+            practice
+          </Badge>
+        ) : null}
       </div>
-      <ConnectionPills pills={pills} />
-      <div className="row" style={{ justifyContent: "space-between" }}>
-        <div className="row">
-          <b>{hello?.lecture?.title ?? (hello?.transcript_kind === "deepgram" ? "Live microphone" : "Session")}</b>
-          <span className="muted small">
-            {hello?.learner.name} · {hello?.mode} · <span className="mono">{mmss(state.t)}</span>
-          </span>
-          <span className={"badge " + (status === "open" ? "good" : status === "failed" || status === "closed" ? "bad" : "")}>{status}</span>
-          {state.ended ? <span className="badge accent">ended: {state.ended.gaps} gaps</span> : null}
-        </div>
+      <div className="row">
         {recorded && hello ? (
           <SessionPlayer
             lectureId={hello.lecture?.id ?? null}
@@ -317,28 +357,37 @@ export default function Live() {
             onResume={() => setState((s) => clearCatchup(s))}
           />
         ) : null}
+        <button className={"btn btn-sm" + (details ? " is-on" : "")} onClick={toggleDetails} title="Signal trace, headset and totem status, rolling recaps">
+          {details ? "Hide details" : "Details"}
+        </button>
       </div>
     </div>
   );
 
   if (wsError) {
     return (
-      <div className="panel">
-        <div className="error">{wsError}</div>
-        <div className="row" style={{ marginTop: "0.75rem" }}>
-          <button onClick={() => nav(`/notes/${sessionId}`)}>Go to notes</button>
-          <button onClick={() => nav(`/replay/${sessionId}`)}>Replay</button>
-          <button className="ghost" onClick={() => nav("/")}>Back to dashboard</button>
+      <div className="page narrow">
+        <div className="card">
+          <div className="error-text">{wsError}</div>
+          <div className="row" style={{ marginTop: 12 }}>
+            <button className="btn" onClick={() => nav(`/notes/${sessionId}`)}>
+              Notes
+            </button>
+            <button className="btn" onClick={() => nav(`/team/replay/${sessionId}`)}>
+              Replay
+            </button>
+            <button className="btn btn-plain" onClick={() => nav("/")}>
+              Home
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <>
-      <SimFlash visible={sim.visible} label={sim.label} />
-      <LiveStage
-        state={state}
+    <LiveStage
+      state={state}
         capture={hello?.mode === "live" ? <>
           <LiveCapture sessionId={sessionId} active={status === "open" && !ending && !state.ended} onStatus={setCapture} />
           {boardPanel ? (
@@ -358,14 +407,15 @@ export default function Live() {
             </details>
           ) : null}
         </> : undefined}
-        onCatchupExpire={onExpire}
-        onCatchupDismiss={onDismiss}
-        onOpenChip={onOpenChip}
-        cycleToken={cycleToken}
-        freezeCatchup={freeze}
-        controls={controls}
-        above={above}
-      />
-    </>
+      onCatchupExpire={onExpire}
+      onCatchupDismiss={onDismiss}
+      onOpenChip={onOpenChip}
+      onIgnoreChip={onIgnoreChip}
+      cycleToken={cycleToken}
+      freezeCatchup={freeze}
+      controls={controls}
+      head={<>{head}<ConnectionPills pills={pills} /></>}
+      details={details}
+    />
   );
 }

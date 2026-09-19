@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from ..config import FORMS
+from ..config import FORMS, LEGACY_FORMS
 from ..ids import new_id
 
 SCHEMA = """
@@ -71,6 +71,38 @@ class DB:
         self.lock = threading.RLock()
         with self.lock:
             self.conn.executescript(SCHEMA)
+        self._migrate()
+
+    # ---- migrations (databases from before v2) ----
+    def _columns(self, table: str) -> set[str]:
+        return {r["name"] for r in self._q(f"PRAGMA table_info({table})")}
+
+    def _migrate(self) -> None:
+        with self.lock:
+            if "artifact_kind" not in self._columns("cards"):
+                self.conn.execute("ALTER TABLE cards ADD COLUMN artifact_kind TEXT")
+            if "focus_ratio" not in self._columns("cards"):
+                self.conn.execute("ALTER TABLE cards ADD COLUMN focus_ratio REAL")
+            rows = self.conn.execute("SELECT learner_id, form, rescues, attempts FROM tally").fetchall()
+            merged: dict[tuple[str, str], list[int]] = {}
+            legacy = False
+            for r in rows:
+                form = LEGACY_FORMS.get(r["form"], r["form"])
+                legacy = legacy or form != r["form"]
+                acc = merged.setdefault((r["learner_id"], form), [0, 0])
+                acc[0] += r["rescues"]
+                acc[1] += r["attempts"]
+            if legacy:
+                self.conn.execute("DELETE FROM tally")
+                self.conn.executemany(
+                    "INSERT INTO tally(learner_id, form, rescues, attempts) VALUES(?,?,?,?)",
+                    [(lid, f, a, b) for (lid, f), (a, b) in merged.items()],
+                )
+            for old, new in LEGACY_FORMS.items():
+                if old != new:
+                    self.conn.execute("UPDATE flags SET catchup_form=? WHERE catchup_form=?", (new, old))
+                    self.conn.execute("UPDATE sessions SET best_form=? WHERE best_form=?", (new, old))
+                    self.conn.execute("UPDATE cards SET form=? WHERE form=?", (new, old))
 
     def close(self) -> None:
         with self.lock:
@@ -114,7 +146,28 @@ class DB:
         )
         return self.get_learner(lid)  # type: ignore[return-value]
 
+    DEFAULT_LEARNER_ID = "lrn_me"
+
+    def default_learner(self) -> dict:
+        """One device, one listener: the learner every session uses unless a study participant is named."""
+        row = self.get_learner(self.DEFAULT_LEARNER_ID)
+        if row:
+            return row
+        self._x(
+            "INSERT INTO learners(id, name, created_at) VALUES(?,?,?)",
+            (self.DEFAULT_LEARNER_ID, "you", time.time()),
+        )
+        return self.get_learner(self.DEFAULT_LEARNER_ID)  # type: ignore[return-value]
+
+    def learner_by_name(self, name: str) -> dict | None:
+        r = self._one(
+            "SELECT * FROM learners WHERE lower(name)=lower(?) ORDER BY created_at LIMIT 1", (name.strip(),)
+        )
+        return dict(r) if r else None
+
     def get_learner(self, lid: str) -> dict | None:
+        if lid == "me":
+            lid = self.DEFAULT_LEARNER_ID
         r = self._one("SELECT * FROM learners WHERE id=?", (lid,))
         return dict(r) if r else None
 
@@ -303,6 +356,11 @@ class DB:
             d = dict(r)
             d["catchup_shown"] = None if d["catchup_shown"] is None else bool(d["catchup_shown"])
             d["opened"] = bool(d["opened"])
+            d["catchup_form"] = (
+                LEGACY_FORMS.get(d["catchup_form"], d["catchup_form"])
+                if d.get("catchup_form")
+                else d.get("catchup_form")
+            )
             out.append(d)
         return out
 
@@ -361,7 +419,8 @@ class DB:
 
     def add_card(self, c: dict) -> None:
         self._x(
-            "INSERT INTO cards(id,session_id,gap_id,ord,kind,form,shown_at,outcome,choice,option_order_json) VALUES(?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO cards(id,session_id,gap_id,ord,kind,form,shown_at,outcome,choice,option_order_json,artifact_kind,focus_ratio)"
+            " VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
             (
                 c["id"],
                 c["session_id"],
@@ -373,6 +432,8 @@ class DB:
                 c.get("outcome"),
                 c.get("choice"),
                 _j(c.get("option_order")),
+                c.get("artifact_kind"),
+                c.get("focus_ratio"),
             ),
         )
 
@@ -397,6 +458,73 @@ class DB:
         d = dict(r)
         d["option_order"] = _uj(d.pop("option_order_json"))
         return d
+
+    def card_focus_by_form(self, learner_id: str) -> dict[str, dict]:
+        """Mean focus ratio on re-teach cards per family (headset on during restudy), over all of a learner's sessions."""
+        rows = self._q(
+            "SELECT c.form AS form, AVG(c.focus_ratio) AS mean_focus, COUNT(c.focus_ratio) AS n FROM cards c"
+            " JOIN sessions s ON s.id = c.session_id WHERE s.learner_id=? AND c.kind='reteach' AND c.focus_ratio IS NOT NULL"
+            " GROUP BY c.form",
+            (learner_id,),
+        )
+        out = {f: {"mean_focus": None, "n": 0} for f in FORMS}
+        for r in rows:
+            f = LEGACY_FORMS.get(r["form"], r["form"])
+            if f in out:
+                out[f] = {
+                    "mean_focus": (round(float(r["mean_focus"]), 3) if r["mean_focus"] is not None else None),
+                    "n": int(r["n"]),
+                }
+        return out
+
+    def profile_stats(self, learner_id: str) -> dict:
+        """Streak of days with a lecture, moments restudied, lectures listened."""
+        import datetime as _dt
+
+        days = sorted(
+            {
+                time.strftime("%Y-%m-%d", time.localtime(r["started_at"]))
+                for r in self._q(
+                    "SELECT started_at FROM sessions WHERE learner_id=? AND mode!='review'", (learner_id,)
+                )
+            }
+        )
+        streak = 0
+        if days:
+            today = _dt.date.today()
+            dset = {_dt.date.fromisoformat(d) for d in days}
+            day = today if today in dset else today - _dt.timedelta(days=1)
+            while day in dset:
+                streak += 1
+                day -= _dt.timedelta(days=1)
+        closed = self._one(
+            "SELECT COUNT(*) AS n FROM gaps g JOIN sessions s ON s.id=g.session_id WHERE s.learner_id=? AND g.status='closed'",
+            (learner_id,),
+        )
+        moments = self._one(
+            "SELECT COUNT(*) AS n FROM gaps g JOIN sessions s ON s.id=g.session_id WHERE s.learner_id=?",
+            (learner_id,),
+        )
+        lectures = self._one(
+            "SELECT COUNT(*) AS n FROM sessions WHERE learner_id=? AND mode!='review' AND status!='running'",
+            (learner_id,),
+        )
+        return {
+            "streak_days": streak,
+            "active_days": len(days),
+            "moments_total": int(moments["n"]) if moments else 0,
+            "moments_restudied": int(closed["n"]) if closed else 0,
+            "lectures": int(lectures["n"]) if lectures else 0,
+        }
+
+    def reset_profile(self, learner_id: str) -> None:
+        """Start fresh: forget the preferences and the stored calibration; lectures and notes stay."""
+        with self.lock:
+            self.conn.execute("DELETE FROM tally WHERE learner_id=?", (learner_id,))
+            self.conn.execute(
+                "UPDATE learners SET baseline_mu=NULL, baseline_sigma=NULL, baseline_at=NULL WHERE id=?",
+                (learner_id,),
+            )
 
     # ---- tally ----
     def get_tally(self, learner_id: str) -> dict[str, dict]:

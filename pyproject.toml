@@ -23,6 +23,7 @@ dependencies = [
 [project.scripts]
 reflow = "reflow.cli:main"
 neurospace = "reflow.cli:main"
+neuropace = "reflow.cli:main"
 
 [project.optional-dependencies]
 bluetooth = [

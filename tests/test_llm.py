@@ -17,7 +17,7 @@ CTX = "Three distances narrow you to two points, and one of them is out in space
 def test_strict_schema_shape():
     sch = strict_schema(GapPackage)
     assert sch["additionalProperties"] is False
-    assert set(sch["required"]) == {"note", "question", "forms"}
+    assert set(sch["required"]) == {"note", "question", "artifacts"}
     q = sch["$defs"]["CheckQuestion"]
     assert q["additionalProperties"] is False and set(q["required"]) == {
         "question",
@@ -55,11 +55,11 @@ def test_schema_validators_catch_bad_outputs():
 def test_fallback_outputs_are_valid_and_grounded():
     r = fallback.recap_forms(SPAN, CTX + " " + SPAN)
     assert all(getattr(r, f) for f in FORMS)
-    assert r.plain in SPAN
+    assert r.words.split(": ", 1)[-1] in SPAN and "(offline)" in r.analogy
     p = fallback.gap_package(SPAN, CTX, CTX + " " + SPAN, seed=1)
     assert len(p.question.options) == 4 and 0 <= p.question.correct_index < 4
     assert p.question.options[p.question.correct_index] in SPAN
-    assert 2 <= len(p.forms.sketch.diagram.nodes) <= 8
+    assert 2 <= len(p.artifacts.diagram.nodes) <= 8 and p.artifacts.example.lines
     assert p.note.key_term.lower() in SPAN.lower()
 
 
@@ -81,27 +81,27 @@ class FakeClient:
         self.responses = FakeResponses(outputs)
 
 
-GOOD_RECAP = json.dumps({"plain": "p", "keyterm": "k: d", "analogy": "a", "sketch": "s"})
+GOOD_RECAP = json.dumps({"words": "p", "analogy": "a", "visual": "v", "doing": "d"})
 
 
 def test_llm_uses_strict_format_and_caches(tmp_path):
-    s = Settings(data_dir=tmp_path, openai_model="gpt-5-mini")
+    s = Settings(data_dir=tmp_path, openai_model="gpt-5-mini", allow_offline_llm=True)
     db = DB(s.db_path)
     fake = FakeClient([GOOD_RECAP])
     c = LLMClient(s, db, client=fake)
     forms, source = asyncio.run(c.recap("some words here", "corpus"))
-    assert source == "llm" and forms.plain == "p"
+    assert source == "llm" and forms.words == "p"
     call = fake.responses.calls[0]
     assert call["text"]["format"]["strict"] is True and call["text"]["format"]["type"] == "json_schema"
     assert call["reasoning"] == {"effort": "minimal"} and "temperature" not in call
     forms2, source2 = asyncio.run(c.recap("some words here", "corpus"))
-    assert source2 == "cache" and forms2.plain == "p" and len(fake.responses.calls) == 1
+    assert source2 == "cache" and forms2.words == "p" and len(fake.responses.calls) == 1
 
 
 def test_llm_retries_once_on_invalid_then_falls_back(tmp_path):
-    s = Settings(data_dir=tmp_path)
+    s = Settings(data_dir=tmp_path, allow_offline_llm=True)
     db = DB(s.db_path)
-    fake = FakeClient(['{"plain": ""}', '{"nope": 1}'])
+    fake = FakeClient(['{"words": ""}', '{"nope": 1}'])
     c = LLMClient(s, db, client=fake)
     forms, source = asyncio.run(c.recap("the words in the window", "corpus"))
     assert source == "offline" and isinstance(forms, RecapForms)
@@ -109,7 +109,7 @@ def test_llm_retries_once_on_invalid_then_falls_back(tmp_path):
 
 
 def test_llm_drops_reasoning_param_when_rejected(tmp_path):
-    s = Settings(data_dir=tmp_path, openai_model="gpt-5-mini")
+    s = Settings(data_dir=tmp_path, openai_model="gpt-5-mini", allow_offline_llm=True)
     db = DB(s.db_path)
     fake = FakeClient([RuntimeError("Unsupported parameter: 'reasoning'"), GOOD_RECAP])
     c = LLMClient(s, db, client=fake)
@@ -118,7 +118,7 @@ def test_llm_drops_reasoning_param_when_rejected(tmp_path):
 
 
 def test_llm_timeout_falls_back(tmp_path):
-    s = Settings(data_dir=tmp_path, recap_timeout_seconds=0.05)
+    s = Settings(data_dir=tmp_path, recap_timeout_seconds=0.05, allow_offline_llm=True)
     db = DB(s.db_path)
 
     class Slow:
@@ -134,7 +134,7 @@ def test_llm_timeout_falls_back(tmp_path):
 
 
 def test_no_key_means_offline_without_network(tmp_path):
-    s = Settings(data_dir=tmp_path, openai_api_key=None)
+    s = Settings(data_dir=tmp_path, openai_api_key=None, allow_offline_llm=True)
     c = LLMClient(s, DB(s.db_path))
     assert not c.enabled
     pkg, source = asyncio.run(c.gap_package(SPAN, CTX, CTX + " " + SPAN))
