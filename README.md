@@ -5,7 +5,7 @@ command remain compatible; use `uv run neuropace serve` to start the app.
 
 **It notices the moment a lecture loses you, catches you up in one glance, and re-teaches what you missed until it lands.**
 
-HackMIT 2026 · Education track · NeuroSky MindWave Mobile 2 + Arduino UNO Q 4 GB (UNO R4 direct path stays as a fallback) · Deepgram + OpenAI.
+HackMIT 2026 · Education track · NeuroSky MindWave Mobile 2 + Arduino UNO Q 4 GB (UNO R4 direct path stays as a fallback) · Deepgram + OpenAI or OpenRouter.
 
 - Product requirements: [`docs/PRD.md`](docs/PRD.md)
 - Technical design (the contract every module follows): [`docs/TDD.md`](docs/TDD.md)
@@ -24,14 +24,14 @@ The student-facing product is defined in [`docs/PRODUCT.md`](docs/PRODUCT.md): t
 5. **Your tally.** Which form rescued which misses, scored by quiz answers only. It picks the form of your next live catch-up. New learners start from the average across learners.
 6. **Lecture loss map.** Across learners, the 40 seconds where the room was lost. Anonymous and aggregate: it grades the lecture, never a student.
 
-Everything runs with no hardware (simulated headset, keyboard totem, scripted transcript) and every simulated thing is labelled on screen. An OpenAI key is required for a session: recaps, gap notes, check questions and re-teach forms are generated, never templated. If the API is down mid-lecture the catch-up shows the verbatim transcript (labelled), and notes that could not be generated say so with a retry button.
+Everything runs with no hardware (simulated headset, keyboard totem, scripted transcript) and every simulated thing is labelled on screen. An OpenAI or OpenRouter key is required for a session: recaps, gap notes, check questions and re-teach forms are generated, never templated. If the API is down mid-lecture the catch-up shows the verbatim transcript (labelled), and notes that could not be generated say so with a retry button.
 
 ## Quick start
 
 ```bash
 # backend (Python 3.13 via uv)
 uv sync
-cp .env.example .env            # add DEEPGRAM_API_KEY and OPENAI_API_KEY when you have them
+cp .env.example .env            # add Deepgram and either OpenAI or OpenRouter credentials
 uv run neuropace doctor            # keys, services, serial ports, frontend build
 
 # frontend (built once, served by the backend)
@@ -106,7 +106,7 @@ Two copies of the evaluation toolkit exist on purpose: the root `reflow_eval.py`
 | Command | Purpose |
 |---|---|
 | `uv run neuropace serve` | API + built frontend on one port |
-| `uv run neuropace doctor` | keys, Deepgram, OpenAI model (lists alternatives if the configured one is missing), ports, build |
+| `uv run neuropace doctor` | keys, Deepgram, selected OpenAI/OpenRouter model, ports, build |
 | `uv run neuropace ingest-lecture --title T --file lecture.m4a --meta study/meta.json` | transcribe a recorded lecture with Deepgram and register segments/quiz |
 | `uv run neuropace ingest-script script.json` | register a scripted lecture (words or plain text) |
 | `uv run neuropace replay SESSION_ID --speed 4` | print a session's event log at speed |
@@ -132,13 +132,13 @@ docs/          PRD, TDD, demo runbook
 ## Sponsor challenges
 
 - **Deepgram:** live streaming transcription (`reflow/transcribe/deepgram_live.py`) and prerecorded transcription for recorded lectures. Both are in the product path.
-- **OpenAI:** rolling recaps, gap notes, check questions, re-teach forms and diagram scene graphs as strict JSON-schema structured outputs (`reflow/llm/`). The Codex story for the demo is recorded in the runbook.
+- **OpenAI/OpenRouter:** rolling recaps, gap notes, check questions, re-teach forms and diagram scene graphs as strict JSON-schema structured outputs (`reflow/llm/`).
 - **Long Lake:** pitch framing only. No prompt box. NeuroPace notices for you.
 
 ## Honesty rules baked in
 
 - A simulated headset or scripted transcript is labelled on screen, and forced flags carry `source: "forced"`. Keyboard taps are real taps.
-- No placeholder text: without `OPENAI_API_KEY` a session cannot start; during an outage the catch-up is the verbatim transcript (`source: "transcript"`) and failed notes are reported (`package_source: "failed"`) with a retry. The extractive `offline` generator only runs in automated tests (`REFLOW_ALLOW_OFFLINE_LLM=1`).
+- No placeholder text: without a key for the selected OpenAI or OpenRouter provider, a session cannot start; during an outage the catch-up is the verbatim transcript (`source: "transcript"`) and failed notes are reported (`package_source: "failed"`) with a retry. The extractive `offline` generator only runs in automated tests (`REFLOW_ALLOW_OFFLINE_LLM=1`).
 - The tally says "not enough data yet" until 12 scored cards.
 - The loss map refuses to render with fewer than 2 learners.
 - Every study number is reported with its interval, including nulls.
@@ -155,3 +155,12 @@ in the local backend process and must be entered again after restarting it. Savi
 does not validate the key with Deepgram; authentication happens when transcription
 connects. For configuration that survives restarts, set `DEEPGRAM_API_KEY` in your
 local `.env` file. Never commit that file.
+
+### Choosing OpenAI or OpenRouter
+
+Open **Start session → Explanation model**. Choose OpenAI or OpenRouter, enter a
+model name and that provider's API key, then save. Both keys can remain available
+in the running local server, so switching back does not require pasting the key
+again. The change applies to new sessions. For setup that survives restarts, use
+`OPENAI_API_KEY` and `OPENAI_MODEL`, or `OPENROUTER_API_KEY` and
+`OPENROUTER_MODEL`, then set `REFLOW_LLM_PROVIDER` to `openai` or `openrouter`.

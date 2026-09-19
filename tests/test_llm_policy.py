@@ -1,4 +1,4 @@
-"""No placeholder text in the product: OpenAI is required, outages degrade to the verbatim transcript or a retry."""
+"""No placeholder text: a model provider is required; outages degrade to transcript or retry."""
 
 from __future__ import annotations
 
@@ -76,7 +76,7 @@ def test_session_creation_is_refused_without_a_key(tmp_path):
         r = c.post(
             "/api/sessions", json={"learner_id": lr["id"], "lecture_id": "lec_demo0001", "mode": "live"}
         )
-        assert r.status_code == 400 and "OPENAI_API_KEY" in r.json()["detail"]
+        assert r.status_code == 400 and "OpenAI or OpenRouter" in r.json()["detail"]
 
 
 @pytest.mark.asyncio

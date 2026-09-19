@@ -130,8 +130,8 @@ Stages A to D of the spec's build order. Each stage is a complete demo on its ow
 
 | ID | Requirement |
 |---|---|
-| FR-O1 | `reflow doctor` reports: keys present, Deepgram reachable, OpenAI model available, headset port, totem port, frontend build present |
-| FR-O2 | Everything runs with no hardware: simulated headset, keyboard totem, scripted transcript, all labelled. An OpenAI key is required to start a session; the extractive offline generator exists for automated tests only |
+| FR-O1 | `reflow doctor` reports: keys present, Deepgram reachable, selected OpenAI/OpenRouter model available, headset port, totem port, frontend build present |
+| FR-O2 | Everything runs with no hardware: simulated headset, keyboard totem, scripted transcript, all labelled. A key for the selected OpenAI/OpenRouter provider is required to start a session; the extractive offline generator exists for automated tests only |
 | FR-O3 | One command starts the whole product: `uv run reflow serve` |
 | FR-O4 | LLM outputs are cached on disk by content hash, so replays and re-runs are free and instant |
 

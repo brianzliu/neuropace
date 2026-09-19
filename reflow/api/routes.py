@@ -69,6 +69,62 @@ async def set_deepgram_key(request: Request):
     return {"configured": True}
 
 
+class ModelSettingsIn(BaseModel):
+    provider: str
+    api_key: str | None = None
+    model: str | None = None
+
+
+def _model_settings(request: Request) -> dict:
+    s = _s(request)
+    return {
+        "provider": s.llm_provider,
+        "model": s.openrouter_model if s.llm_provider == "openrouter" else s.openai_model,
+        "models": {"openai": s.openai_model, "openrouter": s.openrouter_model},
+        "configured": {
+            "openai": bool(s.openai_api_key),
+            "openrouter": bool(s.openrouter_api_key),
+        },
+    }
+
+
+@router.get("/settings/model")
+def model_settings(request: Request):
+    return _model_settings(request)
+
+
+@router.put("/settings/model")
+def set_model_settings(body: ModelSettingsIn, request: Request):
+    from ..llm.client import LLMClient
+
+    provider = body.provider.lower().strip()
+    if provider not in ("openai", "openrouter"):
+        raise HTTPException(400, "Provider must be OpenAI or OpenRouter.")
+    key = body.api_key.strip() if isinstance(body.api_key, str) else ""
+    if key and (len(key) > 512 or any(c.isspace() for c in key)):
+        raise HTTPException(400, "Enter a valid API key.")
+    model = body.model.strip() if isinstance(body.model, str) else ""
+    if not model or len(model) > 200 or any(c.isspace() for c in model):
+        raise HTTPException(400, "Enter a valid model name.")
+    s = _s(request)
+    if provider == "openai":
+        if key:
+            s.openai_api_key = key
+        s.openai_model = model
+        configured = bool(s.openai_api_key)
+    else:
+        if key:
+            s.openrouter_api_key = key
+        s.openrouter_model = model
+        configured = bool(s.openrouter_api_key)
+    if not configured:
+        raise HTTPException(400, f"Enter an API key for {provider.title()}.")
+    s.llm_provider = provider
+    # Existing live sessions keep their client; all new work uses the selected provider.
+    request.app.state.llm = LLMClient(s, _db(request))
+    return _model_settings(request)
+
+
 @router.get("/devices/status")
 async def device_status(request: Request):
     from ..signal.headset import autodetect_headset_port
@@ -400,7 +456,8 @@ async def create_session(body: SessionIn, request: Request):
     if not app.state.llm.enabled and not s.allow_offline_llm:
         raise HTTPException(
             400,
-            "OPENAI_API_KEY is missing: recaps, gap notes and review cards need it. Add it to .env and restart "
+            "An OpenAI or OpenRouter API key is missing: recaps, gap notes and review cards need one. "
+            "Add a key on the Start session screen or to .env and restart "
             "(REFLOW_ALLOW_OFFLINE_LLM=1 is for automated tests only).",
         )
     if body.catchup_policy not in ("always", "randomized"):

@@ -63,6 +63,8 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         "deepgram" if res["keys"]["deepgram"] else "no DEEPGRAM_API_KEY",
         "|",
         "openai" if res["keys"]["openai"] else "no OPENAI_API_KEY",
+        "|",
+        "openrouter" if res["keys"]["openrouter"] else "no OPENROUTER_API_KEY",
     )
     print(
         "deepgram    :", "ok" if res["deepgram"].get("ok") else res["deepgram"].get("reason", res["deepgram"])
@@ -72,6 +74,13 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         "openai model:",
         oa.get("model"),
         "ok" if oa.get("ok") else ("REQUIRED, " if oa.get("required") else "") + str(oa.get("reason", "")),
+    )
+    router = res["openrouter"]
+    print(
+        "router model:",
+        router.get("model"),
+        "ok" if router.get("ok") else str(router.get("reason", "")),
+        "(active)" if res["llm_provider"] == "openrouter" else "",
     )
     if res["openai"].get("alternatives"):
         print("   available:", ", ".join(res["openai"]["alternatives"]))

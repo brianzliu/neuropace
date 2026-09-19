@@ -50,7 +50,13 @@ export default function Team() {
             ) : (
               <div className="status-list">
                 <Line ok={d.keys.deepgram && d.deepgram.ok} label="Deepgram (transcription)" value={d.keys.deepgram ? (d.deepgram.ok ? "reachable" : d.deepgram.reason ?? "unreachable") : "no key: set DEEPGRAM_API_KEY in .env"} />
-                <Line ok={d.keys.openai && d.openai.ok} label="OpenAI (recaps, notes, artifacts)" value={d.keys.openai && d.openai.ok ? d.openai.model : d.keys.openai ? `${d.openai.model} unavailable` : "no key: set OPENAI_API_KEY in .env (required)"} />
+                <Line
+                  ok={d.llm_provider === "openrouter" ? d.keys.openrouter && d.openrouter.ok : d.keys.openai && d.openai.ok}
+                  label={`${d.llm_provider === "openrouter" ? "OpenRouter" : "OpenAI"} (recaps, notes, artifacts)`}
+                  value={d.llm_provider === "openrouter"
+                    ? (d.keys.openrouter ? (d.openrouter.ok ? d.openrouter.model : `${d.openrouter.model} unavailable`) : "no OpenRouter key")
+                    : (d.keys.openai ? (d.openai.ok ? d.openai.model : `${d.openai.model} unavailable`) : "no OpenAI key")}
+                />
                 <Line ok={d.headset.kind === "real"} warn label="Headset" value={d.headset.kind === "real" ? `MindWave on ${d.headset.port}` : "none found: sessions simulate one"} />
                 <Line ok={d.totem.kind === "real"} accent label="Totem" value={d.totem.kind === "real" ? `Arduino on ${d.totem.port}` : "none found: keyboard fallback (Space/T, terminal keys)"} />
                 <Line ok={d.frontend_built} label="Frontend build" value={d.frontend_built ? "built" : "run pnpm build"} />

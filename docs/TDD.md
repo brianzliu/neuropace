@@ -14,7 +14,7 @@
 | Firmware | Current target: Arduino UNO Q 4 GB BLE relay (`firmware/uno_q_relay/`, App Lab MCU sketch + Bless/RouterBridge Linux prototype). Fallback: Arduino UNO R4 WiFi (core `arduino:renesas_uno` 1.6.0), `Arduino_CapacitiveTouch` 1.4, `Arduino_LED_Matrix`, USB CDC serial 115200 | The UNO Q path is experimental and uncompiled; blockers in `firmware/uno_q_relay/README.md`. The R4 fallback is verified to compile with `arduino-cli`; a Minima build flag drops the matrix |
 | Tests | pytest (backend), `tsc --noEmit` + `vite build` (frontend), `arduino-cli compile` (firmware), `scripts/smoke_e2e.py` (full session over HTTP + WS with everything simulated) | NFR-7: < 60 s, no network, no hardware |
 | Style | ruff (E, F, I, B, UP), TypeScript `strict`. No em dashes anywhere, including comments | House rule |
-| Config | `.env` + env vars prefixed `REFLOW_`, plus `DEEPGRAM_API_KEY`, `OPENAI_API_KEY`, `OPENAI_MODEL` | `reflow doctor` prints the effective values |
+| Config | `.env` + env vars prefixed `REFLOW_`, plus Deepgram, OpenAI, or OpenRouter key/model variables | `reflow doctor` prints the effective values |
 | IDs | `lrn_`, `lec_`, `sess_`, `flag_`, `gap_`, `card_` + 8 hex chars | Greppable in logs |
 | Time | `lecture_time`: float seconds on the lecture's own timeline. Live: monotonic since session start. Recorded: the media player's current time, reported by the client | Every learner of the same lecture shares one timeline, which is what the loss map pools |
 
@@ -98,7 +98,7 @@ Session end → `GapBuilder` merges flags into gaps → one LLM call per gap (pa
 | Headset | `SimulatedHeadset` (state set from UI: focused / drifting / poor) | "SIMULATED HEADSET" |
 | Totem | `KeyboardTotem` (Space/T in the browser or terminal, on-screen pad) | "keyboard fallback"; taps carry `source: "key"` and are real learner actions |
 | Deepgram key or connection | `ScriptedTranscript` (word-timed script replayed in real time) or, in recorded mode, a cached transcript | "SCRIPTED TRANSCRIPT" |
-| OpenAI key missing | session creation refused (400) unless `allow_offline_llm` (tests only) | doctor row "required" |
+| Selected OpenAI/OpenRouter key missing | session creation refused (400) unless `allow_offline_llm` (tests only) | doctor row "required" |
 | OpenAI call fails mid-lecture | recap skipped, catch-up shows the verbatim transcript of the span | `source: "transcript"` capsule |
 | OpenAI fails at session end | gap package retried 3 times, then stored as `package_source: "failed"` with the error; `POST /sessions/{id}/regenerate` retries; review refuses (409) until notes exist | notes page shows the error and a retry button |
 | Frontend build | `reflow serve` prints the `pnpm build` command and still serves the API | n/a |

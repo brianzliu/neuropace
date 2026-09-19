@@ -52,9 +52,25 @@ async def check_openai(key: str | None, model: str) -> dict:
         return {"ok": False, "model": model, "reason": str(e)[:200]}
 
 
+async def check_openrouter(key: str | None, model: str) -> dict:
+    if not key:
+        return {"ok": False, "reason": "no OPENROUTER_API_KEY", "model": model}
+    try:
+        from openai import AsyncOpenAI
+
+        client = AsyncOpenAI(api_key=key, base_url="https://openrouter.ai/api/v1")
+        page = await asyncio.wait_for(client.models.list(), timeout=10.0)
+        names = {item.id for item in page.data}
+        return {"ok": model in names, "model": model, **({} if model in names else {"reason": "model not found"})}
+    except Exception as e:  # noqa: BLE001
+        return {"ok": False, "model": model, "reason": str(e)[:200]}
+
+
 async def run_doctor(s: Settings) -> dict:
-    dg, oa = await asyncio.gather(
-        check_deepgram(s.deepgram_api_key), check_openai(s.openai_api_key, s.openai_model)
+    dg, oa, router = await asyncio.gather(
+        check_deepgram(s.deepgram_api_key),
+        check_openai(s.openai_api_key, s.openai_model),
+        check_openrouter(s.openrouter_api_key, s.openrouter_model),
     )
     hp = (
         "sim"
@@ -67,9 +83,11 @@ async def run_doctor(s: Settings) -> dict:
         else (s.totem_port or autodetect_totem_port(exclude=hp))
     )
     return {
-        "keys": {"deepgram": bool(s.deepgram_api_key), "openai": bool(s.openai_api_key)},
+        "keys": {"deepgram": bool(s.deepgram_api_key), "openai": bool(s.openai_api_key), "openrouter": bool(s.openrouter_api_key)},
         "deepgram": dg,
         "openai": {**oa, "required": not s.allow_offline_llm},
+        "openrouter": {**router, "required": not s.allow_offline_llm},
+        "llm_provider": s.llm_provider,
         "headset": {
             "port": hp,
             "kind": "simulated" if not hp or hp == "sim" else "real",

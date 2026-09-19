@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, errorText } from "../lib/api";
 import DeepgramSettings from "../components/DeepgramSettings";
+import ModelSettings from "../components/ModelSettings";
 import type { LectureFull, SessionPublic } from "../lib/types";
 
 /** Main's direct recording flow in the separate Pocket Studio window. */
@@ -37,6 +38,7 @@ export default function Setup() {
     {running ? <Link className="btn btn-primary btn-lg btn-block" to={`/live/${running.id}`}>Resume session</Link> : <button className="btn btn-primary btn-lg btn-block" disabled={busy} onClick={() => void start(null)}>{busy ? "Starting…" : "Start session"}</button>}
     <p className="small muted">Your microphone starts in the live window. Enable whiteboard capture there when you’re ready.</p>
     <DeepgramSettings />
+    <ModelSettings />
     {practice && !running && <button className="linklike" disabled={busy} onClick={() => void start(practice.id)}>Try a practice lecture</button>}
     <Link className="advanced-link" to="/session/advanced">Devices and session options</Link>
   </section>;

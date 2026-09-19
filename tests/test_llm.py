@@ -81,6 +81,23 @@ class FakeClient:
         self.responses = FakeResponses(outputs)
 
 
+class FakeChatCompletions:
+    def __init__(self, outputs):
+        self.outputs = list(outputs)
+        self.calls = []
+
+    async def create(self, **kwargs):
+        self.calls.append(kwargs)
+        out = self.outputs.pop(0)
+        message = type("Message", (), {"content": out})()
+        return type("Response", (), {"choices": [type("Choice", (), {"message": message})()]})()
+
+
+class FakeOpenRouter:
+    def __init__(self, outputs):
+        self.chat = type("Chat", (), {"completions": FakeChatCompletions(outputs)})()
+
+
 GOOD_RECAP = json.dumps({"words": "p", "analogy": "a", "visual": "v", "doing": "d"})
 
 
@@ -96,6 +113,19 @@ def test_llm_uses_strict_format_and_caches(tmp_path):
     assert call["reasoning"] == {"effort": "minimal"} and "temperature" not in call
     forms2, source2 = asyncio.run(c.recap("some words here", "corpus"))
     assert source2 == "cache" and forms2.words == "p" and len(fake.responses.calls) == 1
+
+
+def test_openrouter_uses_chat_completions_and_strict_schema(tmp_path):
+    s = Settings(data_dir=tmp_path, llm_provider="openrouter", openrouter_model="openai/gpt-4o-mini", allow_offline_llm=True)
+    fake = FakeOpenRouter([GOOD_RECAP])
+    client = LLMClient(s, DB(s.db_path), client=fake)
+    forms, source = asyncio.run(client.recap("some words", "corpus"))
+    assert source == "llm" and forms.words == "p"
+    call = fake.chat.completions.calls[0]
+    assert call["model"] == "openai/gpt-4o-mini"
+    assert call["response_format"]["type"] == "json_schema"
+    assert call["response_format"]["json_schema"]["strict"] is True
+    assert call["extra_body"] == {"provider": {"require_parameters": True}}
 
 
 def test_llm_retries_once_on_invalid_then_falls_back(tmp_path):

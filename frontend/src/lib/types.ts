@@ -472,9 +472,11 @@ export interface LossMap {
 }
 
 export interface Doctor {
-  keys: { deepgram: boolean; openai: boolean };
+  keys: { deepgram: boolean; openai: boolean; openrouter: boolean };
   deepgram: { ok: boolean; reason?: string; status?: number };
   openai: { ok: boolean; model: string; reason?: string; alternatives?: string[]; required?: boolean };
+  openrouter: { ok: boolean; model: string; reason?: string; required?: boolean };
+  llm_provider: "openai" | "openrouter";
   headset: { port: string | null; kind: string; setting: string | null; bridge?: string | null };
   totem: { port: string | null; kind: string; setting: string | null; hint?: string | null };
   serial_ports: { device: string; description: string; hwid?: string; vid?: number | null }[];

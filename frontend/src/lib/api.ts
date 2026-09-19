@@ -56,6 +56,9 @@ export const api = {
   saveCurriculum: (id: string, body: import("./dashboardTypes").Curriculum) => request<import("./dashboardTypes").Curriculum>(`/api/learners/${id}/curriculum`, { method: "PUT", body: JSON.stringify(body) }),
   deepgramKeyStatus: () => get<{ configured: boolean }>("/api/settings/deepgram"),
   setDeepgramKey: (api_key: string) => request<{ configured: boolean }>("/api/settings/deepgram", { method: "PUT", body: JSON.stringify({ api_key }) }),
+  modelSettings: () => get<{ provider: "openai" | "openrouter"; model: string; models: Record<"openai" | "openrouter", string>; configured: Record<"openai" | "openrouter", boolean> }>("/api/settings/model"),
+  setModelSettings: (body: { provider: "openai" | "openrouter"; api_key?: string; model: string }) =>
+    request<{ provider: "openai" | "openrouter"; model: string; models: Record<"openai" | "openrouter", string>; configured: Record<"openai" | "openrouter", boolean> }>("/api/settings/model", { method: "PUT", body: JSON.stringify(body) }),
   health: () => get<{ ok: boolean; version: string }>("/api/health"),
   doctor: () => get<Doctor>("/api/doctor"),
   learners: () => get<{ learners: Learner[] }>("/api/learners"),

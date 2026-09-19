@@ -27,7 +27,7 @@ What was checked, how, and what is still unverified. Re-run the commands before 
 
 | Check | How | Result |
 |---|---|---|
-| No OpenAI key | `POST /api/sessions` with the default settings | refused with 400 "OPENAI_API_KEY is missing: recaps, gap notes and review cards need it"; `reflow doctor` prints REQUIRED |
+| No selected model-provider key | `POST /api/sessions` with the default settings | refused with 400 explaining that an OpenAI or OpenRouter key is required; `reflow doctor` prints REQUIRED |
 | OpenAI down mid-lecture | runtime test with a failing fake client | recaps skipped with one notice; the tap catch-up shows the verbatim transcript (`source: transcript`), all four forms identical, no "(offline)" text |
 | OpenAI down at session end | same test | gap package retried 3 times, stored as `package_source: failed` with the error; review refuses (409); `regenerate_packages` fills it once the API answers |
 | Real OpenAI call | not verified: no key on this machine | the client is exercised with a fake OpenAI (strict schema, cache, retries, reasoning-param fallback) |

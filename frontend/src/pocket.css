@@ -74,3 +74,8 @@ input[type="radio"], input[type="checkbox"] { width: 18px; height: 18px; min-hei
 .transcription-settings h2 { margin: 0 0 .75rem; font: 400 1.3rem var(--display); }
 .transcription-settings p { font-size: .85rem; color: var(--muted); line-height: 1.5; }
 .transcription-settings input { margin-top: .5rem; }
+.transcription-settings label + input { margin-bottom: .8rem; }
+.provider-switch { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin: 1rem 0; }
+.provider-switch button { min-height: 44px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--muted); }
+.provider-switch button.is-active { color: var(--text); background: #fff6cb; border-color: var(--surface-edge); box-shadow: 0 2px 0 var(--surface-edge); }
+.success-copy { color: var(--good) !important; }

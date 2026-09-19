@@ -66,7 +66,10 @@ class Settings:
     deepgram_model: str = "nova-3"
     openai_api_key: str | None = None
     openai_model: str = "gpt-5-mini"
-    # The product needs OpenAI. The extractive offline generator is for automated tests only.
+    openrouter_api_key: str | None = None
+    openrouter_model: str = "openai/gpt-4o-mini"
+    llm_provider: str = "openai"
+    # The product needs the selected model provider. The extractive fallback is for tests only.
     allow_offline_llm: bool = False
 
     headset_port: str | None = None  # None = auto-detect, "sim" = simulate
@@ -170,6 +173,10 @@ def load_settings(env_file: str | os.PathLike | None = None) -> Settings:
     s.deepgram_model = _env("REFLOW_DEEPGRAM_MODEL", s.deepgram_model) or s.deepgram_model
     s.openai_api_key = _env("OPENAI_API_KEY")
     s.openai_model = _env("OPENAI_MODEL", s.openai_model) or s.openai_model
+    s.openrouter_api_key = _env("OPENROUTER_API_KEY")
+    s.openrouter_model = _env("OPENROUTER_MODEL", s.openrouter_model) or s.openrouter_model
+    provider = (_env("REFLOW_LLM_PROVIDER") or ("openrouter" if s.openrouter_api_key and not s.openai_api_key else "openai")).lower()
+    s.llm_provider = provider if provider in ("openai", "openrouter") else "openai"
     s.headset_port = _env("REFLOW_HEADSET_PORT")
     s.allow_offline_llm = (_env("REFLOW_ALLOW_OFFLINE_LLM", "0") or "0").lower() in ("1", "true", "yes")
     s.totem_port = _env("REFLOW_TOTEM_PORT")
