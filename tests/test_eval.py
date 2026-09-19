@@ -127,4 +127,4 @@ def test_study_analysis_four_numbers_on_synthetic_sessions(tmp_path):
         "mean_diff" in res["catchup"]["benefit_on_missed_span"]
         or "note" in res["catchup"]["benefit_on_missed_span"]
     )
-    assert set(res["rescues_per_form"]["pooled"]) == {"plain", "keyterm", "analogy", "sketch"}
+    assert set(res["rescues_per_form"]["pooled"]) == {"words", "analogy", "visual", "doing"}

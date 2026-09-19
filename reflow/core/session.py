@@ -34,6 +34,7 @@ from .recaps import Recap, RecapRing, RecapScheduler
 from .spans import eeg_span, merge_into_gaps, snap_end, tap_span
 
 log = logging.getLogger(__name__)
+UV_PER_RAW = 1.8 / 4096 / 2000 * 1e6  # ADC counts -> microvolts (approximate, matches the mindwave pipeline)
 
 
 class SessionRuntime:
@@ -99,6 +100,7 @@ class SessionRuntime:
             seed=self.seed + 1,
             on_frame=self._on_frame,
             log_dir=str(s.data_dir / "eeg"),
+            on_raw=self._on_raw_chunk,
         )
         self._totem_setting = totem_port
         self.totem = make_totem(
@@ -111,6 +113,9 @@ class SessionRuntime:
         self.catchups_shown = 0
         self.notices: list[dict] = []
         self._focus_hist: list[dict] = []
+        self.review_only = self.mode == "review"  # headset only: no transcript, no recaps, no gaps
+        self._raw_acc: list[float] = []
+        self._raw_chunk: list[float] = []
         if transcript_kind == "scripted" and lecture and lecture.get("words"):
             self.transcriber = ScriptedTranscript(
                 [Word(**w) for w in lecture["words"]], self._on_words, self.clock
@@ -238,10 +243,29 @@ class SessionRuntime:
         }
 
     # ------------------------------------------------------------------ inputs
+    def _on_raw_chunk(self, msg: dict) -> None:
+        """A 64 Hz microvolt trace chunk from the mindwave pipeline: {"t", "fs", "uv": [...]}."""
+        if self.status == "running":
+            self.broadcast({"type": "raw", "fs": msg.get("fs", 64), "uv": msg.get("uv", [])})
+
+    def _decimate_raw(self, raws: list[int]) -> None:
+        """Reflow's own raw path (simulator, serial:<port>): average every 8 samples, send 8 at a time (64 Hz)."""
+        acc = self._raw_acc
+        for v in raws:
+            acc.append(v * UV_PER_RAW)
+            if len(acc) >= 8:
+                self._raw_chunk.append(round(sum(acc) / len(acc), 1))
+                acc.clear()
+                if len(self._raw_chunk) >= 8:
+                    self.broadcast({"type": "raw", "fs": self.engine.fs // 8, "uv": self._raw_chunk})
+                    self._raw_chunk = []
+
     def _on_headset_events(self, events: list[TGEvent]) -> None:
         raws = [e.value for e in events if e.kind == "raw"]
         if raws:
             self.engine.feed_raw(raws)
+            if self.status == "running":
+                self._decimate_raw(raws)
         for e in events:
             if e.kind == "poor_signal":
                 self.engine.feed_poor_signal(int(e.value))
@@ -265,6 +289,9 @@ class SessionRuntime:
             "calibrated": frame.calibrated,
             "cal_phase": frame.cal_phase,
             "attention": frame.attention,
+            "log_theta": frame.log_theta,
+            "log_alpha": frame.log_alpha,
+            "log_beta": frame.log_beta,
         }
         self.engine.feed_frame(frame.engagement, frame.quality, frame.valid, frame.blink_count, extra=extra)
         if frame.attention is not None:
@@ -496,6 +523,8 @@ class SessionRuntime:
         return f
 
     def _offer_eeg_style(self, f: dict, t: float) -> None:
+        if self.review_only:
+            return  # restudy reacts to the flag itself (switches the explanation); there is no lecture to catch up on
         if self.mode == "recorded" and self.auto_pause:
             self.broadcast({"type": "pause_request", "flag_id": f["id"]})
             self._offer_catchup(f, t, auto_show=True, reason="video_pause")
@@ -547,6 +576,7 @@ class SessionRuntime:
         d["blinks_total"] = self.engine.blinks.count
         if self.engine.external and self.engine.extra:
             d["mw"] = self.engine.extra
+        d["bands"] = self.engine.bands
         if not self.engine.baseline.ready:
             fit = min(8, int(round(sample.baseline_progress * 8)))
             if self.totem.fit != fit:
@@ -555,7 +585,8 @@ class SessionRuntime:
             self.totem.send("FIT 8")
         self._on_detector_events(events, t)
         self._maybe_attach_totem(t)
-        self.recaps.maybe_run(t)
+        if not self.review_only:
+            self.recaps.maybe_run(t)
         self._focus_hist.append(d)
         if len(self._focus_hist) > 4000:
             self._focus_hist = self._focus_hist[-2000:]
@@ -660,6 +691,9 @@ class SessionRuntime:
         return gaps
 
     async def _build_gaps(self) -> list[dict]:
+        if self.review_only:
+            self.db.replace_gaps(self.id, [])
+            return []
         lecture_end = max(self.transcript.end_time, self.clock.now())
         merged = merge_into_gaps(list(self.flags.values()), self.s, lecture_end=lecture_end)
         corpus = self.transcript.text_between(0, lecture_end + 1)

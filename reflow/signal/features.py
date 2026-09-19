@@ -201,6 +201,9 @@ class FocusEngine:
         self._ext_valid = False
         self._ext_t = 0.0
         self.extra: dict = {}
+        self.bands: dict | None = (
+            None  # relative theta/alpha/beta of the latest valid window, for the waves display
+        )
 
     # ---- external per-second index (mindwave bridge) ----
     def feed_frame(
@@ -219,6 +222,11 @@ class FocusEngine:
             self.blinks.count += int(blinks)
         if extra:
             self.extra = extra
+            lt, la, lb = extra.get("log_theta"), extra.get("log_alpha"), extra.get("log_beta")
+            if lt is not None and la is not None and lb is not None:
+                pw = {"theta": 10**lt, "alpha": 10**la, "beta": 10**lb}
+                tot = sum(pw.values())
+                self.bands = {k: round(v / tot, 3) for k, v in pw.items()} if tot > 0 else None
 
     @property
     def external(self) -> bool:
@@ -289,6 +297,8 @@ class FocusEngine:
         if denom <= 0 or bp["beta"] <= 0:
             return None, True
         e = bp["beta"] / denom
+        tot = bp["theta"] + bp["alpha"] + bp["beta"]
+        self.bands = {k: round(bp[k] / tot, 3) for k in ("theta", "alpha", "beta")} if tot > 0 else None
         return math.log(e), False
 
     def tick(self, t: float, paused: bool = False) -> tuple[FocusSample, list[DetectorEvent]]:

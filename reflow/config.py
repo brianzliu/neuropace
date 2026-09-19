@@ -8,7 +8,27 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-FORMS: tuple[str, ...] = ("plain", "keyterm", "analogy", "sketch")
+# The four explanation families the preference model learns over (docs/PRODUCT.md §4).
+FORMS: tuple[str, ...] = ("words", "analogy", "visual", "doing")
+FORM_LABELS: dict[str, str] = {
+    "words": "in words",
+    "analogy": "by comparison",
+    "visual": "as a picture",
+    "doing": "by doing",
+}
+# keys used before v2 (tally rows, flags, sessions); mapped on read and by the migration
+LEGACY_FORMS: dict[str, str] = {
+    "plain": "words",
+    "keyterm": "words",
+    "analogy": "analogy",
+    "sketch": "visual",
+}
+
+
+def canonical_form(form: str | None) -> str | None:
+    if form is None:
+        return None
+    return LEGACY_FORMS.get(form, form) if form not in FORMS else form
 
 
 def _env(name: str, default: str | None = None) -> str | None:

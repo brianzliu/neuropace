@@ -102,7 +102,10 @@ async def test_live_session_tap_catchup_eeg_flag_notes_and_log(settings, db, llm
     assert gaps and all(
         g["package"]["question"]["options"] and len(g["package"]["question"]["options"]) == 4 for g in gaps
     )
-    assert all(g["package"]["forms"]["sketch"]["diagram"]["nodes"] for g in gaps)
+    assert all(
+        g["package"]["artifacts"]["diagram"]["nodes"] and g["package"]["artifacts"]["example"]["lines"]
+        for g in gaps
+    )
     sess = db.get_session(rt.id)
     assert sess["status"] == "ended" and sess["baseline"]["ready"] and sess["headset_kind"] == "simulated"
     assert db.get_learner(lrn["id"])["baseline_mu"] is not None

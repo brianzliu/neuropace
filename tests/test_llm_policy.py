@@ -17,7 +17,7 @@ from reflow.llm.client import LLMClient, LLMUnavailable
 from reflow.store.db import DB
 from reflow.transcribe.transcript import Word
 
-GOOD_RECAP = json.dumps({"plain": "p", "keyterm": "k: d", "analogy": "a", "sketch": "s"})
+GOOD_RECAP = json.dumps({"words": "p", "analogy": "a", "visual": "v", "doing": "d"})
 
 
 class FakeResponses:
@@ -144,19 +144,26 @@ async def test_outage_gives_verbatim_transcript_and_failed_packages_then_regener
                 "correct_index": 1,
                 "explanation": "e",
             },
-            "forms": {
-                "plain": "p",
-                "keyterm": {"term": "k", "definition": "d", "example": "e"},
+            "artifacts": {
+                "summary": "s",
+                "key_idea": {"term": "k", "definition": "d", "example": "e"},
                 "analogy": "a",
-                "sketch": {
-                    "line": "l",
-                    "diagram": {
-                        "title": "t",
-                        "nodes": [{"id": "n1", "label": "x"}, {"id": "n2", "label": "y"}],
-                        "edges": [{"from_id": "n1", "to_id": "n2", "label": "to"}],
-                        "steps": [{"highlight": ["n1"], "caption": "c"}],
-                    },
+                "diagram": {
+                    "title": "t",
+                    "nodes": [{"id": "n1", "label": "x"}, {"id": "n2", "label": "y"}],
+                    "edges": [{"from_id": "n1", "to_id": "n2", "label": "to"}],
+                    "steps": [{"highlight": ["n1"], "caption": "c"}],
                 },
+                "chart": {
+                    "applicable": True,
+                    "kind": "bar",
+                    "title": "t",
+                    "unit": "s",
+                    "points": [{"label": "a", "value": 1}, {"label": "b", "value": 2}],
+                    "takeaway": "tk",
+                },
+                "steps": {"applicable": False, "title": "", "steps": []},
+                "example": {"title": "ex", "lines": ["l1", "l2"], "result": "r"},
             },
         }
     )

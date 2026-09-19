@@ -81,8 +81,36 @@ def learner_tally(learner_id: str, request: Request):
     if not db.get_learner(learner_id):
         raise HTTPException(404, "unknown learner")
     return tallymod.summary(
-        db.get_tally(learner_id), db.population_tally(), _s(request), np.random.default_rng()
+        db.get_tally(learner_id),
+        db.population_tally(),
+        _s(request),
+        np.random.default_rng(),
+        focus=db.card_focus_by_form(learner_id),
     )
+
+
+@router.get("/me/profile")
+def me_profile(request: Request):
+    """The device learner's profile: streak, moments, and how they learn best (docs/PRODUCT.md §5)."""
+    db = _db(request)
+    me = db.default_learner()
+    stats = db.profile_stats(me["id"])
+    tally = tallymod.summary(
+        db.get_tally(me["id"]),
+        db.population_tally(),
+        _s(request),
+        np.random.default_rng(),
+        focus=db.card_focus_by_form(me["id"]),
+    )
+    return {"learner": me, "stats": stats, "tally": tally, "calibrated": me.get("baseline_mu") is not None}
+
+
+@router.post("/me/reset")
+def me_reset(request: Request):
+    db = _db(request)
+    me = db.default_learner()
+    db.reset_profile(me["id"])
+    return {"ok": True, "learner": db.get_learner(me["id"])}
 
 
 # ---------------------------------------------------------------- lectures
@@ -239,8 +267,8 @@ async def create_session(body: SessionIn, request: Request):
     lecture = db.get_lecture(body.lecture_id, full=True) if body.lecture_id else None
     if body.lecture_id and not lecture:
         raise HTTPException(404, "unknown lecture")
-    if body.mode not in ("live", "recorded"):
-        raise HTTPException(400, "mode must be live or recorded")
+    if body.mode not in ("live", "recorded", "review"):
+        raise HTTPException(400, "mode must be live, recorded or review")
     if not app.state.llm.enabled and not s.allow_offline_llm:
         raise HTTPException(
             400,
@@ -251,14 +279,18 @@ async def create_session(body: SessionIn, request: Request):
         raise HTTPException(400, "catchup_policy must be always or randomized")
     # transcript kind
     tk = body.transcript
-    if tk == "auto":
+    if body.mode == "review":
+        tk = "none"  # restudy: headset only, so focus can be measured card by card
+    elif tk == "auto":
         if body.mode == "recorded":
             tk = "recorded"
         elif lecture and lecture.get("words"):
             tk = "scripted"
         else:
             tk = "deepgram"
-    if tk in ("scripted", "recorded") and not (lecture and lecture.get("words")):
+    if body.mode == "review":
+        pass
+    elif tk in ("scripted", "recorded") and not (lecture and lecture.get("words")):
         raise HTTPException(400, f"transcript={tk} needs a lecture with words")
     if tk == "deepgram" and not s.deepgram_api_key:
         raise HTTPException(400, "live microphone needs DEEPGRAM_API_KEY; pick a scripted lecture instead")
@@ -385,6 +417,12 @@ def _gap_public(g: dict) -> dict:
         "flag_ids": g.get("flag_ids", []),
         "status": g["status"],
         "note": pkg.get("note"),
+        "summary": (pkg.get("artifacts") or {}).get("summary"),
+        "artifacts_available": sorted(
+            k
+            for k, v in (pkg.get("artifacts") or {}).items()
+            if v and not (isinstance(v, dict) and v.get("applicable") is False)
+        ),
         "question": q,
         "package_source": g.get("package_source"),
         "error": pkg.get("error"),
@@ -449,10 +487,14 @@ def _review(request: Request, session_id: str) -> ReviewEngine:
 class AnswerIn(BaseModel):
     card_id: str
     choice: int
+    focus_ratio: float | None = (
+        None  # fraction of the card's seconds not in a drop (headset on), client-measured
+    )
 
 
 class CardIn(BaseModel):
     card_id: str
+    focus_ratio: float | None = None
 
 
 @router.post("/sessions/{session_id}/review/start")
@@ -473,7 +515,7 @@ def review_state(session_id: str, request: Request):
 def review_answer(session_id: str, body: AnswerIn, request: Request):
     eng = _review(request, session_id)
     try:
-        out = eng.answer(body.card_id, body.choice)
+        out = eng.answer(body.card_id, body.choice, body.focus_ratio)
     except ValueError as e:
         raise HTTPException(400, str(e)) from e
     if out["done"]:
@@ -485,7 +527,7 @@ def review_answer(session_id: str, body: AnswerIn, request: Request):
 def review_drop(session_id: str, body: CardIn, request: Request):
     eng = _review(request, session_id)
     try:
-        out = eng.drop(body.card_id)
+        out = eng.drop(body.card_id, body.focus_ratio)
     except ValueError as e:
         raise HTTPException(400, str(e)) from e
     if out["done"]:
@@ -497,7 +539,7 @@ def review_drop(session_id: str, body: CardIn, request: Request):
 def review_advance(session_id: str, body: CardIn, request: Request):
     eng = _review(request, session_id)
     try:
-        return eng.advance(body.card_id)
+        return eng.advance(body.card_id, body.focus_ratio)
     except ValueError as e:
         raise HTTPException(400, str(e)) from e
 

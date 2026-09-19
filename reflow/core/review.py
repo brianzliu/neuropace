@@ -8,6 +8,7 @@ import numpy as np
 
 from ..config import FORMS, Settings
 from ..ids import new_id
+from ..llm.schemas import pick_artifact
 from ..store.db import DB
 from . import tally as tallymod
 
@@ -74,6 +75,9 @@ class ReviewEngine:
         return None
 
     def _new_card(self, gap: dict, kind: str, form: str | None) -> dict:
+        artifact_kind = None
+        if kind == "reteach" and form:
+            artifact_kind = pick_artifact((gap.get("package") or {}).get("artifacts") or {}, form)[0]
         card = {
             "id": new_id("card"),
             "session_id": self.session_id,
@@ -85,6 +89,8 @@ class ReviewEngine:
             "outcome": None,
             "choice": None,
             "option_order": None,
+            "artifact_kind": artifact_kind,
+            "focus_ratio": None,
         }
         self._ord += 1
         if kind == "question":
@@ -115,10 +121,11 @@ class ReviewEngine:
             opts = q.get("options", ["", "", "", ""])
             out["question"] = {"question": q.get("question", ""), "options": [opts[i] for i in order]}
         else:
-            forms = pkg.get("forms", {})
+            kind, content = pick_artifact(pkg.get("artifacts") or {}, card["form"] or "words")
             out["reteach"] = {
                 "form": card["form"],
-                "content": forms.get(card["form"]),
+                "artifact": kind,
+                "content": content,
                 "key_term": pkg.get("note", {}).get("key_term"),
             }
         return out
@@ -136,7 +143,11 @@ class ReviewEngine:
 
     def tally_summary(self) -> dict:
         return tallymod.summary(
-            self.db.get_tally(self.learner_id), self.db.population_tally(), self.s, self.rng
+            self.db.get_tally(self.learner_id),
+            self.db.population_tally(),
+            self.s,
+            self.rng,
+            focus=self.db.card_focus_by_form(self.learner_id),
         )
 
     # ---- API ----
@@ -169,7 +180,7 @@ class ReviewEngine:
         self.db.set_gap_status(gap["id"], "exhausted")
         return None
 
-    def answer(self, card_id: str, choice: int) -> dict:
+    def answer(self, card_id: str, choice: int, focus_ratio: float | None = None) -> dict:
         card = self.db.get_card(card_id)
         if card is None or card["kind"] != "question" or card["outcome"] is not None:
             raise ValueError("card is not an open question")
@@ -180,7 +191,7 @@ class ReviewEngine:
         correct_shown = order.index(correct_orig)
         hit = int(choice) == correct_shown
         outcome = "hit" if hit else "miss"
-        self.db.update_card(card_id, outcome=outcome, choice=int(choice))
+        self.db.update_card(card_id, outcome=outcome, choice=int(choice), focus_ratio=focus_ratio)
         self.cards_answered += 1
         form_before = self._form_before.get(gap["id"])
         if form_before in FORMS:
@@ -212,12 +223,12 @@ class ReviewEngine:
             "tally": self.tally_summary(),
         }
 
-    def drop(self, card_id: str) -> dict:
+    def drop(self, card_id: str, focus_ratio: float | None = None) -> dict:
         """Focus drop while a card is open: switch form, no tally change."""
         card = self.db.get_card(card_id)
         if card is None or card["outcome"] is not None:
             raise ValueError("card is not open")
-        self.db.update_card(card_id, outcome="drop")
+        self.db.update_card(card_id, outcome="drop", focus_ratio=focus_ratio)
         gap = self._gap(card["gap_id"])
         if card["kind"] == "question":
             self.cards_answered += 1
@@ -236,12 +247,12 @@ class ReviewEngine:
             "tally": self.tally_summary(),
         }
 
-    def advance(self, card_id: str) -> dict:
+    def advance(self, card_id: str, focus_ratio: float | None = None) -> dict:
         """After reading a reteach card, ask the question again."""
         card = self.db.get_card(card_id)
         if card is None or card["kind"] != "reteach" or card["outcome"] is not None:
             raise ValueError("card is not an open reteach card")
-        self.db.update_card(card_id, outcome="read")
+        self.db.update_card(card_id, outcome="read", focus_ratio=focus_ratio)
         gap = self._gap(card["gap_id"])
         nxt = self._new_card(gap, "question", None)
         return {

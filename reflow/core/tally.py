@@ -6,7 +6,7 @@ from dataclasses import asdict, dataclass
 
 import numpy as np
 
-from ..config import FORMS, Settings
+from ..config import FORM_LABELS, FORMS, Settings
 
 Counts = dict[str, dict]  # form -> {"rescues": int, "attempts": int}
 
@@ -66,12 +66,18 @@ def rank(post: dict[str, FormStat]) -> list[str]:
     return sorted(FORMS, key=lambda f: (-post[f].posterior_mean, FORMS.index(f)))
 
 
-def summary(learner: Counts, pop: Counts, s: Settings, rng: np.random.Generator) -> dict:
+def summary(
+    learner: Counts, pop: Counts, s: Settings, rng: np.random.Generator, focus: dict[str, dict] | None = None
+) -> dict:
     prior = population_prior(pop, s.tally_prior_pseudocount)
     post = posteriors(learner, prior)
     total = sum(st.attempts for st in post.values())
+    forms = {f: st.to_dict() for f, st in post.items()}
+    for f in FORMS:
+        forms[f]["label"] = FORM_LABELS[f]
+        forms[f]["focus"] = (focus or {}).get(f, {"mean_focus": None, "n": 0})
     return {
-        "forms": {f: st.to_dict() for f, st in post.items()},
+        "forms": forms,
         "rank": rank(post),
         "pick": thompson_pick(post, rng),
         "enough_data": total >= s.tally_enough_attempts,
