@@ -4,21 +4,23 @@ import { SourceBadge } from "./Badges";
 
 export default function RecapPanel({ recap, bestForm }: { recap: RecapMsg | null; bestForm: Form }) {
   return (
-    <div className="panel recap-panel">
-      <h2>
-        Rolling recap{" "}
-        {recap ? (
-          <span className="muted small mono">
-            {mmss(recap.t_from)} to {mmss(recap.t_to)}
-          </span>
-        ) : null}{" "}
-        {recap ? <SourceBadge source={recap.source} /> : null}
-      </h2>
-      {!recap ? <div className="dim small">Written every 20 s from the last 30 s of transcript, in all four forms.</div> : null}
+    <div className="card">
+      <div className="card-header">
+        <span className="card-title">Rolling recap</span>
+        <span className="row">
+          {recap ? (
+            <span className="mono t-footnote label-2">
+              {mmss(recap.t_from)} to {mmss(recap.t_to)}
+            </span>
+          ) : null}
+          {recap ? <SourceBadge source={recap.source} /> : null}
+        </span>
+      </div>
+      {!recap ? <div className="t-footnote label-2">Written every 20 s from the last 30 s of transcript, in all four forms.</div> : null}
       {recap
         ? FORMS.map((f) => (
-            <div key={f} className={"form" + (f === bestForm ? " best" : "")}>
-              <div className="name">{FORM_LABEL[f]}{f === bestForm ? " ★" : ""}</div>
+            <div key={f} className={"recap-row" + (f === bestForm ? " best" : "")}>
+              <div className="name">{FORM_LABEL[f]}{f === bestForm ? " · best" : ""}</div>
               <div className="text">{recap.forms[f]}</div>
             </div>
           ))

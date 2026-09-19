@@ -36,9 +36,12 @@ export interface FocusMsg {
   blinks_total?: number;
 }
 
+export type FlagSource = "tap" | "key" | "eeg" | "forced" | "sim_tap";
+export const isTapSource = (s: string) => s === "tap" || s === "key" || s === "sim_tap";
+
 export interface Flag {
   id: string;
-  source: "tap" | "sim_tap" | "eeg" | "forced";
+  source: FlagSource;
   t_trigger: number;
   t_start: number;
   t_end: number | null;
@@ -60,7 +63,7 @@ export interface CatchupMsg {
   line: string;
   now_text: string;
   forms: Record<Form, string>;
-  source: "llm" | "cache" | "offline";
+  source: "llm" | "cache" | "offline" | "transcript";
   recap_window: [number, number];
   ttl_s: number;
   auto_show: boolean;
@@ -71,17 +74,20 @@ export interface RecapMsg {
   t_from: number;
   t_to: number;
   forms: Record<Form, string>;
-  source: "llm" | "cache" | "offline";
+  source: "llm" | "cache" | "offline" | "transcript";
   best_form?: Form;
 }
 
+export type TotemKind = "real" | "keyboard";
+
 export interface TotemStatus {
   connected: boolean;
-  kind: "real" | "simulated";
+  kind: TotemKind | string;
   port: string | null;
   dots: number;
   fit: number;
   pulse?: boolean;
+  hint?: string | null;
 }
 
 export type HeadsetKind = "real" | "simulated" | "fake" | "replay";
@@ -252,6 +258,8 @@ export interface GapNote {
   connection: string;
 }
 
+export type PackageSource = "llm" | "cache" | "offline" | "failed" | "transcript";
+
 export interface GapPublic {
   id: string;
   ord: number;
@@ -262,9 +270,15 @@ export interface GapPublic {
   flag_ids: string[];
   status: "open" | "closed" | "exhausted";
   note: GapNote | null;
-  question: { question: string; options: string[] };
-  package_source: "llm" | "cache" | "offline" | null;
+  question: { question: string; options: string[] } | null;
+  package_source: PackageSource | null;
+  error?: string | null;
   forms_available: Form[];
+}
+
+export interface RegenerateResponse {
+  gaps: GapPublic[];
+  failed: number;
 }
 
 export interface NotesResponse {
@@ -312,7 +326,7 @@ export interface Card {
   form: Form | null;
   t_start: number;
   t_end: number;
-  package_source: "llm" | "cache" | "offline" | null;
+  package_source: PackageSource | null;
   forms_used: Form[];
   question?: { question: string; options: string[] };
   reteach?: { form: Form; content: ReteachContent; key_term: string | null };
@@ -405,10 +419,11 @@ export interface LossMap {
 export interface Doctor {
   keys: { deepgram: boolean; openai: boolean };
   deepgram: { ok: boolean; reason?: string; status?: number };
-  openai: { ok: boolean; model: string; reason?: string; alternatives?: string[] };
-  headset: { port: string | null; kind: "real" | "simulated"; setting: string | null };
-  totem: { port: string | null; kind: "real" | "simulated"; setting: string | null };
-  serial_ports: { device: string; description: string }[];
+  openai: { ok: boolean; model: string; reason?: string; alternatives?: string[]; required?: boolean };
+  headset: { port: string | null; kind: string; setting: string | null; bridge?: string | null };
+  totem: { port: string | null; kind: string; setting: string | null; hint?: string | null };
+  serial_ports: { device: string; description: string; hwid?: string; vid?: number | null }[];
+  platform?: string;
   frontend_built: boolean;
   data_dir: string;
   baseline_seconds: number;

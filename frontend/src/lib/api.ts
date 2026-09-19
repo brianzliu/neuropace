@@ -1,7 +1,20 @@
 import type {
-  Doctor, EventsResponse, LectureFull, Learner, LossMap, NotesResponse, QuizGet, QuizResult, ReviewAnswer,
+  Doctor, EventsResponse, LectureFull, Learner, LossMap, NotesResponse, QuizGet, QuizResult, RegenerateResponse, ReviewAnswer,
   ReviewNext, ReviewStart, SessionPublic, TallySummary, GapPublic,
 } from "./types";
+
+/** An HTTP error with the backend's `detail` kept separately, so views can show it verbatim. */
+export class ApiError extends Error {
+  constructor(public status: number, public detail: string) {
+    super(`${status}: ${detail}`);
+    this.name = "ApiError";
+  }
+}
+
+export function errorText(e: unknown): string {
+  if (e instanceof ApiError) return e.detail;
+  return e instanceof Error ? e.message : String(e);
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...init });
@@ -13,7 +26,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       // keep statusText
     }
-    throw new Error(`${res.status}: ${detail}`);
+    throw new ApiError(res.status, detail);
   }
   return (await res.json()) as T;
 }
@@ -30,7 +43,7 @@ export interface SessionCreate {
   use_stored_baseline?: boolean;
   auto_pause?: boolean;
   headset?: string; // auto | sim | fake | replay:<dir> | serial:<port> | a device path
-  totem?: "auto" | "sim";
+  totem?: string; // auto | keyboard | a device path
   transcript?: "auto" | "scripted" | "deepgram" | "recorded";
   seed?: number;
 }
@@ -59,6 +72,7 @@ export const api = {
   simHeadset: (id: string, state: string) => post<unknown>(`/api/sessions/${id}/sim/headset`, { state }),
   events: (id: string) => get<EventsResponse>(`/api/sessions/${id}/events`),
   notes: (id: string) => get<NotesResponse>(`/api/sessions/${id}/notes`),
+  regenerate: (id: string) => post<RegenerateResponse>(`/api/sessions/${id}/regenerate`),
   reviewStart: (id: string) => post<ReviewStart>(`/api/sessions/${id}/review/start`),
   reviewState: (id: string) => get<ReviewStart>(`/api/sessions/${id}/review`),
   reviewAnswer: (id: string, card_id: string, choice: number) => post<ReviewAnswer>(`/api/sessions/${id}/review/answer`, { card_id, choice }),

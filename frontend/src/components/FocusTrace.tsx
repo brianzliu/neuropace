@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { Flag, FocusMsg } from "../lib/types";
+import { isTapSource, type Flag, type FocusMsg } from "../lib/types";
 
 interface Props {
   focus: FocusMsg[];
@@ -10,7 +10,12 @@ interface Props {
   windowSeconds?: number;
 }
 
-/** Focus trace: z(E) over the last 180 s with thresholds, drop bands, tap marks and blink ticks. */
+function cssVar(el: Element, name: string, fallback: string): string {
+  const v = getComputedStyle(el).getPropertyValue(name).trim();
+  return v || fallback;
+}
+
+/** Focus trace: z(E) over the last 180 s with thresholds, drop bands, tap marks and blink ticks. Colors follow the theme. */
 export default function FocusTrace({ focus, flags, now, enterZ, exitZ, windowSeconds = 180 }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
   const last = focus.length ? focus[focus.length - 1] : null;
@@ -27,12 +32,23 @@ export default function FocusTrace({ focus, flags, now, enterZ, exitZ, windowSec
     }
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+    const C = {
+      accent: cssVar(canvas, "--accent", "#007aff"),
+      purple: cssVar(canvas, "--purple", "#af52de"),
+      danger: cssVar(canvas, "--danger", "#ff3b30"),
+      warning: cssVar(canvas, "--warning", "#ff9f0a"),
+      success: cssVar(canvas, "--success", "#34c759"),
+      sep: cssVar(canvas, "--separator", "rgba(60,60,67,0.12)"),
+      label2: cssVar(canvas, "--label-2", "rgba(60,60,67,0.6)"),
+      label3: cssVar(canvas, "--label-3", "rgba(60,60,67,0.3)"),
+      label: cssVar(canvas, "--label", "#1d1d1f"),
+    };
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
-    const padL = 34;
-    const padR = 8;
-    const padT = 22;
-    const padB = 22;
+    const padL = 30;
+    const padR = 6;
+    const padT = 14;
+    const padB = 18;
     const zMin = -4;
     const zMax = 3;
     const t1 = Math.max(now, windowSeconds);
@@ -40,12 +56,13 @@ export default function FocusTrace({ focus, flags, now, enterZ, exitZ, windowSec
     const x = (t: number) => padL + ((t - t0) / windowSeconds) * (W - padL - padR);
     const y = (z: number) => padT + ((zMax - Math.max(zMin, Math.min(zMax, z))) / (zMax - zMin)) * (H - padT - padB);
 
-    // drop bands (from focus state) and bad-quality shading
     let bandStart: number | null = null;
     let badStart: number | null = null;
     const flush = (kind: "drop" | "bad", from: number, to: number) => {
-      ctx.fillStyle = kind === "drop" ? "rgba(248,113,113,0.18)" : "rgba(139,149,167,0.10)";
+      ctx.globalAlpha = kind === "drop" ? 0.14 : 0.08;
+      ctx.fillStyle = kind === "drop" ? C.danger : C.label2;
       ctx.fillRect(x(from), padT, Math.max(1, x(to) - x(from)), H - padT - padB);
+      ctx.globalAlpha = 1;
     };
     for (const f of focus) {
       if (f.t < t0 - 1) continue;
@@ -65,137 +82,118 @@ export default function FocusTrace({ focus, flags, now, enterZ, exitZ, windowSec
     if (bandStart !== null) flush("drop", bandStart, t1);
     if (badStart !== null) flush("bad", badStart, t1);
 
-    // grid + thresholds
-    ctx.strokeStyle = "#273041";
+    ctx.strokeStyle = C.sep;
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(padL, y(0));
     ctx.lineTo(W - padR, y(0));
     ctx.stroke();
-    ctx.setLineDash([4, 4]);
-    ctx.strokeStyle = "#f87171";
+    ctx.setLineDash([3, 4]);
+    ctx.strokeStyle = C.danger;
     ctx.beginPath();
     ctx.moveTo(padL, y(enterZ));
     ctx.lineTo(W - padR, y(enterZ));
     ctx.stroke();
-    ctx.strokeStyle = "#fbbf24";
+    ctx.strokeStyle = C.warning;
     ctx.beginPath();
     ctx.moveTo(padL, y(exitZ));
     ctx.lineTo(W - padR, y(exitZ));
     ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle = "#8b95a7";
-    ctx.font = "11px ui-monospace, Menlo, monospace";
+    ctx.fillStyle = C.label2;
+    ctx.font = "10px ui-monospace, Menlo, monospace";
     ctx.textAlign = "right";
-    for (const z of [2, 0, -2, enterZ]) {
-      ctx.fillText(z.toFixed(0), padL - 6, y(z) + 4);
-    }
+    for (const z of [2, 0, -2]) ctx.fillText(z.toFixed(0), padL - 5, y(z) + 3);
     ctx.textAlign = "left";
-    // time ticks
     for (let t = Math.ceil(t0 / 30) * 30; t <= t1; t += 30) {
-      ctx.fillText(`${Math.floor(t / 60)}:${String(Math.round(t % 60)).padStart(2, "0")}`, x(t) + 2, H - 6);
-      ctx.fillStyle = "#273041";
+      ctx.fillStyle = C.sep;
       ctx.fillRect(x(t), padT, 1, H - padT - padB);
-      ctx.fillStyle = "#8b95a7";
+      ctx.fillStyle = C.label2;
+      ctx.fillText(`${Math.floor(t / 60)}:${String(Math.round(t % 60)).padStart(2, "0")}`, x(t) + 3, H - 5);
     }
 
-    // z line
-    ctx.strokeStyle = "#60a5fa";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    let pen = false;
-    for (const f of focus) {
-      if (f.t < t0 - 1) continue;
-      if (f.z === null || f.paused) {
-        pen = false;
-        continue;
+    const drawLine = (get: (f: FocusMsg) => number | null, color: string, width: number, alpha: number) => {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      let pen = false;
+      for (const f of focus) {
+        if (f.t < t0 - 1) continue;
+        const v = get(f);
+        if (v === null || f.paused) {
+          pen = false;
+          continue;
+        }
+        const px = x(f.t);
+        const py = y(v);
+        if (!pen) {
+          ctx.moveTo(px, py);
+          pen = true;
+        } else ctx.lineTo(px, py);
       }
-      const px = x(f.t);
-      const py = y(f.z);
-      if (!pen) {
-        ctx.moveTo(px, py);
-        pen = true;
-      } else ctx.lineTo(px, py);
-    }
-    ctx.stroke();
-    // w15 (window mean) as a thin line
-    ctx.strokeStyle = "rgba(167,139,250,0.8)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    pen = false;
-    for (const f of focus) {
-      if (f.t < t0 - 1) continue;
-      if (f.w15 === null || f.paused) {
-        pen = false;
-        continue;
-      }
-      const px = x(f.t);
-      const py = y(f.w15);
-      if (!pen) {
-        ctx.moveTo(px, py);
-        pen = true;
-      } else ctx.lineTo(px, py);
-    }
-    ctx.stroke();
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    };
+    drawLine((f) => f.z, C.accent, 1.8, 1);
+    drawLine((f) => f.w15, C.purple, 1.2, 0.85);
 
-    // blink ticks and artifacts
     for (const f of focus) {
       if (f.t < t0) continue;
       if (f.blink) {
-        ctx.fillStyle = "#34d399";
-        ctx.fillRect(x(f.t) - 1, padT - 8, 2, 6);
+        ctx.fillStyle = C.success;
+        ctx.fillRect(x(f.t) - 1, padT - 6, 2, 5);
       }
       if (f.artifact) {
-        ctx.fillStyle = "#8b95a7";
-        ctx.fillRect(x(f.t) - 1, padT - 14, 2, 4);
+        ctx.fillStyle = C.label3;
+        ctx.fillRect(x(f.t) - 1, padT - 11, 2, 3);
       }
     }
-    // tap marks and flag spans
     for (const fl of flags) {
       if (fl.t_trigger < t0 - 5) continue;
-      const isTap = fl.source === "tap" || fl.source === "sim_tap";
-      ctx.strokeStyle = isTap ? "#fbbf24" : "#f87171";
+      const isTap = isTapSource(fl.source);
+      ctx.strokeStyle = isTap ? C.warning : C.danger;
       ctx.lineWidth = isTap ? 2 : 1;
       ctx.beginPath();
       ctx.moveTo(x(fl.t_trigger), padT);
       ctx.lineTo(x(fl.t_trigger), H - padB);
       ctx.stroke();
       if (fl.t_start !== null) {
-        ctx.fillStyle = isTap ? "rgba(251,191,36,0.12)" : "rgba(248,113,113,0.10)";
+        ctx.globalAlpha = 0.16;
+        ctx.fillStyle = isTap ? C.warning : C.danger;
         const end = fl.t_end ?? t1;
-        ctx.fillRect(x(fl.t_start), H - padB - 6, Math.max(2, x(end) - x(fl.t_start)), 6);
+        ctx.fillRect(x(fl.t_start), H - padB - 5, Math.max(2, x(end) - x(fl.t_start)), 5);
+        ctx.globalAlpha = 1;
       }
       if (isTap) {
-        ctx.fillStyle = "#fbbf24";
-        ctx.font = "bold 10px sans-serif";
-        ctx.fillText("tap", x(fl.t_trigger) + 3, padT + 10);
+        ctx.fillStyle = C.warning;
+        ctx.font = "600 9px -apple-system, BlinkMacSystemFont, sans-serif";
+        ctx.fillText("tap", x(fl.t_trigger) + 3, padT + 9);
       }
     }
-    // now marker
-    ctx.fillStyle = "#e8ecf2";
-    ctx.fillRect(x(now) - 1, padT, 1, H - padT - padB);
+    ctx.fillStyle = C.label;
+    ctx.globalAlpha = 0.7;
+    ctx.fillRect(x(now) - 0.5, padT, 1, H - padT - padB);
+    ctx.globalAlpha = 1;
   }, [focus, flags, now, enterZ, exitZ, windowSeconds]);
 
   return (
-    <div className="trace-wrap">
-      <canvas ref={ref} className="trace" />
+    <div className="card trace-card">
       <div className="trace-legend">
-        <span style={{ color: "#60a5fa" }}>z(E)</span>
-        <span style={{ color: "#a78bfa" }}>15 s mean</span>
-        <span style={{ color: "#f87171" }}>drop {enterZ}</span>
-        <span style={{ color: "#fbbf24" }}>recover {exitZ}</span>
-        <span style={{ color: "#34d399" }}>blink</span>
-        {last ? <span className="mono">blinks {last.blinks_total ?? 0}</span> : null}
+        <span><i className="sw" style={{ background: "var(--accent)" }} />z(E)</span>
+        <span><i className="sw" style={{ background: "var(--purple)" }} />15 s mean</span>
+        <span><i className="sw" style={{ background: "var(--danger)" }} />drop {enterZ}</span>
+        <span><i className="sw" style={{ background: "var(--warning)" }} />recover {exitZ}</span>
+        <span><i className="sw" style={{ background: "var(--success)" }} />blink</span>
       </div>
+      <canvas ref={ref} />
       {last && !last.baseline_ready ? (
-        <>
-          <div className="baseline-bar">
+        <div className="trace-foot">
+          <span className="progress">
             <i style={{ width: `${Math.round(last.baseline_progress * 100)}%` }} />
-          </div>
-          <div className="baseline-label">
-            {last.state === "nosignal" ? "waiting for headset" : last.quality === "bad" ? "poor signal, fix the fit" : `baseline ${Math.round(last.baseline_progress * 100)}%`}
-          </div>
-        </>
+          </span>
+          <span>{last.state === "nosignal" ? "waiting for the headset" : last.quality === "bad" ? "poor signal, fix the fit" : `baseline ${Math.round(last.baseline_progress * 100)}%`}</span>
+        </div>
       ) : null}
     </div>
   );

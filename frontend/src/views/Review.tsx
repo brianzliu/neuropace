@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { api } from "../lib/api";
+import { api, errorText } from "../lib/api";
 import { FORM_LABEL, type Card, type KeyTermContent, type Progress, type SketchContent, type TallySummary } from "../lib/types";
 import { range } from "../lib/format";
-import { useSimBadge } from "../lib/useSimBadge";
-import { SimFlash, SourceBadge } from "../components/Badges";
+import { flash } from "../lib/flash";
+import { SourceBadge } from "../components/Badges";
 import Dissolve from "../components/Dissolve";
 import Diagram from "../components/Diagram";
 import TallyPanel from "../components/TallyPanel";
+import { Group, Row } from "../components/Inspector";
 
 type Phase = "idle" | "answering" | "feedback" | "dissolving" | "reteach" | "done";
 
@@ -26,7 +27,6 @@ export default function Review() {
   const [step, setStep] = useState(0);
   const [learnerId, setLearnerId] = useState<string | null>(null);
   const [lectureId, setLectureId] = useState<string | null>(null);
-  const sim = useSimBadge();
   const pendingNext = useRef<Card | null>(null);
   const busy = useRef(false);
 
@@ -56,7 +56,7 @@ export default function Review() {
         setTally(st.tally);
         applyNext(st.card, st.progress.done);
       } catch (e) {
-        setErr(String(e));
+        setErr(errorText(e));
       }
     })();
     return () => {
@@ -100,7 +100,7 @@ export default function Review() {
   const drop = useCallback(async () => {
     if (!card || busy.current || (phase !== "answering" && phase !== "reteach")) return;
     busy.current = true;
-    sim.flash("SIMULATED FOCUS DROP");
+    flash("SIMULATED FOCUS DROP");
     try {
       const r = await api.reviewDrop(sessionId, card.id);
       setOutcome("drop");
@@ -113,7 +113,7 @@ export default function Review() {
     } finally {
       busy.current = false;
     }
-  }, [card, phase, sessionId, sim, applyNext]);
+  }, [card, phase, sessionId, applyNext]);
 
   const advance = useCallback(async () => {
     if (!card || card.kind !== "reteach" || busy.current) return;
@@ -152,99 +152,131 @@ export default function Review() {
     return () => window.removeEventListener("keydown", onKey);
   }, [phase, answer, drop, advance, sketch, step, nSteps]);
 
-  if (err) return <div className="panel error">{err}</div>;
-  if (!progress || !tally) return <div className="panel muted">preparing review…</div>;
-
-  return (
-    <div className="review">
-      <SimFlash visible={sim.visible} label={sim.label} />
-      <div className="col">
-        <div className="progress-line">
-          <span>
-            gaps closed {progress.gaps_closed}/{progress.gaps_total}
-            {progress.gaps_exhausted ? ` (${progress.gaps_exhausted} exhausted)` : ""}
-          </span>
-          <span className="streak">
-            streak {progress.streak}/{progress.stop_streak}
-          </span>
-          <span>cards {progress.cards_answered}</span>
-          {card ? (
-            <span className="mono">
-              gap {card.gap_ord + 1} · {range(card.t_start, card.t_end)}
-            </span>
-          ) : null}
-          {card ? <SourceBadge source={card.package_source} /> : null}
-        </div>
-        <div className="panel card">
-          {phase === "done" || !card ? (
-            <div className="done-screen">
-              <h2>Review done</h2>
-              <div className="muted">
-                {progress.streak >= progress.stop_streak ? `${progress.stop_streak} straight hits.` : "Every gap is closed or exhausted."} {progress.gaps_closed}/{progress.gaps_total} gaps closed.
-              </div>
-              <div className="row">
-                {learnerId ? <Link to={`/tally/${learnerId}`}>your tally</Link> : null}
-                {lectureId ? <Link to={`/lossmap/${lectureId}`}>lecture loss map</Link> : null}
-                <Link to={`/notes/${sessionId}`}>notes</Link>
-                <Link to="/">home</Link>
-              </div>
-            </div>
-          ) : card.kind === "question" && card.question ? (
-            <>
-              <div className="q">
-                <Dissolve text={card.question.question} active={phase === "dissolving"} />
-              </div>
-              <div className="options">
-                {card.question.options.map((o, i) => {
-                  let cls = "";
-                  if (correctIdx !== null) {
-                    if (i === correctIdx) cls = "correct";
-                    else if (i === chosen) cls = "wrong";
-                  }
-                  return (
-                    <button key={i} className={cls} disabled={phase !== "answering"} onClick={() => void answer(i)}>
-                      <span className="k">{i + 1}</span>
-                      <Dissolve text={o} active={phase === "dissolving"} />
-                    </button>
-                  );
-                })}
-              </div>
-              {outcome ? (
-                <div>
-                  <span className={"outcome " + outcome}>{outcome === "hit" ? "Hit." : outcome === "miss" ? "Miss. Re-teaching in another form…" : "Focus drop. Switching form…"}</span>{" "}
-                  {outcome !== "drop" && explanation ? <span className="muted">{explanation}</span> : null}
-                  {credited ? <span className="dim small"> · scored form: {FORM_LABEL[credited as keyof typeof FORM_LABEL] ?? credited}</span> : null}
-                </div>
-              ) : (
-                <div className="dim small">press 1 to 4 · D simulates a focus drop on this card</div>
-              )}
-            </>
-          ) : card.kind === "reteach" && card.reteach ? (
-            <div className="reteach">
-              <div className="form-name">re-taught as: {FORM_LABEL[card.reteach.form]}</div>
-              <ReteachBody card={card} step={step} />
-              <div className="row">
-                {sketch && step < nSteps - 1 ? (
-                  <button onClick={() => setStep((s) => s + 1)}>
-                    Next step ({step + 1}/{nSteps}) <span className="dim">space</span>
-                  </button>
-                ) : null}
-                <button className="primary" onClick={() => void advance()}>
-                  Continue to the question
-                </button>
-                <span className="dim small">D simulates a focus drop</span>
-              </div>
-            </div>
-          ) : null}
+  if (err) {
+    return (
+      <div className="page narrow">
+        <div className="card stack">
+          <div className="t-headline">Review is not ready</div>
+          <div className="label-2">{err}</div>
+          <div className="row">
+            <Link className="btn" to={`/notes/${sessionId}`}>
+              Back to notes
+            </Link>
+          </div>
         </div>
       </div>
-      <div className="col">
-        <TallyPanel tally={tally} compact />
-        {card ? (
-          <div className="panel small muted">
-            forms used on this gap: {card.forms_used.length ? card.forms_used.map((f) => FORM_LABEL[f]).join(", ") : "none yet"}
+    );
+  }
+  if (!progress || !tally) return <div className="page narrow"><div className="loading">Preparing review…</div></div>;
+
+  return (
+    <div className="page">
+      <div className="review-layout">
+        <div className="review-sheet">
+          <div className="progress-row">
+            <span>
+              gaps closed <b className="tabular">{progress.gaps_closed}/{progress.gaps_total}</b>
+              {progress.gaps_exhausted ? ` (${progress.gaps_exhausted} exhausted)` : ""}
+            </span>
+            <span className="streak">
+              streak {progress.streak}/{progress.stop_streak}
+            </span>
+            <span>cards {progress.cards_answered}</span>
+            {card ? (
+              <span className="mono">
+                gap {card.gap_ord + 1} · {range(card.t_start, card.t_end)}
+              </span>
+            ) : null}
+            {card ? <SourceBadge source={card.package_source} /> : null}
           </div>
-        ) : null}
+          <div className="sheet">
+            {phase === "done" || !card ? (
+              <div className="done">
+                <div className="mark">✓</div>
+                <h2 className="t-title2">Review done</h2>
+                <div className="label-2">
+                  {progress.streak >= progress.stop_streak ? `${progress.stop_streak} straight hits.` : "Every gap is closed or exhausted."} {progress.gaps_closed}/{progress.gaps_total} gaps closed.
+                </div>
+                <div className="row">
+                  {learnerId ? <Link className="btn" to={`/tally/${learnerId}`}>Your tally</Link> : null}
+                  {lectureId ? <Link className="btn" to={`/lossmap/${lectureId}`}>Loss map</Link> : null}
+                  <Link className="btn btn-plain" to={`/notes/${sessionId}`}>Notes</Link>
+                </div>
+              </div>
+            ) : card.kind === "question" && card.question ? (
+              <div className="stack">
+                <div className="question">
+                  <Dissolve text={card.question.question} active={phase === "dissolving"} />
+                </div>
+                <div className="options">
+                  {card.question.options.map((o, i) => {
+                    let cls = "";
+                    if (correctIdx !== null) {
+                      if (i === correctIdx) cls = " correct";
+                      else if (i === chosen) cls = " wrong";
+                    }
+                    const disabled = phase !== "answering";
+                    return (
+                      <div
+                        key={i}
+                        role="button"
+                        tabIndex={disabled ? -1 : 0}
+                        aria-disabled={disabled}
+                        className={"group-row" + (disabled ? "" : " clickable") + cls}
+                        onClick={() => !disabled && void answer(i)}
+                        onKeyDown={(e) => e.key === "Enter" && !disabled && void answer(i)}
+                      >
+                        <span className="kbd">{i + 1}</span>
+                        <span className="txt">
+                          <Dissolve text={o} active={phase === "dissolving"} />
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {outcome ? (
+                  <div className="t-subhead">
+                    <span className={"outcome " + outcome}>{outcome === "hit" ? "Hit." : outcome === "miss" ? "Miss. Re-teaching in another form…" : "Focus drop. Switching form…"}</span>{" "}
+                    {outcome !== "drop" && explanation ? <span className="label-2">{explanation}</span> : null}
+                    {credited ? <span className="label-3"> · scored form: {FORM_LABEL[credited as keyof typeof FORM_LABEL] ?? credited}</span> : null}
+                  </div>
+                ) : (
+                  <div className="t-footnote label-2">
+                    Press <span className="kbd">1</span> to <span className="kbd">4</span>. <span className="kbd">D</span> simulates a focus drop on this card.
+                  </div>
+                )}
+              </div>
+            ) : card.kind === "reteach" && card.reteach ? (
+              <div className="reteach">
+                <div className="group-header" style={{ padding: 0 }}>Re-taught as {FORM_LABEL[card.reteach.form]}</div>
+                <ReteachBody card={card} step={step} />
+                <div className="row">
+                  {sketch && step < nSteps - 1 ? (
+                    <button className="btn" onClick={() => setStep((s) => s + 1)}>
+                      Next step ({step + 1}/{nSteps}) <span className="kbd">space</span>
+                    </button>
+                  ) : null}
+                  <button className="btn btn-primary" onClick={() => void advance()}>
+                    Continue to the question
+                  </button>
+                  <span className="t-footnote label-2">
+                    <span className="kbd">D</span> simulates a focus drop
+                  </span>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+        <div className="inspector">
+          <TallyPanel tally={tally} compact />
+          {card ? (
+            <Group title="This gap">
+              <Row label="forms used">
+                <span>{card.forms_used.length ? card.forms_used.map((f) => FORM_LABEL[f]).join(", ") : "none yet"}</span>
+              </Row>
+            </Group>
+          ) : null}
+        </div>
       </div>
     </div>
   );
@@ -253,14 +285,14 @@ export default function Review() {
 function ReteachBody({ card, step }: { card: Card; step: number }) {
   const r = card.reteach!;
   const c = r.content;
-  if (c === null || c === undefined) return <div className="dim">no content for this form</div>;
+  if (c === null || c === undefined) return <div className="label-2">no content for this form</div>;
   if (r.form === "keyterm" && typeof c === "object" && "term" in c) {
     const k = c as KeyTermContent;
     return (
       <>
         <div className="kt-term">{k.term}</div>
-        <div>{k.definition}</div>
-        <div className="muted">Example: {k.example}</div>
+        <div className="prose">{k.definition}</div>
+        <div className="prose label-2">Example: {k.example}</div>
       </>
     );
   }
@@ -270,12 +302,14 @@ function ReteachBody({ card, step }: { card: Card; step: number }) {
     return (
       <>
         <div className="sketch-line">{s.line}</div>
-        <Diagram graph={s.diagram} step={step} />
+        <div className="diagram-card">
+          <Diagram graph={s.diagram} step={step} />
+        </div>
         <div className="caption" key={step}>
           {cap}
         </div>
       </>
     );
   }
-  return <div>{typeof c === "string" ? c : JSON.stringify(c)}</div>;
+  return <div className="prose">{typeof c === "string" ? c : JSON.stringify(c)}</div>;
 }
