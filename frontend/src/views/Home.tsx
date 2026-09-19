@@ -87,21 +87,23 @@ export default function Home() {
   const lectureById = (id: string | null) => lectures.find((l) => l.id === id);
 
   return (
-    <div className="col">
-      <h1>Reflow</h1>
-      <div className="muted" style={{ marginTop: "-0.5rem" }}>
-        It notices the moment a lecture loses you, catches you up in one glance, and re-teaches what you missed until it lands.
-      </div>
-      <DoctorStrip d={doctor} />
+    <div className="col home-page">
+      <section className="welcome">
+        <div><span className="eyebrow">Your learning space</span>
+          <h1>A little focus.<br />A little more <em>clarity.</em></h1>
+          <p className="muted">Follow the lecture. Save the moments to revisit. Pick up where you left off.</p>
+        </div>
+        <div className="learning-art" aria-hidden="true"><span className="art-orbit" /><span className="art-sheet"><i /><i /><i /><b>Got it.</b></span><span className="art-spark">✳</span><span className="art-loop">↗</span></div>
+      </section>
       {err ? <div className="panel error">{err}</div> : null}
       <div className="home">
-        <div className="panel col">
-          <h2>Start a session</h2>
+        <div className="panel col session-setup">
+          <div className="section-heading"><span className="section-number">01</span><div><h2>Start a session</h2><p className="muted small">Choose what you’re tuning into.</p></div></div>
           <div className="form-grid">
             <label>
-              learner
+              Your profile
               <select value={form.learner_id} onChange={(e) => setForm({ ...form, learner_id: e.target.value })}>
-                {learners.length === 0 ? <option value="">create one first</option> : null}
+                {learners.length === 0 ? <option value="">Create a profile first</option> : null}
                 {learners.map((l) => (
                   <option key={l.id} value={l.id}>
                     {l.name}
@@ -111,16 +113,16 @@ export default function Home() {
               </select>
             </label>
             <label>
-              new learner
+              Create a profile
               <div className="row" style={{ gap: "0.4rem" }}>
-                <input value={newName} placeholder="name" onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void addLearner()} style={{ flex: 1 }} />
-                <button onClick={() => void addLearner()}>add</button>
+                <input value={newName} placeholder="Your name" onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void addLearner()} style={{ flex: 1 }} />
+                <button onClick={() => void addLearner()}>Add</button>
               </div>
             </label>
             <label className="full">
-              lecture
+              Lecture
               <select value={form.lecture_id ?? ""} onChange={(e) => setForm({ ...form, lecture_id: e.target.value || null })}>
-                <option value="">Live microphone (Deepgram, needs a key)</option>
+                <option value="">Live microphone (requires transcription setup)</option>
                 {lectures.map((l) => (
                   <option key={l.id} value={l.id}>
                     {l.title} · {l.kind} · {mmss(l.duration)} · {l.segments?.length ?? 0} segments · {(l.quiz ?? []).length} quiz items
@@ -129,12 +131,17 @@ export default function Home() {
               </select>
             </label>
             <label>
-              mode
+              Listening mode
               <select value={form.mode} onChange={(e) => setForm({ ...form, mode: e.target.value as "live" | "recorded" })}>
-                <option value="live">live (transcript streams in real time)</option>
-                <option value="recorded">recorded (player drives the clock, auto-pause on a flag)</option>
+                <option value="live">Live · follow along</option>
+                <option value="recorded">Recorded · listen at your pace</option>
               </select>
             </label>
+          </div>
+          <details className="session-settings">
+            <summary>Session settings <span>Devices, calibration & catch-ups</span></summary>
+            <DoctorStrip d={doctor} />
+            <div className="form-grid">
             <label>
               catch-up policy
               <select value={form.catchup_policy} onChange={(e) => setForm({ ...form, catchup_policy: e.target.value as "always" | "randomized" })}>
@@ -191,20 +198,22 @@ export default function Home() {
                 </div>
               </label>
             ) : null}
-          </div>
+            </div>
+          </details>
+          <div className="small muted device-summary">Headset: {headsetChoice === "sim" || headsetChoice === "fake" ? "simulated" : headsetChoice === "custom" ? "custom source" : doctor ? (doctor.headset.kind === "real" ? "connected" : "simulated") : "checking connection"} · Totem: {form.totem === "sim" ? "simulated" : doctor ? (doctor.totem.kind === "real" ? "connected" : "simulated") : "checking connection"}</div>
           {liveMic && doctor && !doctor.keys.deepgram ? <div className="small error">Live microphone needs DEEPGRAM_API_KEY. Pick a scripted lecture to rehearse without it.</div> : null}
           {form.lecture_id && form.mode === "live" ? <div className="small muted">Scripted lecture: the transcript is replayed in real time (labelled SCRIPTED TRANSCRIPT). Keys T / L / 1 / 2 / 3 / E drive the demo.</div> : null}
           <div className="row">
             <button className="primary" disabled={!form.learner_id || busy} onClick={() => void start()}>
               {busy ? "starting…" : "Start session"}
             </button>
-            {learner ? <Link to={`/tally/${learner.id}`}>tally for {learner.name}</Link> : null}
-            {form.lecture_id ? <Link to={`/lossmap/${form.lecture_id}`}>loss map: {lectureById(form.lecture_id)?.title}</Link> : null}
+            {learner ? <Link to={`/tally/${learner.id}`}>My review preferences</Link> : null}
+            {form.lecture_id ? <Link to={`/lossmap/${form.lecture_id}`}>Lecture overview</Link> : null}
           </div>
         </div>
-        <div className="panel">
-          <h2>Recent sessions</h2>
-          {sessions.length === 0 ? <div className="dim">none yet</div> : null}
+        <div className="panel recent-sessions">
+          <div className="section-heading"><span className="section-number">02</span><div><h2>Pick up the thread</h2><p className="muted small">Your recent sessions, notes, and review.</p></div></div>
+          {sessions.length === 0 ? <div className="empty-sessions"><span aria-hidden="true">↳</span><h3>A fresh page.</h3><p>Your sessions will land here.<br />Start one when you’re ready.</p></div> : null}
           <div className="sessions-list">
             {sessions.map((s) => (
               <div key={s.id} className="s">
@@ -230,16 +239,16 @@ export default function Home() {
 }
 
 function DoctorStrip({ d }: { d: Doctor | null }) {
-  if (!d) return <div className="strip"><span className="item muted">doctor: checking…</span></div>;
+  if (!d) return <div className="strip"><span className="item muted">Checking connections…</span></div>;
   return (
     <div className="strip">
       <span className="item">
         <span className={"dotled " + (d.keys.deepgram ? (d.deepgram.ok ? "on" : "warn") : "off")} />
-        Deepgram <b>{d.keys.deepgram ? (d.deepgram.ok ? "ok" : d.deepgram.reason ?? "key set, not reachable") : "no key"}</b>
+        Transcription <b>{d.keys.deepgram ? (d.deepgram.ok ? "ok" : d.deepgram.reason ?? "key set, not reachable") : "no key"}</b>
       </span>
       <span className="item">
         <span className={"dotled " + (d.keys.openai ? (d.openai.ok ? "on" : "warn") : "off")} />
-        OpenAI <b>{d.keys.openai ? `${d.openai.model} ${d.openai.ok ? "ok" : "unavailable"}` : "no key (offline recaps)"}</b>
+        Recaps <b>{d.keys.openai ? (d.openai.ok ? "ready" : "unavailable") : "no key (offline recaps)"}</b>
       </span>
       <span className="item">
         <span className={"dotled " + (d.headset.kind === "real" ? "on" : "warn")} />

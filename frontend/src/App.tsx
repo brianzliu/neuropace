@@ -1,3 +1,4 @@
+import { useLayoutEffect, useState } from "react";
 import { Link, Route, Routes, useLocation } from "react-router-dom";
 import Home from "./views/Home";
 import Live from "./views/Live";
@@ -9,6 +10,14 @@ import Replay from "./views/Replay";
 import Quiz from "./views/Quiz";
 
 export default function App() {
+  const [theme, setTheme] = useState(() => {
+    try { const saved = localStorage.getItem("reflow.theme"); return saved && ["fieldnotes", "studio", "afterhours"].includes(saved) ? saved : "fieldnotes"; }
+    catch { return "fieldnotes"; }
+  });
+  useLayoutEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try { localStorage.setItem("reflow.theme", theme); } catch { /* Theme still works without storage. */ }
+  }, [theme]);
   const loc = useLocation();
   const compact = loc.pathname.startsWith("/live") || loc.pathname.startsWith("/replay");
   return (
@@ -17,7 +26,14 @@ export default function App() {
         <Link to="/" className="brand">
           <span className="brand-dot" /> Reflow
         </Link>
-        <nav className="topnav">
+        <nav className="topnav" aria-label="Main navigation">
+          <label className="theme-picker">Appearance
+            <select aria-label="Design theme" value={theme} onChange={e => setTheme(e.target.value)}>
+              <option value="fieldnotes">Fieldnotes</option>
+              <option value="studio">Studio</option>
+              <option value="afterhours">Afterhours</option>
+            </select>
+          </label>
           <Link to="/">Home</Link>
         </nav>
       </header>

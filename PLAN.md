@@ -31,6 +31,14 @@ below if you just want where things stand right now.
   a third trigger that doesn't depend on the student's state at all, plus privacy and framing
   changes that follow directly from the self-advocacy and stigma literature.
 
+**19 Sep revision, requested product direction:** Part II now includes a dedicated Arduino
+physical "I'm stuck" button, EEG timing, and a teacher/whiteboard-facing webcam with microphone.
+Timestamped board images and the teacher's audio transcript supply context for a multimodal LLM
+explanation when the learner presses the button. This restores the camera as **lesson content
+capture**, not learner face/gaze analysis. See II.2.1 and II.4. This is planned work, not a claim
+that the current implementation already captures or understands whiteboards. The existing frozen
+`docs/PRD.md` and `docs/TDD.md` must be revised before implementing this extension.
+
 **Current authoritative direction:** Part II's architecture (lecture capture → gap notes →
 adaptive review) with Part III's additions layered on top (content-based risk flagging as a third
 trigger, private output routing, configurable accommodation profile, "available to everyone"
@@ -49,8 +57,10 @@ confirm before relying on it. **[!]** = a claim that was checked and turned out 
 ## Quick reference
 
 **Pitch, right now:** A study tool any student in the room could opt into. In a lecture, a
-headset, a discreet pad tap, and the transcript itself flag the moments you lost the thread —
-including the ones you didn't notice. Afterward you get notes for exactly those gaps, and a review
+headset, a dedicated Arduino button, and the transcript itself flag the moments you lost the thread —
+including the ones you didn't notice. Press the button for a private explanation grounded in
+what the teacher just said and drew: a webcam captures the whiteboard and its microphone captures
+the teacher's voice for transcription. Afterward you get notes for exactly those gaps, and a review
 pass that re-teaches each one in a different form — worked example, analogy, diagram — until a
 check question says it landed. It learns which form rescues you, keeps that as your playbook, and
 never shows anyone else that you struggled.
@@ -58,11 +68,14 @@ never shows anyone else that you struggled.
 **What's different from Part I's original pitch:** no claim about detecting a "learning style";
 the sensor's job is timing (*when* you were lost), not diagnosis (*why*, or what to teach you
 instead) — a check question does the diagnosis. No live mid-sentence dissolve; the dissolve
-mechanic survives, moved into the review phase. No camera as a third witness — EEG + pad tap +
+mechanic survives, moved into the review phase. The camera captures lesson content, not learner
+state. Trigger sources remain EEG + physical button +
 (Part III addition) transcript-based risk flagging.
 
 **Immediate build priorities (Part II §8 + Part III §6 merged):**
-1. Pad tap → transcript span → gap note → check question (Part II Stage A).
+1. Dedicated Arduino button → timestamped transcript + whiteboard context → private catch-up,
+   gap note, and check question (Part II Stage A and II.2.1). Start with the working transcript-only
+   path, then add synchronized board frames and multimodal generation with explicit fallbacks.
 2. Focus index (EEG) as a second flag source (Part II Stage B).
 3. **Content-based risk flagging** on the transcript — vocabulary density, sentence complexity,
    rate vs. baseline — as a third, state-independent flag source (Part III, promoted to Tier 1: cheap,
@@ -414,6 +427,11 @@ simulated states, never fake a sensor) carries through unchanged into Part II an
 
 ## I.12. Build schedule (hours from start) — superseded by Part II §8's stage table; kept as the detailed hour-by-hour reference
 
+The original hour ranges predate A+ and are retained as the earlier baseline, not a promise
+that the camera extension fits for free. A+ is part of the requested product direction; first
+validate capture quality and end-to-end latency, then revise the schedule. Transcript-only mode
+remains a labelled fallback, not completion of the whiteboard feature.
+
 Roles: **S** signal and brain · **C** content engine and diagram · **U** reader UI, state, bandit ·
 **H** camera, Arduino, study, pitch.
 
@@ -547,12 +565,14 @@ at every stage.
 ## II.2. The product
 
 1. **In the lecture.** Headset on, totem on the desk, laptop ignored. Deepgram transcribes with
-   word timestamps. Focus drops (relative to your own first 3 minutes) and heart-pad taps mark
-   spans, with an 8 s lead-in. The totem lights a dot; nothing else happens. **Changed by Part III:
-   route this output to a private surface instead of a visible totem light — see Part III §2.**
+   word timestamps; a teacher/board-facing webcam supplies timestamped whiteboard frames.
+   Focus drops (relative to your own first 3 minutes) and dedicated Arduino button presses mark
+   spans, with an 8 s lead-in. A button press requests a private explanation using the matching
+   transcript and board images (II.2.1). EEG flags offer an optional catch-up; they do not claim
+   to diagnose confusion. Keep output private as required by Part III §2.
 2. **Gap notes.** When the lecture ends you get notes for your flagged spans only: what was said,
-   the key term, how it connects to the part you did hear. Grounded in the transcript, not
-   invented.
+   the key term, how it connects to the part you did hear. Grounded in the transcript and available timestamped board images, with source references.
+   Missing or unreadable board content is disclosed, not invented.
 3. **Adaptive review.** One card per gap, check question first. Miss it, or lose focus on the card
    → the same idea re-taught in another form: worked example → analogy → animated diagram. The
    text-to-diagram "dissolve" (Part I §7) lives here. Stop after three straight hits.
@@ -565,6 +585,58 @@ at every stage.
 picks topics to re-show from pre-authored content [V10]; Wang et al. detect confusing clips
 offline [V14]; AXIS picks explanations from ratings, no sensing [V17]. Reflow: passive lapse
 capture in live lectures → generated gap notes → re-teaching verified by recall.
+
+### II.2.1. Button-triggered explanations from voice and whiteboard (planned)
+
+**Input and ownership.** The Arduino UNO R4 handles the dedicated physical button. The laptop
+receives button events over USB, consumes the existing MindWave pipeline, and captures webcam
+frames and microphone audio. The camera faces the teaching area, not the learner. A webcam's
+built-in microphone can capture the teacher's voice; use a separate microphone if speech is not
+clear enough. Audio transcription and image capture are separate streams synchronized to one
+session clock. The Arduino does not process audio, images, or LLM requests.
+
+**On a press:**
+
+1. Debounce the physical switch and send one event per press with an event ID. Acknowledge the
+   press immediately in the learner's private UI and save its session timestamp. Preserve the
+   existing `tap` event semantics so manual flags still feed notes, replay, and evaluation.
+2. Select the relevant transcript span and board frames from a rolling buffer. Retain the
+   existing 8-second flag lead-in; use a wider preceding context window for explanation, initially
+   60 seconds, so "this arrow" or "the second term" can refer to an earlier drawing. If an EEG
+   span already exists, associate the request with that span rather than creating duplicate gaps.
+3. Send the transcript plus a small set of timestamped board images to a multimodal LLM. Include
+   the latest readable frame at or before the press and earlier changed frames, so an erased
+   equation can still be referenced. Never use future lecture content for a live explanation.
+4. Return a short explanation of the selected passage, connecting spoken references to visible
+   equations, labels, and arrows. Attach transcript timestamps and image IDs. Distinguish what
+   the teacher said or drew from an added worked example; do not infer illegible symbols as fact.
+5. Show a quiet, static catch-up on the learner's screen. Make the fuller explanation and board
+   excerpt available on demand and in gap notes. A later check question decides whether the
+   explanation helped; neither EEG nor the button establishes correctness or a learning style.
+
+**Latency and failures.** A press saves the moment immediately, without waiting for generation.
+Use an available cached transcript recap while the multimodal explanation is pending, labelled
+"Transcript recap; board explanation loading". Do not replace text mid-reading: offer the completed
+explanation for the learner to open. If camera access is denied, the board is obscured, or image
+processing fails, say "Transcript only; board unavailable". If transcription is incomplete,
+identify that limitation too. On model failure, preserve the saved moment and the existing labelled
+offline recap. Do not promise sub-second fresh multimodal generation.
+
+**Initial engineering assumptions, not measured claims.** Try one board frame every 2 seconds,
+a 90-second local rolling image buffer, and at most 4 distinct frames per request. These are tuning
+starting points, not requirements supported by a run. Keep stable frame IDs, capture timestamps,
+transcript word timestamps, source availability, and generation provenance on each request. Bound
+image size, queue length, and request frequency; coalesce repeated presses without losing saved
+moments. Check whiteboard readability at the actual distance before committing to this camera.
+
+**Verification gate.** Use synthetic lesson content recorded by consenting adult teammates. Cover
+an equation referenced as "this term", an erased diagram, an obscured board, microphone/camera
+denial, slow or failed generation, repeated presses, and a press overlapping an EEG flag. Verify
+frame/transcript alignment and source citations, and measure press acknowledgement and explanation
+latency separately. Compare transcript-only versus transcript-plus-board explanations on questions
+that require the drawing. Treat this as a separate content-grounding evaluation; any outcome claim
+about sensor timing must still use the yoked random-timing control from Part I §9. No new accuracy
+or learning-benefit claim is [RUN] until a reproducing script has actually been executed.
 
 ## II.3. Signal engine
 
@@ -589,10 +661,17 @@ calibration task.
 
 ## II.4. The totem (UNO R4)
 
-Touch-capable pin → jumper → foil pad = "lost me" (official `Arduino_CapacitiveTouch` [U]). WiFi
-model's LED matrix: fit meter, one dot per saved span. Not entering Arduino's challenge (requires
-UNO Q [V8]). **Changed by Part III:** the "one dot per saved span" output is visible to anyone near
-the desk — Part III §2 replaces it with a private surface for the inclusion-classroom use case.
+The primary manual input is a **dedicated momentary pushbutton labelled "I'm stuck"**, connected
+to an appropriate UNO R4 digital input and ground with a pull-up configuration. Confirm the exact
+board and wiring before implementation. Firmware debounces the switch and emits one USB serial
+`tap` event per press to the laptop. A capacitive foil/heart pad is an optional alternative, not a
+required part. Both request the same catch-up and save the same kind of flagged moment.
+
+The headset connects to the laptop through the existing MindWave pipeline, independently of the
+button. The webcam and microphone also connect to the laptop. Hardware failure must not stop
+capture: retain the on-screen/keyboard input, explicitly labelled simulated, and label simulated
+EEG separately. Default acknowledgement and catch-up output are private; do not expose learner
+struggles through desk LEDs. The original board/sponsor discussion remains in Part I §8.
 
 ## II.5. Tracks
 
@@ -619,7 +698,10 @@ every number with its interval, including nulls.
 ## II.7. Demo (~3 min; format is an open question) — current
 
 1. (0–20 s) Pitch. Name NeuroChat. "We don't believe in learning styles; we test it on you."
-2. (20–70 s) Replay of a real session at 4×: transcript, focus trace, flags, pad taps.
+2. (20–70 s) Show a consenting teammate teaching a synthetic lesson with a whiteboard. Press the
+   real Arduino button; show the saved moment, matching board image and transcript, and the
+   private explanation. Show EEG as the independent passive timing source. Use a labelled replay
+   if live classroom capture is unavailable; never present prerecorded generation as live.
 3. (70–130 s) That learner's gap notes, then live review: judge answers a card, misses or taps the
    pad → dissolve into the diagram form → hit.
 4. (130–170 s) Loss map from your study with the planted segment revealed; the flagged-vs-unflagged
@@ -632,11 +714,17 @@ Say "simulated" aloud if a forced trigger is ever used.
 
 | Stage | Hrs | Deliverable |
 |---|---|---|
-| A | 0–4 | Pad tap → transcript span → gap note → check question. **Gate at hr 1: real blinks on a real forehead** |
+| A | 0–4 | Dedicated Arduino button → transcript span → gap note → check question. **Gate at hr 1: real blinks on a real forehead** |
+| A+ | Re-estimate before build | Webcam + microphone capture → synchronized board frames/transcript → button-triggered multimodal explanation; source references, private display, explicit fallbacks |
 | B | 4–6 | Focus index as a second flag source; live trace |
 | C | 6–8 | Review player: miss or drop → re-teach in next form; dissolve; tally |
 | D | 8–12 | Study (II.6) + loss map. **Freeze at 12** |
 | — | 12–end | Replay recording, slides, rehearsal, fresh AAA, sleep in shifts |
+
+The original hour ranges predate A+ and are retained as the earlier baseline, not a promise
+that the camera extension fits for free. A+ is part of the requested product direction; first
+validate capture quality and end-to-end latency, then revise the schedule. Transcript-only mode
+remains a labelled fallback, not completion of the whiteboard feature.
 
 Roles: **S** signal · **A** Deepgram + LLM · **U** UI · **H** totem, lecture recording with planted
 flaw, recruiting.
@@ -655,7 +743,8 @@ or a later dashboard pass (Tier 2).
 
 **Ran today:** `bandit_sim.py`, `lossmap_sim.py`, `reflow_eval.py selftest`, per-learner tally null
 check.
-**Open:** HackMIT code rule; judging format; real-forehead performance; Deepgram/OpenAI challenge
+**Open:** whiteboard capture readability, audio quality, multimodal grounding, latency/cost,
+retention controls, and synchronization (II.2.1, all unverified); HackMIT code rule; judging format; real-forehead performance; Deepgram/OpenAI challenge
 requirements; fused-signal AUC 0.76 and the 60–90% "bad segment loses learners" range are
 ASSUMPTIONS; simulations assume independent noise across learners; everything tagged [U].
 
@@ -820,6 +909,20 @@ after a general-purpose note-taking product already exists. For the hackathon: k
 synthetic or from consenting adult teammates, and say in the pitch that you know this is the next
 real engineering item, not an afterthought.
 
+**Camera/audio extension, planned product requirements.** Before capture, explain which camera
+and microphone are active, what is saved, and whether selected transcript/images will be sent to
+an external model provider. Obtain agreement from the teacher and any recorded participants for
+the demo. Frame/crop to the board, avoid audience faces, and show a persistent recording indicator
+with pause/stop controls. Do not perform face recognition, gaze tracking, or learner emotion
+inference. These are product requirements, not a statement of legal compliance.
+
+Keep the rolling image buffer local and ephemeral; discard unselected frames as they age out.
+Save only the selected board excerpts and transcript spans needed for learner-owned notes, with
+an explicit session retention setting and delete action. Do not retain raw audio by default after
+transcription. Document external-provider retention before enabling upload; do not imply local
+processing when sending content off-device. Demo lessons remain synthetic. Classroom deployment,
+especially with minors, requires a separately scoped consent and access-control implementation.
+
 ## III.6. Build order — what this adds to Part II's stages
 
 | Tier | Addition | Why here |
@@ -845,7 +948,9 @@ real engineering item, not an afterthought.
   an intervention live; moving the format-adaptation into a review phase, gated by a check
   question, is more defensible with the sensor actually available. Revive if the project moves
   toward a browser-reading-companion product rather than a lecture-companion product.
-- **Camera as a third witness** (Part I §5, MediaPipe Face Landmarker). Dropped from Part II for
+- **Camera as a third witness** (Part I §5, MediaPipe Face Landmarker). Still excluded; the
+  restored teacher/whiteboard camera in II.2.1 supplies lesson content, not learner-state signals.
+  Originally dropped from Part II for
   build-time scope, not because the signal is bad — brow furrow and gaze-off-screen are reasonable
   overload/disengagement cues. Would restore a two-of-three fusion rule instead of Part II's
   two-source (EEG + pad) rule.
