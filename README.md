@@ -35,7 +35,7 @@ cd frontend && pnpm install && pnpm build && cd ..
 uv run reflow serve             # http://127.0.0.1:8765
 ```
 
-Open the URL, create a learner, pick the demo lecture ("How GPS finds you", scripted, with a planted bad segment 3), start a live session with headset `sim` (the totem falls back to the keyboard when no Arduino is plugged in), and press Space or `T` to tap. Press `1`/`2` to switch the simulated headset between focused and drifting and watch the EEG flag arrive as a chip and a totem pulse.
+Open the URL, pick the demo lecture ("How GPS finds you", scripted, with a planted bad segment 3), start a live session with headset `sim` (the totem falls back to the keyboard when no Arduino is plugged in), and press Space or `T` to tap. Press `1`/`2` to switch the simulated headset between focused and drifting and watch the EEG flag arrive as a chip and a totem pulse.
 
 Frontend development with hot reload: `cd frontend && pnpm dev` (proxies `/api`, `/ws`, `/media` to the backend on 8765).
 

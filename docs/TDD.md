@@ -290,7 +290,7 @@ Requires ≥ 2 sessions; otherwise returns `{n, ready: false}`.
 |---|---|
 | `GET /health` | `{ok, version}` |
 | `GET /doctor` | `{keys:{deepgram, openai}, openai_model:{name, available, alternatives}, headset:{port, kind}, totem:{port, kind}, frontend_built}` |
-| `GET/POST /learners` | `{name}` → learner |
+| `GET/POST /learners` | `{name}` → learner. One device has one learner, `lrn_me` ("you"), created on demand; `me` is accepted wherever a learner id is; sessions without `learner_id` use it, and the study can pass `learner_name` to keep a participant's tally separate |
 | `GET /learners/{id}/tally` | `{forms:{form:{rescues, attempts, rate, posterior_mean}}, pick, enough_data, total_attempts}` |
 | `GET/POST /lectures` | `POST` multipart `{title, file?, script?, segments?, quiz?, keyterms?}` → lecture (media is transcribed via Deepgram prerecorded when a key exists) |
 | `GET /lectures/{id}` | lecture without transcript words; `?full=1` includes them |

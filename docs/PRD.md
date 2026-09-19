@@ -18,7 +18,7 @@ Mind-wandering during lectures goes with lower learning, and the lapses that hur
 
 | User | Situation | What they get |
 |---|---|---|
-| **Learner** (primary) | Sits in a live lecture or watches a recorded one, wearing a NeuroSky MindWave Mobile 2 with a small desk "totem" (Arduino UNO R4 + touch pad) | Instant one-glance catch-ups, gap notes for only the spans they missed, an adaptive review, and a personal tally of which explanation form works for them |
+| **Learner** (primary) | Sits in a live lecture or watches a recorded one, wearing a NeuroSky MindWave Mobile 2 with a small desk "totem" (Arduino UNO R4 + touch pad). One device, one learner: the app never asks who is listening (the study names participants under Advanced options) | Instant one-glance catch-ups, gap notes for only the spans they missed, an adaptive review, and a personal tally of which explanation form works for them |
 | **Lecturer** (secondary, aggregate only) | Several learners took the same lecture | An anonymous loss map: where the room was lost. It grades the lecture, never a student |
 | **Judge / study participant** | The 3-minute demo and the 20-minute study | The same product, with any forced trigger announced as "simulated" |
 

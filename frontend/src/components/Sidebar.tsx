@@ -6,7 +6,6 @@ import { useTheme, type Theme } from "../lib/theme";
 
 /** macOS window sidebar: brand, navigation, and a status footer. `rail` collapses it to icons (live and replay). */
 
-const LS_LEARNER = "reflow.learner";
 
 type IconName = "start" | "live" | "notes" | "review" | "replay" | "quiz" | "tally" | "lossmap";
 
@@ -90,13 +89,6 @@ export default function Sidebar({ sessionId, sessionRunning, rail }: { sessionId
   const [theme, setTheme] = useTheme();
   const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [lectureId, setLectureId] = useState<string | null>(null);
-  const learnerId = (() => {
-    try {
-      return localStorage.getItem(LS_LEARNER);
-    } catch {
-      return null;
-    }
-  })();
 
   useEffect(() => {
     let alive = true;
@@ -135,7 +127,7 @@ export default function Sidebar({ sessionId, sessionRunning, rail }: { sessionId
           </>
         ) : null}
         {rail ? null : <div className="sb-section">You</div>}
-        {learnerId ? <Item to={`/tally/${learnerId}`} icon="tally" label="What works for you" rail={rail} /> : null}
+        <Item to="/tally/me" icon="tally" label="What works for you" rail={rail} />
         {lectureId ? <Item to={`/lossmap/${lectureId}`} icon="lossmap" label="Where the room drifted" rail={rail} /> : null}
       </nav>
       <div className="sb-footer">

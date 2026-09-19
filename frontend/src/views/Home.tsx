@@ -5,14 +5,8 @@ import type { Doctor, LectureFull, Learner, SessionPublic } from "../lib/types";
 import { mmss } from "../lib/format";
 import { Badge, StatusDot } from "../components/Badges";
 
-const LS_KEY = "reflow.learner";
 type HeadsetChoice = "auto" | "sim" | "fake" | "custom";
 type TotemChoice = "auto" | "keyboard" | "custom";
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  return (parts.length ? parts.map((p) => p[0]!).slice(0, 2).join("") : "?").toUpperCase();
-}
 
 function statusLabel(s: SessionPublic): { text: string; tone: "success" | "accent" | "neutral" } {
   if (s.status === "running") return { text: "Listening now", tone: "success" };
@@ -23,12 +17,11 @@ function statusLabel(s: SessionPublic): { text: string; tone: "success" | "accen
 /** Student-facing start screen: two decisions and a button. Everything technical lives under Setup. */
 export default function Home() {
   const nav = useNavigate();
-  const [learners, setLearners] = useState<Learner[]>([]);
+  const [me, setMe] = useState<Learner | null>(null);
   const [lectures, setLectures] = useState<LectureFull[]>([]);
   const [sessions, setSessions] = useState<SessionPublic[]>([]);
   const [doctor, setDoctor] = useState<Doctor | null>(null);
-  const [newName, setNewName] = useState("");
-  const [adding, setAdding] = useState(false);
+  const [participant, setParticipant] = useState("");
   const [headsetChoice, setHeadsetChoice] = useState<HeadsetChoice>("auto");
   const [customHeadset, setCustomHeadset] = useState("");
   const [totemChoice, setTotemChoice] = useState<TotemChoice>("auto");
@@ -36,7 +29,6 @@ export default function Home() {
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState<SessionCreate>(() => ({
-    learner_id: localStorage.getItem(LS_KEY) ?? "",
     lecture_id: null,
     mode: "live",
     catchup_policy: "always",
@@ -60,45 +52,27 @@ export default function Home() {
   };
 
   const load = async () => {
-    try {
-      const [l, lec, s] = await Promise.all([api.learners(), api.lectures(), api.sessions()]);
-      setLearners(l.learners);
-      setLectures(lec.lectures);
-      setSessions(s.sessions.slice(0, 6));
-      setForm((f) => ({
-        ...f,
-        learner_id: f.learner_id && l.learners.some((x) => x.id === f.learner_id) ? f.learner_id : (l.learners[0]?.id ?? ""),
-        lecture_id: f.lecture_id ?? lec.lectures[0]?.id ?? null,
-      }));
-    } catch (e) {
-      setErr(errorText(e));
+    // each call stands alone: a failing one must not blank the lecture list
+    const [m, lec, s] = await Promise.allSettled([api.learner("me"), api.lectures(), api.sessions()]);
+    if (m.status === "fulfilled") setMe(m.value);
+    if (lec.status === "fulfilled") {
+      setLectures(lec.value.lectures);
+      setForm((f) => ({ ...f, lecture_id: f.lecture_id ?? lec.value.lectures[0]?.id ?? null }));
+    } else {
+      setErr(errorText(lec.reason));
     }
+    if (s.status === "fulfilled") setSessions(s.value.sessions.slice(0, 6));
   };
   useEffect(() => {
     void load();
     api.doctor().then(setDoctor).catch(() => setDoctor(null));
   }, []);
 
-  const addLearner = async () => {
-    if (!newName.trim()) return;
-    try {
-      const l = await api.createLearner(newName.trim());
-      setNewName("");
-      setAdding(false);
-      setLearners((xs) => xs.concat(l));
-      setForm((f) => ({ ...f, learner_id: l.id }));
-      localStorage.setItem(LS_KEY, l.id);
-    } catch (e) {
-      setErr(errorText(e));
-    }
-  };
-
   const start = async () => {
     setErr(null);
     setBusy(true);
     try {
-      localStorage.setItem(LS_KEY, form.learner_id);
-      const body: SessionCreate = { ...form, lecture_id: form.lecture_id || null };
+      const body: SessionCreate = { ...form, lecture_id: form.lecture_id || null, learner_name: participant.trim() || null };
       const s = await api.createSession(body);
       nav(`/live/${s.id}`);
     } catch (e) {
@@ -108,7 +82,7 @@ export default function Home() {
     }
   };
 
-  const learner = learners.find((l) => l.id === form.learner_id);
+  const learner = me;
   const liveMic = !form.lecture_id;
   const lectureById = (id: string | null) => lectures.find((l) => l.id === id);
   const openaiOk = !!doctor && doctor.keys.openai && doctor.openai.ok;
@@ -130,32 +104,6 @@ export default function Home() {
       <div className="home-grid">
         <div className="stack-lg">
           <section className="sheet setup">
-            <div className="setup-sec">
-              <div className="setup-head">
-                <h2 className="t-title3">Who is listening?</h2>
-              </div>
-              <div className="chips">
-                {learners.map((l) => (
-                  <button key={l.id} className={"chip" + (form.learner_id === l.id ? " selected" : "")} onClick={() => setForm({ ...form, learner_id: l.id })}>
-                    <span className="avatar sm">{initials(l.name)}</span>
-                    <span>{l.name}</span>
-                  </button>
-                ))}
-                {adding ? (
-                  <span className="chip editing">
-                    <input className="field" autoFocus value={newName} placeholder="your name" onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => (e.key === "Enter" ? void addLearner() : e.key === "Escape" ? setAdding(false) : undefined)} />
-                    <button className="btn btn-primary btn-sm" onClick={() => void addLearner()}>
-                      Add
-                    </button>
-                  </span>
-                ) : (
-                  <button className="chip add" onClick={() => setAdding(true)}>
-                    <span className="plus">+</span> New
-                  </button>
-                )}
-              </div>
-            </div>
-
             <div className="setup-sec">
               <div className="setup-head">
                 <h2 className="t-title3">What are you listening to?</h2>
@@ -182,7 +130,7 @@ export default function Home() {
             </div>
 
             <footer className="setup-foot">
-              <button className="btn btn-primary btn-lg" disabled={!form.learner_id || busy || (liveMic && !deepgramOk)} onClick={() => void start()}>
+              <button className="btn btn-primary btn-lg" disabled={busy || (liveMic && !deepgramOk)} onClick={() => void start()}>
                 {busy ? "Starting…" : "Start listening"}
               </button>
               <span className="label-2 t-subhead">
@@ -213,7 +161,7 @@ export default function Home() {
                     <div className="si-main">
                       <div className="si-title">{lectureById(s.lecture_id)?.title ?? (s.transcript_kind === "deepgram" ? "Live lecture" : "Lecture")}</div>
                       <div className="si-meta">
-                        {learners.find((l) => l.id === s.learner_id)?.name ?? "someone"} · {s.gaps ? `${s.gaps} moment${s.gaps === 1 ? "" : "s"} missed` : `${s.flags.length} flag${s.flags.length === 1 ? "" : "s"}`}
+                        {s.gaps ? `${s.gaps} moment${s.gaps === 1 ? "" : "s"} missed` : `${s.flags.length} flag${s.flags.length === 1 ? "" : "s"}`}{s.learner_id !== "lrn_me" ? " · study participant" : ""}
                       </div>
                     </div>
                     <Badge tone={st.tone}>{st.text}</Badge>
@@ -281,6 +229,10 @@ export default function Home() {
                   </span>
                 </label>
                 <label className="opt">
+                  <span className="opt-k">Study participant</span>
+                  <input className="field wide" value={participant} placeholder="optional, e.g. P07 (keeps their tally separate)" onChange={(e) => setParticipant(e.target.value)} />
+                </label>
+                <label className="opt">
                   <span className="opt-k">Stored baseline</span>
                   <span className="row">
                     <input type="checkbox" className="switch" checked={!!form.use_stored_baseline} disabled={!learner || learner.baseline_mu === null} onChange={(e) => setForm({ ...form, use_stored_baseline: e.target.checked })} />
@@ -341,11 +293,9 @@ export default function Home() {
                     </span>
                   </label>
                 ) : null}
-                {learner ? (
-                  <Link className="t-footnote" to={`/tally/${learner.id}`}>
-                    What works for {learner.name}
-                  </Link>
-                ) : null}
+                <Link className="t-footnote" to="/tally/me">
+                  What works for you
+                </Link>
                 {form.lecture_id ? (
                   <Link className="t-footnote" to={`/lossmap/${form.lecture_id}`}>
                     Where the room drifted

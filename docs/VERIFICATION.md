@@ -6,7 +6,7 @@ What was checked, how, and what is still unverified. Re-run the commands before 
 
 | Check | Command | Result |
 |---|---|---|
-| Backend unit + integration tests (parser, features, blinks, spans, recaps, LLM client with a fake OpenAI, tally, review, loss map, session runtime, REST + WebSocket real-time flow, study analysis, Deepgram client parsing, mindwave bridge on `FakeSource` with a byte-level cross-check of both ThinkGear parsers, port detection on macOS and Windows listings with a fake serial module) | `uv run pytest -q` | 78 passed in about 22 s, no network, no hardware |
+| Backend unit + integration tests (parser, features, blinks, spans, recaps, LLM client with a fake OpenAI, tally, review, loss map, session runtime, REST + WebSocket real-time flow, study analysis, Deepgram client parsing, mindwave bridge on `FakeSource` with a byte-level cross-check of both ThinkGear parsers, port detection on macOS and Windows listings with a fake serial module) | `uv run pytest -q` | 79 passed in about 22 s, no network, no hardware |
 | Lint | `uv run ruff check reflow tests scripts` | clean (the spec's three sim scripts are kept verbatim and excluded from style rules) |
 | Frontend types + build | `cd frontend && pnpm typecheck && pnpm build` | 0 errors, 67 modules, `dist/` served by the backend |
 | Firmware | `arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi firmware/totem` and `:minima` | both compile (57 KB / 44 KB) |
@@ -60,6 +60,10 @@ What was checked, how, and what is still unverified. Re-run the commands before 
 | Deepgram streaming | `DeepgramLive` fed 100 ms PCM frames at real-time pace, mic started 2 s into the lecture | 49 final words, interim results flowing, first word stamped at 2.12 s lecture time (offset correct) |
 | Microphone path through the server | WebSocket `audio_start` + binary PCM into a `transcript=deepgram` session | words broadcast on lecture time, tap produced a catch-up from the live transcript, gap built at session end |
 | OpenAI | not verified: no key on this machine yet | sessions now refuse to start without the key; the client is covered by tests with a fake OpenAI (strict schema, cache, retry, timeout, reasoning-param fallback) |
+
+## Single learner per device (19 Sep, late evening)
+
+The learner picker is gone: every session belongs to this device's learner `lrn_me` ("you"), created on demand; `/api/learners/me` and `/tally/me` resolve to it. A study participant name can still be given under Advanced options (created on first use, reused case-insensitively) so the study keeps tallies apart. Verified: `uv run pytest -q` (79 passed, including the default and named-participant paths) and a browser run where Start listening with no learner produced a session on `lrn_me` and the tally page read "What works for you".
 
 ## Consumer pass (19 Sep, late evening)
 

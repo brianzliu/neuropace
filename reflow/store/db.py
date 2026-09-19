@@ -101,7 +101,28 @@ class DB:
         )
         return self.get_learner(lid)  # type: ignore[return-value]
 
+    DEFAULT_LEARNER_ID = "lrn_me"
+
+    def default_learner(self) -> dict:
+        """One device, one listener: the learner every session uses unless a study participant is named."""
+        row = self.get_learner(self.DEFAULT_LEARNER_ID)
+        if row:
+            return row
+        self._x(
+            "INSERT INTO learners(id, name, created_at) VALUES(?,?,?)",
+            (self.DEFAULT_LEARNER_ID, "you", time.time()),
+        )
+        return self.get_learner(self.DEFAULT_LEARNER_ID)  # type: ignore[return-value]
+
+    def learner_by_name(self, name: str) -> dict | None:
+        r = self._one(
+            "SELECT * FROM learners WHERE lower(name)=lower(?) ORDER BY created_at LIMIT 1", (name.strip(),)
+        )
+        return dict(r) if r else None
+
     def get_learner(self, lid: str) -> dict | None:
+        if lid == "me":
+            lid = self.DEFAULT_LEARNER_ID
         r = self._one("SELECT * FROM learners WHERE id=?", (lid,))
         return dict(r) if r else None
 

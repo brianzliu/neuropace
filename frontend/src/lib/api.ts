@@ -35,7 +35,8 @@ const get = <T,>(path: string) => request<T>(path);
 const post = <T,>(path: string, body?: unknown) => request<T>(path, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body) });
 
 export interface SessionCreate {
-  learner_id: string;
+  learner_id?: string | null; // omitted: this device's single learner
+  learner_name?: string | null; // study participant, optional
   lecture_id?: string | null;
   mode: "live" | "recorded";
   catchup_policy: "always" | "randomized";

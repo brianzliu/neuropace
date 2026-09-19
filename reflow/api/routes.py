@@ -66,7 +66,8 @@ def create_learner(body: LearnerIn, request: Request):
 
 @router.get("/learners/{learner_id}")
 def get_learner(learner_id: str, request: Request):
-    lr = _db(request).get_learner(learner_id)
+    db = _db(request)
+    lr = db.default_learner() if learner_id == "me" else db.get_learner(learner_id)
     if not lr:
         raise HTTPException(404, "unknown learner")
     return lr
@@ -75,6 +76,8 @@ def get_learner(learner_id: str, request: Request):
 @router.get("/learners/{learner_id}/tally")
 def learner_tally(learner_id: str, request: Request):
     db = _db(request)
+    if learner_id == "me":
+        learner_id = db.default_learner()["id"]
     if not db.get_learner(learner_id):
         raise HTTPException(404, "unknown learner")
     return tallymod.summary(
@@ -181,7 +184,8 @@ def lecture_study(lecture_id: str, request: Request):
 
 # ---------------------------------------------------------------- sessions
 class SessionIn(BaseModel):
-    learner_id: str
+    learner_id: str | None = None  # default: this device's single learner ("me")
+    learner_name: str | None = None  # study only: a participant name, created on first use
     lecture_id: str | None = None
     mode: str = "live"
     catchup_policy: str = "always"
@@ -224,9 +228,14 @@ def list_sessions(request: Request, lecture_id: str | None = None, learner_id: s
 async def create_session(body: SessionIn, request: Request):
     app = request.app
     s, db = _s(request), _db(request)
-    learner = db.get_learner(body.learner_id)
-    if not learner:
-        raise HTTPException(404, "unknown learner")
+    if body.learner_name and body.learner_name.strip():
+        learner = db.learner_by_name(body.learner_name) or db.create_learner(body.learner_name)
+    elif body.learner_id:
+        learner = db.get_learner(body.learner_id)
+        if not learner:
+            raise HTTPException(404, "unknown learner")
+    else:
+        learner = db.default_learner()
     lecture = db.get_lecture(body.lecture_id, full=True) if body.lecture_id else None
     if body.lecture_id and not lecture:
         raise HTTPException(404, "unknown lecture")

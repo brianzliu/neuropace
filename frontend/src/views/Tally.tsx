@@ -25,7 +25,7 @@ export default function Tally() {
     <div className="page narrow">
       <div className="page-head">
         <div>
-          <h1 className="t-title1">What works for {learner?.name ?? "you"}</h1>
+          <h1 className="t-title1">What works for {learner && learner.id !== "lrn_me" ? learner.name : "you"}</h1>
           <div className="sub">Reflow does not assume a learning style. Every explanation you get is scored by whether you answered the question after it, and the winner is what you see next time.</div>
         </div>
         {tally.enough_data ? <Badge tone="success">enough data</Badge> : <Badge>still learning · {tally.total_attempts}/{tally.needed_attempts} answers</Badge>}
