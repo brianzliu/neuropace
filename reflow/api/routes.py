@@ -185,7 +185,7 @@ class SessionIn(BaseModel):
     baseline_seconds: float | None = None
     use_stored_baseline: bool = False
     auto_pause: bool = True
-    headset: str = "auto"  # auto | sim
+    headset: str = "auto"  # auto | sim | fake | replay:<dir> | serial:<port> | <device path>
     totem: str = "auto"
     transcript: str = "auto"  # auto | scripted | deepgram | recorded
     seed: int | None = None
@@ -262,7 +262,7 @@ async def create_session(body: SessionIn, request: Request):
         seed=seed,
         auto_pause=body.auto_pause,
     )
-    hp = "sim" if body.headset == "sim" else settings.headset_port
+    hp = settings.headset_port if body.headset == "auto" else body.headset
     tp = "sim" if body.totem == "sim" else settings.totem_port
     rt = SessionRuntime(
         settings, db, app.state.llm, sess, learner, lecture, tk, headset_port=hp, totem_port=tp
@@ -315,6 +315,19 @@ def sim_headset(session_id: str, body: SimHeadsetIn, request: Request):
         rt.set_sim_headset(body.state)
     except ValueError as e:
         raise HTTPException(400, str(e)) from e
+    return rt.headset_status()
+
+
+class CalibrateIn(BaseModel):
+    phase: str
+
+
+@router.post("/sessions/{session_id}/calibrate")
+def session_calibrate(session_id: str, body: CalibrateIn, request: Request):
+    rt = request.app.state.runtimes.get(session_id)
+    if not rt:
+        raise HTTPException(404, "session is not running")
+    rt.calibrate(body.phase)
     return rt.headset_status()
 
 

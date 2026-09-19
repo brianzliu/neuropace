@@ -4,7 +4,15 @@ Guidance for AI coding agents working in this repo.
 
 ## What this repo is
 
-Two things, kept deliberately separate:
+Three things, kept deliberately separate:
+
+0. **`reflow/`, `frontend/`, `firmware/`, `tests/`, `docs/`, `study/`** — the Reflow product built
+   on 19 Sep 2026 against `docs/PRD.md` and `docs/TDD.md` (the contract every module follows).
+   Backend `uv run reflow serve` (Python 3.13 via uv, FastAPI), frontend Vite + React built into
+   `frontend/dist`, UNO R4 totem firmware. `uv run pytest -q` runs the suite (no hardware, no
+   network); `uv run python scripts/smoke_e2e.py` runs against a live server. `docs/VERIFICATION.md`
+   records what was verified and how. The headset front end is the `mindwave/` pipeline below,
+   consumed in-process (README "EEG bridge"); Reflow's own simulator covers the no-hardware path.
 
 1. **`mindwave/`** — a working, standalone EEG pipeline for the NeuroSky MindWave Mobile 2. It
    turns the Bluetooth stream into one calibrated `FeatureFrame` per second (mental effort,
@@ -30,9 +38,10 @@ python example_consumer.py --fake
 python reflow_eval.py selftest    # runs the evaluation toolkit's self-check
 ```
 
-There is no test framework beyond `reflow_eval.py selftest` and the `--fake` code paths in
-`monitor.py` / `run_pipeline.py` / `example_consumer.py`. There is no linter or formatter
-configured — match the style already in the file you're editing.
+The `mindwave/` tools keep their own style and are excluded from ruff; the Reflow package is
+linted and formatted with ruff (`uv run ruff check reflow tests scripts`). `uv run pytest -q`
+covers Reflow and the bridge (`tests/test_mindwave_bridge.py` runs the pipeline on `FakeSource`).
+`python monitor.py` needs `uv run --group monitor` (matplotlib).
 
 ## Working in `mindwave/`
 

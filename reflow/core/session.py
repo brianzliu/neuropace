@@ -89,7 +89,13 @@ class SessionRuntime:
         self._log_fh = None
         self.words_total = 0
         self._pending_words: list[Word] = []
-        self.headset = make_headset(headset_port, self._on_headset_events, seed=self.seed + 1)
+        self.headset = make_headset(
+            headset_port,
+            self._on_headset_events,
+            seed=self.seed + 1,
+            on_frame=self._on_frame,
+            log_dir=str(s.data_dir / "eeg"),
+        )
         self.totem = make_totem(
             totem_port, self._on_totem_tap, exclude_port=getattr(self.headset, "port", None)
         )
@@ -145,12 +151,28 @@ class SessionRuntime:
             self._tick_task = asyncio.create_task(self._tick_loop(), name=f"tick-{self.id}")
 
     def headset_status(self) -> dict:
-        return {
+        d = {
             "connected": bool(getattr(self.headset, "connected", False)),
             "kind": self.headset.kind,
             "port": getattr(self.headset, "port", None),
             "state": getattr(self.headset, "state", None),
         }
+        if hasattr(self.headset, "status"):
+            d["mw"] = self.headset.status()
+        return d
+
+    def calibrate(self, phase: str) -> None:
+        """Drive the mindwave pipeline's three-anchor calibration (eyes_closed | easy | hard | done | reset)."""
+        if hasattr(self.headset, "calibrate"):
+            try:
+                self.headset.calibrate(phase)
+            except ValueError as e:
+                self.notice("warn", str(e))
+                return
+            self.notice("info", f"calibration: {phase}")
+        else:
+            self.notice("warn", "calibration needs the mindwave pipeline (real, fake or replay headset)")
+        self.broadcast({"type": "headset", **self.headset_status()})
 
     # ------------------------------------------------------------------ broadcast + log
     def broadcast(self, msg: dict) -> None:
@@ -203,7 +225,7 @@ class SessionRuntime:
             "totem": self.totem.status(),
             "notices": self.notices[-5:],
             "sim": {
-                "headset": self.headset.kind == "simulated",
+                "headset": self.headset.kind != "real",
                 "totem": self.totem.kind == "simulated",
                 "transcript": self.transcript_kind == "scripted",
             },
@@ -221,6 +243,26 @@ class SessionRuntime:
                 self.engine.feed_attention(int(e.value))
             elif e.kind == "eeg_power":
                 self.engine.feed_eeg_power(e.value)  # type: ignore[arg-type]
+
+    def _on_frame(self, frame) -> None:
+        """One FeatureFrame per second from the mindwave pipeline (real headset, fake, or replay)."""
+        if self.status != "running":
+            return
+        extra = {
+            "effort": frame.effort,
+            "engagement": frame.engagement,
+            "alpha_ratio": frame.alpha_ratio,
+            "blink_rate": frame.blink_rate,
+            "z_effort_ema": frame.z_effort_ema,
+            "z_engagement_ema": frame.z_engagement_ema,
+            "artifact_coverage": frame.artifact_coverage,
+            "calibrated": frame.calibrated,
+            "cal_phase": frame.cal_phase,
+            "attention": frame.attention,
+        }
+        self.engine.feed_frame(frame.engagement, frame.quality, frame.valid, frame.blink_count, extra=extra)
+        if frame.attention is not None:
+            self.engine.feed_attention(int(frame.attention))
 
     def feed_sim_second(self) -> None:
         """Tests: push one second of simulated EEG synchronously (simulated headset only)."""
@@ -435,7 +477,7 @@ class SessionRuntime:
         for ev in events:
             if ev.kind == "enter":
                 t_start, _ = eeg_span(self.transcript, ev.t, None, self.s)
-                f = self._open_flag("eeg", ev.t, t_start, None, simulated=(self.headset.kind == "simulated"))
+                f = self._open_flag("eeg", ev.t, t_start, None, simulated=(self.headset.kind != "real"))
                 self.open_eeg_flag = f["id"]
                 self._offer_eeg_style(f, t)
             elif ev.kind == "exit" and self.open_eeg_flag:
@@ -461,8 +503,10 @@ class SessionRuntime:
             self._reveal_recorded_words(t)
         sample, events = self.engine.tick(t, paused=paused)
         d = sample.to_dict()
-        d["sim"] = self.headset.kind == "simulated"
+        d["sim"] = self.headset.kind != "real"
         d["blinks_total"] = self.engine.blinks.count
+        if self.engine.external and self.engine.extra:
+            d["mw"] = self.engine.extra
         if not self.engine.baseline.ready:
             fit = min(8, int(round(sample.baseline_progress * 8)))
             if self.totem.fit != fit:

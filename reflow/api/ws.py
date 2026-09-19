@@ -77,6 +77,8 @@ async def handle_client_message(app, rt, data: dict) -> None:
     elif t == "sim_headset":
         with contextlib.suppress(ValueError):
             rt.set_sim_headset(str(data.get("state", "focused")))
+    elif t == "calibrate":
+        rt.calibrate(str(data.get("phase", "")))
     elif t == "media_time":
         rt.set_media_time(float(data.get("t", 0.0)), bool(data.get("playing", False)))
     elif t == "open_catchup":

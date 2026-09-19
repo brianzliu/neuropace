@@ -1,4 +1,4 @@
-# Verification record (19 Sep 2026)
+# Verification record (19 Sep 2026, updated after the mindwave bridge merge)
 
 What was checked, how, and what is still unverified. Re-run the commands before the demo; the outcomes below are from the build day on Joaquin's laptop (macOS, Python 3.13.14, Node 24, pnpm 11.13, arduino-cli with core arduino:renesas_uno 1.6.0).
 
@@ -6,12 +6,21 @@ What was checked, how, and what is still unverified. Re-run the commands before 
 
 | Check | Command | Result |
 |---|---|---|
-| Backend unit + integration tests (parser, features, blinks, spans, recaps, LLM client with a fake OpenAI, tally, review, loss map, session runtime, REST + WebSocket real-time flow, study analysis, Deepgram client parsing) | `uv run pytest -q` | 55 passed in about 17 s, no network, no hardware |
+| Backend unit + integration tests (parser, features, blinks, spans, recaps, LLM client with a fake OpenAI, tally, review, loss map, session runtime, REST + WebSocket real-time flow, study analysis, Deepgram client parsing, mindwave bridge on `FakeSource` with a byte-level cross-check of both ThinkGear parsers) | `uv run pytest -q` | 61 passed in about 22 s, no network, no hardware |
 | Lint | `uv run ruff check reflow tests scripts` | clean (the spec's three sim scripts are kept verbatim and excluded from style rules) |
 | Frontend types + build | `cd frontend && pnpm typecheck && pnpm build` | 0 errors, 67 modules, `dist/` served by the backend |
 | Firmware | `arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi firmware/totem` and `:minima` | both compile (57 KB / 44 KB) |
 | Spec toolkit | `uv run reflow sim selftest` | SELFTEST PASS |
 | Live end-to-end against a running server, everything simulated | `uv run reflow serve` then `uv run python scripts/smoke_e2e.py --baseline 8` | 14/14 PASS; tap to catch-up 1 to 3 ms |
+
+## The team's EEG pipeline (`mindwave/`, merged from brianzliu/neuropace)
+
+| Check | How | Result |
+|---|---|---|
+| Standalone runner still works from the merged repo | `uv run python run_pipeline.py --fake --no-ws --no-log` | one frame line per second (effort, engagement, blink rate, eSense) |
+| Bridge over the API | session with `headset: "fake"`, `POST /calibrate`, WS `calibrate`, `sim_headset: drifting` | `mw` extras on focus samples, `cal_phase` follows the commands, EEG flag 22 s after the switch, `headset_kind` stored as `fake` |
+| Live view on the fake headset | ego-browser: "fake headset" badge, calibration buttons, "calibrating: eyes_closed" chip | renders |
+| Real MindWave through the bridge | not verified: no headset on this machine | the pipeline itself was validated on a real head by its author (`EEG_PIPELINE.md`); `auto` picks it up when a `MindWave` serial port is present |
 
 ## Against real services
 

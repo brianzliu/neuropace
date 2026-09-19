@@ -58,9 +58,15 @@ export default function Live() {
   const doSim = useCallback(
     (st: "focused" | "drifting" | "poor") => {
       send({ type: "sim_headset", state: st });
-      sim.flash(`SIMULATED HEADSET: ${st.toUpperCase()}`);
+      sim.flash(`${(stateRef.current.headset?.kind ?? "simulated").toUpperCase()} HEADSET: ${st.toUpperCase()}`);
     },
     [send, sim],
+  );
+  const doCal = useCallback(
+    (phase: "eyes_closed" | "easy" | "hard" | "done" | "reset") => {
+      send({ type: "calibrate", phase });
+    },
+    [send],
   );
   const doEnd = useCallback(async () => {
     if (ending) return;
@@ -144,7 +150,7 @@ export default function Live() {
           <button onClick={() => setCycleToken((x) => x + 1)} disabled={!state.catchup}>
             <kbd>F</kbd>other form
           </button>
-          {state.headset?.kind === "simulated" ? (
+          {state.headset?.kind === "simulated" || state.headset?.kind === "fake" ? (
             <>
               <button onClick={() => doSim("focused")}>
                 <kbd>1</kbd>focused
@@ -156,6 +162,16 @@ export default function Live() {
                 <kbd>3</kbd>poor signal
               </button>
             </>
+          ) : null}
+          {state.headset && state.headset.kind !== "simulated" ? (
+            <span className="row" style={{ gap: "0.3rem" }} title="mindwave pipeline three-anchor calibration">
+              <span className="dim small">calibrate:</span>
+              <button className="ghost" onClick={() => doCal("eyes_closed")}>eyes closed</button>
+              <button className="ghost" onClick={() => doCal("easy")}>easy</button>
+              <button className="ghost" onClick={() => doCal("hard")}>hard</button>
+              <button className="ghost" onClick={() => doCal("done")}>done</button>
+              <button className="ghost" onClick={() => doCal("reset")}>reset</button>
+            </span>
           ) : null}
           {state.chipIds.length ? (
             <button className="ghost" onClick={onIgnoreChips}>
@@ -178,7 +194,7 @@ export default function Live() {
         {micError ? <div className="error small">{micError}</div> : null}
       </div>
     ),
-    [doTap, doForce, doSim, state.catchup, state.headset?.kind, state.chipIds.length, hello?.transcript_kind, mic, ending, micError, onIgnoreChips, doEnd],
+    [doTap, doForce, doSim, doCal, state.catchup, state.headset, state.chipIds.length, hello?.transcript_kind, mic, ending, micError, onIgnoreChips, doEnd],
   );
 
   const above = (

@@ -28,6 +28,7 @@ export interface FocusMsg {
   baseline_progress: number;
   artifact: boolean;
   blink: boolean;
+  mw?: MindwaveFrameExtras;
   paused: boolean;
   poor_signal: number;
   attention: number | null;
@@ -79,11 +80,41 @@ export interface TotemStatus {
   pulse?: boolean;
 }
 
+export type HeadsetKind = "real" | "simulated" | "fake" | "replay";
+
+/** Status of the team's mindwave pipeline (three-anchor calibration), present for real, fake and replay headsets. */
+export interface MindwaveStatus {
+  calibrated?: boolean | null;
+  cal_phase?: string | null;
+  calibration_weak?: boolean | null;
+  alpha_closed_open_ratio?: number | null;
+  messages?: string[] | null;
+  quality?: number | null;
+  error?: string | null;
+  session_dir?: string | null;
+  frames?: number;
+}
+
 export interface HeadsetStatus {
   connected: boolean;
-  kind: "real" | "simulated";
+  kind: HeadsetKind;
   port: string | null;
   state: string | null;
+  mw?: MindwaveStatus;
+}
+
+/** Per-frame extras from the mindwave pipeline, on focus samples when the bridge is the front end. */
+export interface MindwaveFrameExtras {
+  effort?: number | null;
+  engagement?: number | null;
+  alpha_ratio?: number | null;
+  blink_rate?: number | null;
+  z_effort_ema?: number | null;
+  z_engagement_ema?: number | null;
+  artifact_coverage?: number | null;
+  calibrated?: boolean | null;
+  cal_phase?: string | null;
+  attention?: number | null;
 }
 
 export interface Notice {

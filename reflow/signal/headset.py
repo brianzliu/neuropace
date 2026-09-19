@@ -133,11 +133,123 @@ class SerialHeadset:
                 await asyncio.wait_for(self._thread_task, timeout=3.0)
 
 
-def make_headset(port_setting: str | None, on_events: EventCallback, seed: int = 11):
-    """port_setting: None = auto-detect (simulate if none found), "sim" = simulate, else a device path."""
-    if port_setting == "sim":
+class MindwaveHeadset:
+    """The team's `mindwave` pipeline as a Reflow headset source (TDD §3, README "EEG bridge").
+
+    kind: "real" (MindWaveSource on a serial port), "fake" (the pipeline's FakeSource) or "replay" (ReplaySource).
+    Delivers one FeatureFrame per second to `on_frame` on the asyncio loop; the SessionRuntime feeds the engine.
+    """
+
+    def __init__(
+        self,
+        on_frame: Callable[[object], None],
+        port: str | None = None,
+        fake: bool = False,
+        replay_dir: str | None = None,
+        replay_speed: float = 1.0,
+        log_dir: str | None = None,
+        fake_state: str = "easy",
+    ) -> None:
+        self.on_frame = on_frame
+        self.kind = "fake" if fake else ("replay" if replay_dir else "real")
+        self.port = port or (f"replay:{replay_dir}" if replay_dir else "fake")
+        self.replay_dir = replay_dir
+        self.replay_speed = replay_speed
+        self.log_dir = log_dir
+        self.state = fake_state
+        self.pipe = None
+        self.source = None
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self.frames = 0
+
+    # reflow sim states -> the pipeline's fake states
+    _STATE_MAP = {"focused": "easy", "drifting": "drowsy", "poor": "off"}
+
+    @property
+    def connected(self) -> bool:
+        return bool(self.source is not None and self.source.connected)
+
+    async def start(self) -> None:
+        from mindwave import FakeSource, MindWaveSource, Pipeline, ReplaySource
+
+        self._loop = asyncio.get_running_loop()
+        if self.kind == "fake":
+            self.source = FakeSource(state=self._STATE_MAP.get(self.state, self.state))
+        elif self.kind == "replay":
+            self.source = ReplaySource(self.replay_dir, speed=self.replay_speed)  # type: ignore[arg-type]
+        else:
+            self.source = MindWaveSource(self.port)
+        self.pipe = Pipeline(self.source, log_dir=(self.log_dir if self.kind == "real" else None))
+        self.pipe.on_frame(self._frame_cb)
+        self.pipe.start()
+        log.info("mindwave headset started: %s", self.source.describe())
+
+    def _frame_cb(self, frame) -> None:  # pipeline thread
+        self.frames += 1
+        if self._loop is not None and not self._loop.is_closed():
+            self._loop.call_soon_threadsafe(self.on_frame, frame)
+
+    def set_state(self, state: str) -> None:
+        """Fake source only. Accepts reflow names (focused/drifting/poor) or the pipeline's own states."""
+        mapped = self._STATE_MAP.get(state, state)
+        self.state = state
+        if self.kind == "fake" and self.source is not None:
+            self.source.set_state(mapped)
+
+    def calibrate(self, phase: str) -> None:
+        if self.pipe is not None:
+            self.pipe.calibrate(phase)
+
+    def status(self) -> dict:
+        if self.pipe is None:
+            return {}
+        st = self.pipe.status()
+        return {
+            "calibrated": st.get("calibrated"),
+            "cal_phase": st.get("cal_phase"),
+            "calibration_weak": st.get("calibration_weak"),
+            "alpha_closed_open_ratio": st.get("alpha_closed_open_ratio"),
+            "messages": st.get("messages"),
+            "quality": st.get("quality"),
+            "error": st.get("error"),
+            "session_dir": st.get("session_dir"),
+            "frames": self.frames,
+        }
+
+    async def stop(self) -> None:
+        if self.pipe is not None:
+            pipe = self.pipe
+            self.pipe = None
+            await asyncio.get_running_loop().run_in_executor(None, pipe.stop)
+
+
+def make_headset(
+    port_setting: str | None,
+    on_events: EventCallback,
+    seed: int = 11,
+    on_frame: Callable[[object], None] | None = None,
+    log_dir: str | None = None,
+):
+    """Routing (README "EEG bridge"):
+    None/"auto" -> a paired MindWave through the mindwave pipeline if a port is found, else the simulator;
+    "sim" -> Reflow's simulator; "fake" -> the pipeline's FakeSource; "replay:<dir>" -> the pipeline's ReplaySource;
+    "serial:<port>" -> Reflow's minimal raw reader; anything else -> a device path for the mindwave pipeline.
+    """
+    setting = (port_setting or "auto").strip()
+    if setting == "sim":
         return SimulatedHeadset(on_events, seed=seed)
-    port = port_setting or autodetect_headset_port()
+    if on_frame is None:
+        # no frame consumer: fall back to the raw path
+        port = None if setting == "auto" else setting
+        port = port or autodetect_headset_port()
+        return SerialHeadset(port, on_events) if port else SimulatedHeadset(on_events, seed=seed)
+    if setting == "fake":
+        return MindwaveHeadset(on_frame, fake=True)
+    if setting.startswith("replay:"):
+        return MindwaveHeadset(on_frame, replay_dir=setting.split(":", 1)[1])
+    if setting.startswith("serial:"):
+        return SerialHeadset(setting.split(":", 1)[1], on_events)
+    port = autodetect_headset_port() if setting == "auto" else setting
     if port:
-        return SerialHeadset(port, on_events)
+        return MindwaveHeadset(on_frame, port=port, log_dir=log_dir)
     return SimulatedHeadset(on_events, seed=seed)

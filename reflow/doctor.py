@@ -64,6 +64,7 @@ async def run_doctor(s: Settings) -> dict:
             "port": hp,
             "kind": "simulated" if not hp or hp == "sim" else "real",
             "setting": s.headset_port,
+            "bridge": "mindwave pipeline" if hp and hp != "sim" else None,
         },
         "totem": {
             "port": tp,

@@ -109,7 +109,7 @@ export function reduce(s: SessionState, m: ServerMsg): SessionState {
     case "totem":
       return { ...s, totem: { connected: m.connected, kind: m.kind, port: m.port, dots: m.dots, fit: m.fit, pulse: m.pulse } };
     case "headset":
-      return { ...s, headset: { connected: m.connected, kind: m.kind, port: m.port, state: m.state } };
+      return { ...s, headset: { connected: m.connected, kind: m.kind, port: m.port, state: m.state, mw: m.mw } };
     case "pause_request":
       return { ...s, pauseRequest: { flag_id: m.flag_id, seq: (s.pauseRequest?.seq ?? 0) + 1 } };
     case "session_ended":

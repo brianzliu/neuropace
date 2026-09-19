@@ -88,7 +88,15 @@ Session end → `GapBuilder` merges flags into gaps → one LLM call per gap (pa
 
 ## 3. Signal engine (FR-L5, FR-L6, FR-L7)
 
-### 3.1 ThinkGear parser
+### 3.0 Front end: the team's `mindwave` pipeline
+
+For a real headset (and for the `fake` and `replay` options) the raw-to-index stage is the team's standalone `mindwave/` package (see `EEG_PIPELINE.md`): reconnecting ThinkGear reader, 4 s window hopping 1 s, blink detection in a 0.5 to 8 Hz band with masking and interpolation, Welch PSD, `engagement = log10 β − log10(α+θ)`, contact and artifact gates (`valid`), blink counts, optional three-anchor calibration, session recording and bit-exact replay. `reflow.signal.headset.MindwaveHeadset` runs `mindwave.Pipeline` on its thread and hands each `FeatureFrame` to the asyncio loop; `SessionRuntime._on_frame` calls `FocusEngine.feed_frame(engagement, quality, valid, blink_count, extra)`.
+
+In that external mode the engine skips §3.2's own FFT and applies only the spec's decision layer to the frame's index: EMA, own-baseline z, 15 s window, drop detector, refractory, lead-in. `x` is the log10 engagement (z-scores are scale-free, so log10 vs ln changes nothing downstream); `e = 10^x`. A frame that is not `valid` counts as an artifact second; `quality > 50` or no frame for 3 s counts as bad signal. Reflow's own simulator (§3.4) still exercises the raw path below, so both parsers stay tested (`tests/test_mindwave_bridge.py` cross-checks them byte for byte).
+
+The pipeline's calibration (`eyes_closed`, `easy`, `hard`, `done`, `reset`) is driven from the live view or `POST /api/sessions/{id}/calibrate`; its z-scores ride along on focus samples as `mw.*` fields for display but never replace the spec's first-3-minutes baseline as the flag source.
+
+### 3.1 ThinkGear parser (Reflow's minimal reader, used by the simulator and `serial:<port>`)
 
 Stream framing: `0xAA 0xAA <len ≤ 169> <payload len bytes> <checksum>` where checksum = `(~sum(payload)) & 0xFF`. Payload rows: single-byte codes `< 0x80` carry one value byte; codes `≥ 0x80` carry a length byte then data.
 

@@ -8,6 +8,7 @@ an outlier are rejected. The poor-signal byte gates everything.
 from __future__ import annotations
 
 import math
+import time
 from collections import deque
 from dataclasses import asdict, dataclass
 
@@ -194,6 +195,45 @@ class FocusEngine:
         self.samples_total = 0
         self.artifacts = 0
         self.last: FocusSample | None = None
+        # external mode: a front end (the mindwave pipeline) supplies one index value per second
+        self._external = False
+        self._ext_x: float | None = None
+        self._ext_valid = False
+        self._ext_t = 0.0
+        self.extra: dict = {}
+
+    # ---- external per-second index (mindwave bridge) ----
+    def feed_frame(
+        self, x: float | None, quality: int, valid: bool, blinks: int = 0, extra: dict | None = None
+    ) -> None:
+        """One frame from the mindwave pipeline: x = engagement index (log10 beta - log10(alpha+theta)),
+        quality = poor_signal, valid = the pipeline's contact + artifact gate, blinks = blinks that began in this hop."""
+        self._external = True
+        self._received_any = True
+        self.poor_signal = int(quality)
+        self._ext_x = float(x) if (valid and x is not None and math.isfinite(x)) else None
+        self._ext_valid = bool(valid)
+        self._ext_t = time.monotonic()
+        if blinks:
+            self._blinks_since_tick += int(blinks)
+            self.blinks.count += int(blinks)
+        if extra:
+            self.extra = extra
+
+    @property
+    def external(self) -> bool:
+        return self._external
+
+    def _external_features(self) -> tuple[bool, float | None, bool]:
+        """Returns (quality_ok, x, artifact) for the external mode; stale frames count as no signal."""
+        stale = time.monotonic() - self._ext_t > 3.0
+        quality_ok = self._received_any and not stale and self.poor_signal <= self.s.poor_signal_gate
+        if not quality_ok:
+            return False, None, False
+        if not self._ext_valid or self._ext_x is None:
+            self.artifacts += 1
+            return True, None, True
+        return True, self._ext_x, False
 
     # ---- inputs ----
     def feed_raw(self, samples) -> None:
@@ -253,8 +293,11 @@ class FocusEngine:
 
     def tick(self, t: float, paused: bool = False) -> tuple[FocusSample, list[DetectorEvent]]:
         s = self.s
-        quality_ok = self._received_any and self.poor_signal <= s.poor_signal_gate
-        x, artifact = self._segment_features() if quality_ok else (None, False)
+        if self._external:
+            quality_ok, x, artifact = self._external_features()
+        else:
+            quality_ok = self._received_any and self.poor_signal <= s.poor_signal_gate
+            x, artifact = self._segment_features() if quality_ok else (None, False)
         blink = self._blinks_since_tick > 0
         self._blinks_since_tick = 0
         valid = quality_ok and x is not None and not paused
@@ -285,7 +328,7 @@ class FocusEngine:
             state = "ok"
         sample = FocusSample(
             t=round(t, 3),
-            e=(math.exp(x) if x is not None else None),
+            e=((10.0**x if self._external else math.exp(x)) if x is not None else None),
             x=(round(x_ema, 4) if x_ema is not None else None),
             z=(round(z, 3) if z is not None else None),
             w15=(round(w15, 3) if w15 is not None else None),
