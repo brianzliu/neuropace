@@ -11,7 +11,7 @@
 |---|---|---|
 | Backend | Python 3.13 (uv), FastAPI + uvicorn, Starlette WebSockets, numpy, pyserial, `openai` 3.x (Responses API, JSON-schema structured output), `websockets` 17 (Deepgram live client), httpx (Deepgram prerecorded), SQLite (stdlib) | One process, async, no native audio deps (audio is captured in the browser) |
 | Frontend | Vite 6 + React 19 + TypeScript 5.9 + react-router 7. No UI framework. One CSS file with custom properties. Canvas for the focus trace, inline SVG for diagrams | Built once to `frontend/dist` and served by FastAPI at `/`, so the demo is one process |
-| Firmware | Arduino UNO R4 WiFi (core `arduino:renesas_uno` 1.6.0), `Arduino_CapacitiveTouch` 1.4, `Arduino_LED_Matrix`, USB CDC serial 115200 | Verified to compile with `arduino-cli`. A Minima build flag drops the matrix |
+| Firmware | Current target: Arduino UNO Q 4 GB BLE relay (`firmware/uno_q_relay/`, App Lab MCU sketch + Bless/RouterBridge Linux prototype). Fallback: Arduino UNO R4 WiFi (core `arduino:renesas_uno` 1.6.0), `Arduino_CapacitiveTouch` 1.4, `Arduino_LED_Matrix`, USB CDC serial 115200 | The UNO Q path is experimental and uncompiled; blockers in `firmware/uno_q_relay/README.md`. The R4 fallback is verified to compile with `arduino-cli`; a Minima build flag drops the matrix |
 | Tests | pytest (backend), `tsc --noEmit` + `vite build` (frontend), `arduino-cli compile` (firmware), `scripts/smoke_e2e.py` (full session over HTTP + WS with everything simulated) | NFR-7: < 60 s, no network, no hardware |
 | Style | ruff (E, F, I, B, UP), TypeScript `strict`. No em dashes anywhere, including comments | House rule |
 | Config | `.env` + env vars prefixed `REFLOW_`, plus `DEEPGRAM_API_KEY`, `OPENAI_API_KEY`, `OPENAI_MODEL` | `reflow doctor` prints the effective values |
@@ -52,7 +52,8 @@ reflow/                      Python package
   eval/reflow_eval.py        gate / detector / outcome (from the spec's toolkit)
   eval/bandit_sim.py, eval/lossmap_sim.py, eval/kaggle_check.py
 frontend/                    Vite app (see §9)
-firmware/totem/totem.ino     UNO R4 sketch
+firmware/uno_q_relay/        UNO Q 4 GB BLE relay prototype (current target, uncompiled; blockers in its README)
+firmware/totem/totem.ino     UNO R4 direct-USB sketch (fallback)
 study/                       lecture script, quiz.json, protocol, analysis notes
 data/                        runtime: reflow.db, sessions/*.jsonl, lectures/<id>/
 scripts/smoke_e2e.py         end-to-end check with everything simulated
@@ -73,6 +74,8 @@ scripts/smoke_e2e.py         end-to-end check with everything simulated
         │                                                             │
         └── tap/eeg flag ──► Spans ──► catch-up lookup (no network) ──┘──► WS broadcast + JSONL log + SQLite
 ```
+
+**Current target hardware (19 Sep, §12):** the headset and button reach the laptop through the UNO Q 4 GB BLE relay (`UnoQRelay` replaces both runtime input adapters); the UNO R4 USB path in the diagram stays as the direct fallback. The relay path is experimental and uncompiled.
 
 Session end → `GapBuilder` merges flags into gaps → one LLM call per gap (parallel) produces note + question + full forms + diagram → stored. Review and tally are REST-driven state machines over stored gaps. Loss map is a pure function over stored focus samples and flags for all sessions of one lecture.
 
@@ -378,7 +381,7 @@ reflow kaggle-check PATH/EEG_data.csv          hour-0 feature check on Wang et a
 | `tests/test_eval.py` | `reflow_eval` selftest passes, study analysis on synthetic sessions |
 | `scripts/smoke_e2e.py` | Same as `test_api` against a running server, prints timings |
 | frontend | `tsc --noEmit`, `vite build` |
-| firmware | `arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi` and `:minima` |
+| firmware | `arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi` and `:minima` (UNO R4 fallback sketch only; the UNO Q relay has no compile check yet, §12) |
 
 ## 13. Parameters (single source of truth: `reflow/config.py`)
 

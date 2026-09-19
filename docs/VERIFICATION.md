@@ -55,12 +55,38 @@ See `docs/TDD.md` §3.3. With the defaults (enter −1.25, exit −0.6, 30 s cap
 
 ## On-device status (asked on 19 Sep, evening)
 
-Nothing has run on the physical devices. This Mac has no MindWave paired (Bluetooth shows only AirPods and a speaker) and no Arduino on USB, so the serial port list is empty apart from the system ports. To test on device: pair the headset (System Settings, Bluetooth, pin 0000), plug the UNO R4 in, flash `firmware/totem/totem.ino`, then `uv run reflow doctor` should show both ports and a live session with headset `auto` uses the real pipeline. The pipeline itself was validated on a real head by its author on a Windows laptop.
+Nothing has run on the physical devices. This Mac has no MindWave paired (Bluetooth shows only AirPods and a speaker) and no Arduino on USB, so the serial port list is empty apart from the system ports. To test on device: pair the headset (System Settings, Bluetooth, pin 0000), plug the UNO R4 in, flash `firmware/totem/totem.ino`, then `uv run reflow doctor` should show both ports and a live session with headset `auto` uses the real pipeline. The pipeline itself was validated on a real head by its author on a Windows laptop. The current target is the UNO Q 4 GB relay (`firmware/uno_q_relay/`), which has not been compiled, flashed, or paired; its blockers are listed there. The R4 steps above are the direct fallback route.
 
 ## Not verified (needs the hardware or the event)
 
+### Vercel deployment, 19 Sep 2026
+
+**Brand update:** The current app and Vercel project are Neurospace, deployed at
+https://neurospace-hackmit.vercel.app. The old address redirects there with HTTP 308,
+preserving the requested path. `neurospace.vercel.app` was unavailable. The renamed
+production build passed; HTTPS checks verified the Neurospace title on `/` and
+`/session/new`, the updated connection copy and `uv run neurospace serve` in the JS bundle,
+and the redirect. The three local-bridge tests and targeted ruff checks passed after updating
+the allowed origin. The old `reflow` command remains an alias for compatibility.
+
+- Production: https://reflow-neuropace.vercel.app, deployment
+  `dpl_DhSociVPcNKQvZhiN7TccTduxkLw`, confirmed Ready by `vercel inspect`.
+- `pnpm build` passed locally and on Vercel. Only the frontend directory was deployed.
+- `uv run pytest -q`: 76 passed. Includes hosted-origin HTTP pairing, CORS preflight,
+  media token enforcement, and WebSocket origin/token rejection and acceptance.
+- `uv run ruff check reflow tests scripts` passed.
+- HTTPS checks returned 200 for `/`, `/session/new`, `/review/deployment-check`, and both
+  generated JS/CSS assets. The deployed bundle contains the local connection screen and
+  loopback backend address.
+- A browser was unavailable to the UI automation tool, so the hosted browser-to-localhost
+  permission flow, audio, camera, and media playback remain unverified in a real browser.
+  The already-running local backend needs a restart to load the pairing changes.
+
+### Remaining hardware and service checks
+
 - A real MindWave Mobile 2 on a real forehead: pairing, the serial port name, blink ticks on the trace, the false-flag rate and the drift latency of a real wearer (the hour-1 gate).
-- A real UNO R4 with a foil pad: touch threshold (`TOUCH_THRESHOLD` in the sketch), USB port name, LED matrix rendering.
+- A real UNO R4 with a foil pad (fallback route): touch threshold (`TOUCH_THRESHOLD` in the sketch), USB port name, LED matrix rendering.
+- A real UNO Q 4 GB: relay compile/flash, headset pairing and BLE permissions, App Lab compatibility, encrypted access, throughput/dropped frames, D2/GND wiring, and an end-to-end tap + feature-frame test. Blockers are listed in `firmware/uno_q_relay/README.md`.
 - OpenAI structured outputs with a real key and the event's model id (`reflow doctor` reports availability and alternatives).
 - Browser microphone capture in the live view (getUserMedia + AudioWorklet): the server side of that path is verified; the browser side compiled and is exercised only by hand.
 - HackMIT's rule on pre-written code and AI assistance; the Deepgram and OpenAI booth requirements beyond the challenges PDF.

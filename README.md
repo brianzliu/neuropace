@@ -1,8 +1,11 @@
-# Reflow
+# Neurospace
+
+Previously called Reflow. The `reflow` Python package, existing data files, and old CLI
+command remain compatible; use `uv run neurospace serve` to start the app.
 
 **It notices the moment a lecture loses you, catches you up in one glance, and re-teaches what you missed until it lands.**
 
-HackMIT 2026 · Education track · NeuroSky MindWave Mobile 2 + Arduino UNO R4 · Deepgram + OpenAI.
+HackMIT 2026 · Education track · NeuroSky MindWave Mobile 2 + Arduino UNO Q 4 GB (UNO R4 direct path stays as a fallback) · Deepgram + OpenAI.
 
 - Product requirements: [`docs/PRD.md`](docs/PRD.md)
 - Technical design (the contract every module follows): [`docs/TDD.md`](docs/TDD.md)
@@ -26,40 +29,58 @@ Everything runs with no hardware and no API keys (simulated headset, simulated t
 # backend (Python 3.13 via uv)
 uv sync
 cp .env.example .env            # add DEEPGRAM_API_KEY and OPENAI_API_KEY when you have them
-uv run reflow doctor            # keys, services, serial ports, frontend build
+uv run neurospace doctor            # keys, services, serial ports, frontend build
 
 # frontend (built once, served by the backend)
 cd frontend && pnpm install && pnpm build && cd ..
 
 # run everything in one process
-uv run reflow serve             # http://127.0.0.1:8765
+uv run neurospace serve             # http://127.0.0.1:8765
 ```
 
 Open the URL, create a learner, pick the demo lecture ("How GPS finds you", scripted, with a planted bad segment 3), start a live session with headset `sim` and totem `sim`, and press `T` to tap. Press `1`/`2` to switch the simulated headset between focused and drifting and watch the EEG flag arrive as a chip and a totem pulse.
 
 Frontend development with hot reload: `cd frontend && pnpm dev` (proxies `/api`, `/ws`, `/media` to the backend on 8765).
 
+## Hosted interface
+
+The frontend is deployed at https://neurospace-hackmit.vercel.app. On the same laptop as your
+browser and hardware, run `uv run neurospace serve` and paste the printed pairing code into the
+hosted connection screen. Allow local network access when prompted. Restart an older backend
+to load the hosted-interface changes. The local URL remains available as a fallback.
+
+The frontend deploys from `frontend/` with `vercel --prod`; only frontend files are uploaded.
+`REFLOW_UI_ORIGINS` configures exact allowed origins on the backend. Add preview URLs explicitly
+when testing them. `VITE_BACKEND_URL` can override the default `http://127.0.0.1:8765` at build
+time. Never put API keys or pairing codes in Vite environment variables. For hosted pairing,
+use `neurospace serve` without `--reload` so the terminal prints the current pairing code.
+
+The hosted site requires the local service. It does not provide a cloud backend or a remote
+connection to someone else's laptop. EEG processing and session storage stay local; configured
+transcription and explanation providers still receive the inputs needed for their requests.
+
 ## Hardware
 
 - **Headset:** pair the MindWave Mobile 2 over Bluetooth Classic. It appears as `/dev/cu.MindWaveMobile-SerialPort` (or similar; COM3 on Windows) and is auto-detected; the team's `mindwave/` pipeline reads it (see the EEG bridge section). Force a port with `REFLOW_HEADSET_PORT`, or `REFLOW_HEADSET_PORT=sim` to simulate.
-- **Totem:** flash `firmware/totem/totem.ino` to an UNO R4 WiFi (or Minima) with `arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi firmware/totem && arduino-cli upload -p /dev/cu.usbmodemXXXX --fqbn arduino:renesas_uno:unor4wifi firmware/totem`. Jumper D2 to a foil pad. The board is auto-detected on `usbmodem*`; `REFLOW_TOTEM_PORT=sim` simulates it. If capacitive touch misbehaves, set `USE_CAPTOUCH 0` in the sketch and wire a pushbutton between D2 and GND.
+- **Totem (current target):** the UNO Q 4 GB relay in `firmware/uno_q_relay/` is the target path: the headset and a momentary switch connect to the Q, which relays both to the laptop over BLE. It is **experimental and uncompiled**; the concrete hardware blockers are listed in `firmware/uno_q_relay/README.md`. The physical button is **not built yet** — a momentary switch under a larger 3D-printed press surface is planned. Direct + simulated routes below stay labelled fallbacks.
+- **Totem (direct USB fallback):** flash `firmware/totem/totem.ino` to an UNO R4 WiFi (or Minima) with `arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi firmware/totem && arduino-cli upload -p /dev/cu.usbmodemXXXX --fqbn arduino:renesas_uno:unor4wifi firmware/totem`. Jumper D2 to a foil pad. The board is auto-detected on `usbmodem*`; `REFLOW_TOTEM_PORT=sim` simulates it. If capacitive touch misbehaves, set `USE_CAPTOUCH 0` in the sketch and wire a pushbutton between D2 and GND.
 - **Hour-1 gate:** with the headset on a real forehead the live view must show blink ticks on the trace. If it does not, the raw stream is not real; fix pairing before anything else.
 
 ## EEG bridge (`mindwave/`)
 
 The headset front end is the team's standalone `mindwave/` pipeline, built and validated on the real MindWave Mobile 2: ThinkGear reader with reconnect, 4 s Welch windows, blink detection in its own 0.5 to 8 Hz band, three-anchor calibration (eyes closed, easy, hard), session recording and bit-exact replay. Read [`EEG_PIPELINE.md`](EEG_PIPELINE.md) and [`mindwave/README.md`](mindwave/README.md) before touching it.
 
-Reflow consumes it in-process: the pipeline turns raw into one `FeatureFrame` per second, and Reflow's focus engine applies the spec's own-baseline z-score, 15 s window and drop detector on the frame's `engagement` index (log10 beta minus log10(alpha plus theta), the same E = beta/(alpha+theta) on a log scale). Session start options:
+Neurospace consumes it in-process: the pipeline turns raw into one `FeatureFrame` per second, and Neurospace's focus engine applies the spec's own-baseline z-score, 15 s window and drop detector on the frame's `engagement` index (log10 beta minus log10(alpha plus theta), the same E = beta/(alpha+theta) on a log scale). Session start options:
 
 | `headset` | What runs |
 |---|---|
-| `auto` | a paired MindWave if a port is found (`mindwave.MindWaveSource`), otherwise Reflow's simulator |
-| `sim` | Reflow's synthetic EEG (`focused` / `drifting` / `poor`), the demo keys 1/2/3 |
+| `auto` | a paired MindWave if a port is found (`mindwave.MindWaveSource`), otherwise Neurospace's simulator |
+| `sim` | Neurospace's synthetic EEG (`focused` / `drifting` / `poor`), the demo keys 1/2/3 |
 | `fake` | the pipeline's own `FakeSource` (keys map focused to easy, drifting to drowsy, poor to off) |
 | `replay:<dir>` | the pipeline's `ReplaySource` on a recorded `sessions/<stamp>` directory |
-| `serial:<port>` | Reflow's minimal raw ThinkGear reader, for debugging only |
+| `serial:<port>` | Neurospace's minimal raw ThinkGear reader, for debugging only |
 
-Real sessions are recorded by the pipeline under `data/eeg/<stamp>/`. The pipeline's calibration can be driven from the live view (eyes closed, easy, hard, done) and its go/no-go from `EEG_PIPELINE.md` §7 applies unchanged. The standalone tools still work: `uv run python run_pipeline.py --fake` (use `--ws-port 8766` while Reflow is serving on 8765) and `uv run --group monitor python monitor.py --fake`.
+Real sessions are recorded by the pipeline under `data/eeg/<stamp>/`. The pipeline's calibration can be driven from the live view (eyes closed, easy, hard, done) and its go/no-go from `EEG_PIPELINE.md` §7 applies unchanged. The standalone tools still work: `uv run python run_pipeline.py --fake` (use `--ws-port 8766` while Neurospace is serving on 8765) and `uv run --group monitor python monitor.py --fake`.
 
 Two copies of the evaluation toolkit exist on purpose: the root `reflow_eval.py` is the pipeline team's pre-registered version (yoked random-timing control, `power` command); `reflow/eval/reflow_eval.py` is the REFLOW-3 version that `reflow study-analyze` uses.
 
@@ -97,7 +118,7 @@ Two copies of the evaluation toolkit exist on purpose: the root `reflow_eval.py`
 reflow/        Python package: signal engine, totem bridge, Deepgram, OpenAI, session runtime, review, tally, loss map, API, CLI
 mindwave/      the team's standalone MindWave pipeline (headset -> calibrated FeatureFrame per second); run_pipeline.py, monitor.py, example_consumer.py use it directly
 frontend/      Vite + React app (live, notes, review, tally, loss map, replay, quiz)
-firmware/      UNO R4 totem sketch
+firmware/      uno_q_relay/ (UNO Q 4 GB BLE relay prototype, current target, uncompiled) + totem/ (UNO R4 direct-USB fallback sketch)
 study/         lecture script with the planted flaw, quiz, protocol
 tests/         pytest suite
 data/          runtime data (sqlite, session logs, lectures); the demo lecture script is committed
