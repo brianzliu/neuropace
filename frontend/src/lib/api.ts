@@ -54,6 +54,8 @@ export interface SessionCreate {
 export const api = {
   dashboard: (id: string, organize = false) => get<import("./dashboardTypes").Dashboard>(`/api/learners/${id}/dashboard?organize=${organize}`),
   saveCurriculum: (id: string, body: import("./dashboardTypes").Curriculum) => request<import("./dashboardTypes").Curriculum>(`/api/learners/${id}/curriculum`, { method: "PUT", body: JSON.stringify(body) }),
+  deepgramKeyStatus: () => get<{ configured: boolean }>("/api/settings/deepgram"),
+  setDeepgramKey: (api_key: string) => request<{ configured: boolean }>("/api/settings/deepgram", { method: "PUT", body: JSON.stringify({ api_key }) }),
   health: () => get<{ ok: boolean; version: string }>("/api/health"),
   doctor: () => get<Doctor>("/api/doctor"),
   learners: () => get<{ learners: Learner[] }>("/api/learners"),

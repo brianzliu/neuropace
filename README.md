@@ -146,3 +146,12 @@ docs/          PRD, TDD, demo runbook
 ## License
 
 MIT.
+
+### Entering a Deepgram key in the app
+
+Open **Start session → Lecture transcription**, paste your Deepgram API key, and
+choose **Save key**. It applies to new sessions immediately. The key is held only
+in the local backend process and must be entered again after restarting it. Saving
+does not validate the key with Deepgram; authentication happens when transcription
+connects. For configuration that survives restarts, set `DEEPGRAM_API_KEY` in your
+local `.env` file. Never commit that file.

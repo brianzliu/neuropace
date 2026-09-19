@@ -50,6 +50,25 @@ async def doctor(request: Request):
     return await run_doctor(_s(request))
 
 
+@router.get("/settings/deepgram")
+def deepgram_key_status(request: Request):
+    return {"configured": bool(_s(request).deepgram_api_key)}
+
+
+@router.put("/settings/deepgram")
+async def set_deepgram_key(request: Request):
+    # Keep credentials in this backend process only, never in learner data or responses.
+    try:
+        body = await request.json()
+    except (ValueError, UnicodeDecodeError):
+        raise HTTPException(400, "Enter a valid Deepgram API key.") from None
+    key = body.get("api_key") if isinstance(body, dict) else None
+    if not isinstance(key, str) or not key.strip() or len(key) > 512 or any(c.isspace() for c in key.strip()):
+        raise HTTPException(400, "Enter a valid Deepgram API key.")
+    _s(request).deepgram_api_key = key.strip()
+    return {"configured": True}
+
+
 @router.get("/devices/status")
 async def device_status(request: Request):
     from ..signal.headset import autodetect_headset_port

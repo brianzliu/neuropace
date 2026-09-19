@@ -70,3 +70,7 @@ input[type="radio"], input[type="checkbox"] { width: 18px; height: 18px; min-hei
 .quiz-item .group-row { justify-content: flex-start; }
 .quiz-item .group-row .row { flex-wrap: nowrap; }
 .quiz-item label.group-row { flex-direction: row; font-weight: 400; }
+.transcription-settings { padding: 1.25rem; border: 1px solid var(--line); border-radius: 18px; text-align: left; background: var(--bg-2); }
+.transcription-settings h2 { margin: 0 0 .75rem; font: 400 1.3rem var(--display); }
+.transcription-settings p { font-size: .85rem; color: var(--muted); line-height: 1.5; }
+.transcription-settings input { margin-top: .5rem; }

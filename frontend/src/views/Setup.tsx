@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, errorText } from "../lib/api";
-import type { Doctor, LectureFull, SessionPublic } from "../lib/types";
+import DeepgramSettings from "../components/DeepgramSettings";
+import type { LectureFull, SessionPublic } from "../lib/types";
 
 /** Main's direct recording flow in the separate Pocket Studio window. */
 export default function Setup() {
   const navigate = useNavigate();
-  const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [practice, setPractice] = useState<LectureFull | null>(null);
   const [running, setRunning] = useState<SessionPublic | null>(null);
   const [busy, setBusy] = useState(false);
@@ -14,9 +14,8 @@ export default function Setup() {
   useEffect(() => {
     let alive = true;
     const learnerId = localStorage.getItem("reflow.learner") || "me";
-    Promise.allSettled([api.doctor(), api.lectures(), api.learner(learnerId).then(l => api.sessions({learner_id: l.id}))]).then(([devices, lectures, sessions]) => {
+    Promise.allSettled([api.lectures(), api.learner(learnerId).then(l => api.sessions({learner_id: l.id}))]).then(([lectures, sessions]) => {
       if (!alive) return;
-      if (devices.status === "fulfilled") setDoctor(devices.value);
       if (lectures.status === "fulfilled") setPractice(lectures.value.lectures.find(l => l.kind === "scripted") ?? null);
       if (sessions.status === "fulfilled") setRunning(sessions.value.sessions.find(s => s.status === "running" && s.mode !== "review") ?? null);
     });
@@ -37,7 +36,7 @@ export default function Setup() {
     {error && <div className="callout danger" role="alert">{error}</div>}
     {running ? <Link className="btn btn-primary btn-lg btn-block" to={`/live/${running.id}`}>Resume session</Link> : <button className="btn btn-primary btn-lg btn-block" disabled={busy} onClick={() => void start(null)}>{busy ? "Starting…" : "Start session"}</button>}
     <p className="small muted">Your microphone starts in the live window. Enable whiteboard capture there when you’re ready.</p>
-    {doctor && !doctor.keys.deepgram && <p className="small error">Live recording needs transcription setup. You can use the practice lecture below.</p>}
+    <DeepgramSettings />
     {practice && !running && <button className="linklike" disabled={busy} onClick={() => void start(practice.id)}>Try a practice lecture</button>}
     <Link className="advanced-link" to="/session/advanced">Devices and session options</Link>
   </section>;
