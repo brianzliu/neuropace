@@ -34,5 +34,5 @@ sessions/             recorded runs, replayable (gitignored)
 ```
 
 Also in this repo, not needed to use the pipeline: the HackMIT 2026 product plan
-(`REFLOW HackMIT2026 Education Plan.md`, `tracks.md`) and `reflow_eval.py`, a pre-registered
-statistics toolkit for evaluating that product.
+(`PLAN.md`, `tracks.md`) and `reflow_eval.py`, a pre-registered statistics toolkit for evaluating
+that product.
