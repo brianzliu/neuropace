@@ -7,6 +7,7 @@ import RecapPanel from "./RecapPanel";
 import CatchupOverlay from "./CatchupOverlay";
 import Chip from "./Chip";
 import FocusCard from "./FocusCard";
+import BrainWaves from "./BrainWaves";
 
 interface Props {
   state: SessionState;
@@ -41,6 +42,7 @@ export default function LiveStage(props: Props) {
           <TranscriptPane words={state.words} interim={state.interim} flags={flags} now={state.t} />
         </div>
         <div className="inspector">
+          <BrainWaves samples={state.raw} bands={state.bands} connected={!!state.headset?.connected} />
           <FocusCard last={last} headset={state.headset} flags={flags.length} />
           {errors.length ? (
             <div className="callout danger" style={{ margin: 0 }}>

@@ -6,10 +6,13 @@ HackMIT 2026 · Education track · NeuroSky MindWave Mobile 2 + Arduino UNO R4 �
 
 - Product requirements: [`docs/PRD.md`](docs/PRD.md)
 - Technical design (the contract every module follows): [`docs/TDD.md`](docs/TDD.md)
+- Product definition v2 (screens, artifacts, preferences): [`docs/PRODUCT.md`](docs/PRODUCT.md)
 - Demo runbook and rehearsal checklist: [`docs/DEMO-RUNBOOK.md`](docs/DEMO-RUNBOOK.md)
 - Study protocol (the four numbers): [`study/PROTOCOL.md`](study/PROTOCOL.md)
 
 ## What it does
+
+The student-facing product is defined in [`docs/PRODUCT.md`](docs/PRODUCT.md): two jobs (listen, restudy), four explanation families with an artifact catalogue, a preference model scored by answers with focus as a secondary signal, and a Duolingo-derived design. The list below is the mechanism behind it.
 
 1. **In the lecture.** Headset on, totem on the desk. Deepgram transcribes with word timestamps. Focus drops (relative to your own first 3 minutes) and pad taps mark spans with an 8 s lead-in.
 2. **Live catch-up.** Every 20 s Reflow writes a rolling one-line recap in four forms. **Tap the pad** and the recap for the span you missed appears in under a second: *"You missed: … Now: …"*, one glance, then it fades. An **EEG flag** only offers one: the totem pulses and a "catch-up ready" chip appears.

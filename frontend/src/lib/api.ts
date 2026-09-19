@@ -1,4 +1,5 @@
 import type {
+  Profile,
   Doctor, EventsResponse, LectureFull, Learner, LossMap, NotesResponse, QuizGet, QuizResult, RegenerateResponse, ReviewAnswer,
   ReviewNext, ReviewStart, SessionPublic, TallySummary, GapPublic,
 } from "./types";
@@ -38,8 +39,8 @@ export interface SessionCreate {
   learner_id?: string | null; // omitted: this device's single learner
   learner_name?: string | null; // study participant, optional
   lecture_id?: string | null;
-  mode: "live" | "recorded";
-  catchup_policy: "always" | "randomized";
+  mode: "live" | "recorded" | "review";
+  catchup_policy?: "always" | "randomized";
   baseline_seconds?: number;
   use_stored_baseline?: boolean;
   auto_pause?: boolean;
@@ -76,9 +77,13 @@ export const api = {
   regenerate: (id: string) => post<RegenerateResponse>(`/api/sessions/${id}/regenerate`),
   reviewStart: (id: string) => post<ReviewStart>(`/api/sessions/${id}/review/start`),
   reviewState: (id: string) => get<ReviewStart>(`/api/sessions/${id}/review`),
-  reviewAnswer: (id: string, card_id: string, choice: number) => post<ReviewAnswer>(`/api/sessions/${id}/review/answer`, { card_id, choice }),
-  reviewDrop: (id: string, card_id: string) => post<ReviewNext>(`/api/sessions/${id}/review/drop`, { card_id }),
-  reviewAdvance: (id: string, card_id: string) => post<ReviewNext>(`/api/sessions/${id}/review/advance`, { card_id }),
+  reviewAnswer: (id: string, card_id: string, choice: number, focus_ratio?: number | null) =>
+    post<ReviewAnswer>(`/api/sessions/${id}/review/answer`, { card_id, choice, focus_ratio: focus_ratio ?? null }),
+  reviewDrop: (id: string, card_id: string, focus_ratio?: number | null) => post<ReviewNext>(`/api/sessions/${id}/review/drop`, { card_id, focus_ratio: focus_ratio ?? null }),
+  profile: () => get<Profile>("/api/me/profile"),
+  resetProfile: () => post<{ ok: boolean }>("/api/me/reset"),
+  reviewAdvance: (id: string, card_id: string, focus_ratio?: number | null) =>
+    post<ReviewNext>(`/api/sessions/${id}/review/advance`, { card_id, focus_ratio: focus_ratio ?? null }),
   quiz: (id: string) => get<QuizGet>(`/api/sessions/${id}/quiz`),
   submitQuiz: (id: string, phase: "before" | "after", answers: Record<string, number>) => post<QuizResult>(`/api/sessions/${id}/quiz`, { phase, answers }),
 };

@@ -25,6 +25,8 @@ export interface SessionState {
   pauseRequest: { flag_id: string; seq: number } | null;
   bestForm: Form;
   catchupSeq: number;
+  raw: number[]; // last ~8 s of the 64 Hz brain-wave trace, microvolts
+  bands: { theta: number; alpha: number; beta: number } | null;
 }
 
 export const initialState: SessionState = {
@@ -45,8 +47,10 @@ export const initialState: SessionState = {
   notices: [],
   ended: null,
   pauseRequest: null,
-  bestForm: "plain",
+  bestForm: "words",
   catchupSeq: 0,
+  raw: [],
+  bands: null,
 };
 
 const MAX_FOCUS = 400;
@@ -82,7 +86,11 @@ export function reduce(s: SessionState, m: ServerMsg): SessionState {
     case "focus": {
       const focus = s.focus.length >= MAX_FOCUS ? s.focus.slice(-MAX_FOCUS + 1) : s.focus.slice();
       focus.push(m);
-      return { ...s, focus, t: m.t };
+      return { ...s, focus, t: m.t, bands: m.bands ?? s.bands };
+    }
+    case "raw": {
+      const raw = s.raw.length > 512 ? s.raw.slice(-512 + m.uv.length).concat(m.uv) : s.raw.concat(m.uv);
+      return { ...s, raw };
     }
     case "flag_open":
     case "flag_close": {

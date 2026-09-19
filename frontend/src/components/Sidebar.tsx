@@ -7,7 +7,7 @@ import { useTheme, type Theme } from "../lib/theme";
 /** macOS window sidebar: brand, navigation, and a status footer. `rail` collapses it to icons (live and replay). */
 
 
-type IconName = "start" | "live" | "notes" | "review" | "replay" | "quiz" | "tally" | "lossmap";
+type IconName = "start" | "live" | "notes" | "review" | "replay" | "quiz" | "tally" | "lossmap" | "lectures" | "you" | "team";
 
 function Icon({ name }: { name: IconName }) {
   const common = { width: 16, height: 16, viewBox: "0 0 16 16", fill: "none", stroke: "currentColor", strokeWidth: 1.5, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
@@ -64,6 +64,27 @@ function Icon({ name }: { name: IconName }) {
           <rect x="10.5" y="9" width="2.4" height="3" rx="0.6" fill="currentColor" stroke="none" />
         </svg>
       );
+    case "lectures":
+      return (
+        <svg {...common}>
+          <rect x="2" y="3" width="5" height="10" rx="1" />
+          <rect x="9" y="3" width="5" height="10" rx="1" />
+        </svg>
+      );
+    case "you":
+      return (
+        <svg {...common}>
+          <circle cx="8" cy="5.5" r="3" />
+          <path d="M2.5 14c.8-3 3-4.5 5.5-4.5s4.7 1.5 5.5 4.5" />
+        </svg>
+      );
+    case "team":
+      return (
+        <svg {...common}>
+          <circle cx="8" cy="8" r="2.2" />
+          <path d="M8 1.8v2M8 12.2v2M1.8 8h2M12.2 8h2M3.6 3.6l1.4 1.4M11 11l1.4 1.4M3.6 12.4 5 11M11 5l1.4-1.4" />
+        </svg>
+      );
     case "lossmap":
       return (
         <svg {...common}>
@@ -88,13 +109,11 @@ function Item({ to, icon, label, end, rail }: { to: string; icon: IconName; labe
 export default function Sidebar({ sessionId, sessionRunning, rail }: { sessionId: string | null; sessionRunning: boolean; rail: boolean }) {
   const [theme, setTheme] = useTheme();
   const [doctor, setDoctor] = useState<Doctor | null>(null);
-  const [lectureId, setLectureId] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
     const load = () => api.doctor().then((d) => alive && setDoctor(d)).catch(() => alive && setDoctor(null));
     void load();
-    api.lectures().then((l) => alive && setLectureId(l.lectures[0]?.id ?? null)).catch(() => undefined);
     const id = window.setInterval(load, 30000);
     return () => {
       alive = false;
@@ -103,6 +122,7 @@ export default function Sidebar({ sessionId, sessionRunning, rail }: { sessionId
   }, []);
 
   const openaiOk = !!doctor && doctor.keys.openai && doctor.openai.ok;
+  const setupNeeded = !!doctor && !openaiOk;
   return (
     <aside className={"sidebar" + (rail ? " rail" : "")}>
       <NavLink to="/" className="sb-brand" title="Reflow">
@@ -110,34 +130,20 @@ export default function Sidebar({ sessionId, sessionRunning, rail }: { sessionId
         {rail ? null : <span>Reflow</span>}
       </NavLink>
       <nav className="sb-nav">
-        {rail ? null : <div className="sb-section">Lecture</div>}
         <Item to="/" icon="start" label="Listen" end rail={rail} />
+        <Item to="/lectures" icon="lectures" label="Lectures" rail={rail} />
+        <Item to="/you" icon="you" label="You" rail={rail} />
         {sessionId ? (
           <>
-            {rail ? null : (
-              <div className="sb-section">
-                Session <span className="mono">{sessionId.replace("sess_", "")}</span>
-              </div>
-            )}
-            {sessionRunning ? <Item to={`/live/${sessionId}`} icon="live" label="Now playing" rail={rail} /> : null}
-            <Item to={`/notes/${sessionId}`} icon="notes" label="What you missed" rail={rail} />
-            <Item to={`/review/${sessionId}`} icon="review" label="Make it stick" rail={rail} />
-            <Item to={`/replay/${sessionId}`} icon="replay" label="Replay" rail={rail} />
-            <Item to={`/quiz/${sessionId}`} icon="quiz" label="Quiz" rail={rail} />
+            {rail ? null : <div className="sb-section">This lecture</div>}
+            {sessionRunning ? <Item to={`/live/${sessionId}`} icon="live" label="Listening" rail={rail} /> : null}
+            <Item to={`/lecture/${sessionId}`} icon="notes" label="What you missed" rail={rail} />
+            <Item to={`/restudy/${sessionId}`} icon="review" label="Restudy" rail={rail} />
           </>
         ) : null}
-        {rail ? null : <div className="sb-section">You</div>}
-        <Item to="/tally/me" icon="tally" label="What works for you" rail={rail} />
-        {lectureId ? <Item to={`/lossmap/${lectureId}`} icon="lossmap" label="Where the room drifted" rail={rail} /> : null}
       </nav>
       <div className="sb-footer">
-        <div className="sb-status" title="Deepgram · OpenAI · headset · totem">
-          <span className={"dot " + (doctor?.deepgram.ok ? "ok" : "bad")} title={doctor?.deepgram.ok ? "Deepgram reachable" : "Deepgram: no key or unreachable"} />
-          <span className={"dot " + (openaiOk ? "ok" : "bad")} title={openaiOk ? `OpenAI ${doctor?.openai.model}` : "OpenAI key required"} />
-          <span className={"dot " + (doctor?.headset.kind === "real" ? "ok" : "warn")} title={doctor?.headset.kind === "real" ? "MindWave paired" : "headset simulated"} />
-          <span className={"dot " + (doctor?.totem.kind === "real" ? "ok" : "accent")} title={doctor?.totem.kind === "real" ? "Arduino totem" : "keyboard totem"} />
-          {rail ? null : <span className="sb-status-text">{openaiOk ? "all set" : "setup needed"}</span>}
-        </div>
+        <Item to="/team" icon="team" label={setupNeeded ? "Setup needed" : "For the team"} rail={rail} />
         {rail ? null : (
           <div className="segmented sm sb-theme" aria-label="appearance">
             {(["auto", "light", "dark"] as Theme[]).map((t) => (

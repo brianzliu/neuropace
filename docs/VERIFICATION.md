@@ -61,6 +61,14 @@ What was checked, how, and what is still unverified. Re-run the commands before 
 | Microphone path through the server | WebSocket `audio_start` + binary PCM into a `transcript=deepgram` session | words broadcast on lecture time, tap produced a catch-up from the live transcript, gap built at session end |
 | OpenAI | not verified: no key on this machine yet | sessions now refuse to start without the key; the client is covered by tests with a fake OpenAI (strict schema, cache, retry, timeout, reasoning-param fallback) |
 
+## Product v2 (19 Sep, night)
+
+Backend: four explanation families with a migration from the old form keys, the artifact catalogue (summary, key idea, analogy, diagram, chart with real numbers only, steps for processes, worked example) chosen inside a family by content, headset-only restudy sessions that stream brain waves and flag drifts, per-card focus ratio, profile and reset. `uv run pytest -q`: 83 passed, including the migration, artifact choice, the restudy stream and focus recording.
+
+Frontend: rebuilt as the consumer product in `docs/PRODUCT.md` with a Duolingo-derived design system: Listen (one decision, one button), Listening (transcript, live brain waves with theta/alpha/beta, focus ring, one "I'm lost" button, catch-up HUD, Details for the team), Lecture done, Lectures, one lecture's moments, Restudy as a lesson (progress bar, question, artifact explanation with progressive reveal, three in a row, lesson complete with what worked), You (streak, moments, how you learn best with rescued and held-attention bars, start fresh), For the team (readiness, technical session, replay, loss map, quiz). Verified with `pnpm typecheck`, `pnpm build` and ego-browser screenshots of every screen in light and dark.
+
+Not verified: a real OpenAI generation of the artifact catalogue (no key on this machine; the schema is tested with a fake client), a real headset in restudy.
+
 ## Single learner per device (19 Sep, late evening)
 
 The learner picker is gone: every session belongs to this device's learner `lrn_me` ("you"), created on demand; `/api/learners/me` and `/tally/me` resolve to it. A study participant name can still be given under Advanced options (created on first use, reused case-insensitively) so the study keeps tallies apart. Verified: `uv run pytest -q` (79 passed, including the default and named-participant paths) and a browser run where Start listening with no learner produced a session on `lrn_me` and the tally page read "What works for you".

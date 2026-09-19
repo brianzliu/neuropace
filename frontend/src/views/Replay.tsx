@@ -10,7 +10,7 @@ import { mmss } from "../lib/format";
 const DEFAULT_CONFIG: HelloMsg["config"] = {
   baseline_seconds: 180, lead_in_seconds: 8, recap_period_seconds: 20, recap_window_seconds: 30, catchup_ttl_seconds: 6,
   drop_enter_z: -1.25, drop_exit_z: -0.6, window_seconds: 15, review_stop_streak: 3, tally_enough_attempts: 12,
-  forms: ["plain", "keyterm", "analogy", "sketch"],
+  forms: ["words", "analogy", "visual", "doing"],
 };
 
 /** Plays a session's event log at speed through the same stage as the live view (FR-L14). */
@@ -168,7 +168,7 @@ function synthHello(sess: SessionPublic, lecture: LectureFull | null): HelloMsg 
       ? { id: lecture.id, title: lecture.title, kind: lecture.kind, duration: lecture.duration, segments: lecture.segments, keyterms: lecture.keyterms, has_media: !!lecture.media_path, quiz_count: (lecture.quiz ?? []).length }
       : null,
     config: DEFAULT_CONFIG,
-    best_form: sess.best_form ?? "plain",
+    best_form: sess.best_form ?? "words",
     mode: sess.mode,
     policy: sess.catchup_policy,
     auto_pause: sess.auto_pause,

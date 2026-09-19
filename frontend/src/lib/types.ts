@@ -1,12 +1,25 @@
 // Shapes mirrored from the backend (reflow/core/session.py, review.py, tally.py, lossmap.py, api/routes.py).
 
-export type Form = "plain" | "keyterm" | "analogy" | "sketch";
-export const FORMS: Form[] = ["plain", "keyterm", "analogy", "sketch"];
+/** The four explanation families the preference model learns over (docs/PRODUCT.md §4). */
+export type Form = "words" | "analogy" | "visual" | "doing";
+export const FORMS: Form[] = ["words", "analogy", "visual", "doing"];
 export const FORM_LABEL: Record<Form, string> = {
-  plain: "plain recap",
-  keyterm: "key term",
-  analogy: "analogy",
-  sketch: "sketch / formula",
+  words: "in words",
+  analogy: "by comparison",
+  visual: "as a picture",
+  doing: "by doing",
+};
+export const FORM_ICON: Record<Form, string> = { words: "Aa", analogy: "≈", visual: "◔", doing: "⇢" };
+
+/** One generated way of presenting a moment (docs/PRODUCT.md §4). */
+export type ArtifactKind = "words" | "analogy" | "diagram" | "chart" | "steps" | "example";
+export const ARTIFACT_LABEL: Record<ArtifactKind, string> = {
+  words: "in words",
+  analogy: "a comparison",
+  diagram: "a picture",
+  chart: "the numbers",
+  steps: "step by step",
+  example: "a worked example",
 };
 
 export interface Word {
@@ -29,6 +42,7 @@ export interface FocusMsg {
   artifact: boolean;
   blink: boolean;
   mw?: MindwaveFrameExtras;
+  bands?: { theta: number; alpha: number; beta: number } | null;
   paused: boolean;
   poor_signal: number;
   attention: number | null;
@@ -178,11 +192,11 @@ export interface SessionRow {
   id: string;
   learner_id: string;
   lecture_id: string | null;
-  mode: "live" | "recorded";
+  mode: "live" | "recorded" | "review";
   catchup_policy: "always" | "randomized";
   headset_kind: string | null;
   totem_kind: string | null;
-  transcript_kind: "scripted" | "deepgram" | "recorded" | null;
+  transcript_kind: "scripted" | "deepgram" | "recorded" | "none" | null;
   best_form: Form | null;
   status: "running" | "ended" | "reviewed" | "ending" | "created";
   started_at: number;
@@ -209,10 +223,10 @@ export interface HelloMsg {
   lecture: LectureLite | null;
   config: SessionConfig;
   best_form: Form;
-  mode: "live" | "recorded";
+  mode: "live" | "recorded" | "review";
   policy: "always" | "randomized";
   auto_pause: boolean;
-  transcript_kind: "scripted" | "deepgram" | "recorded";
+  transcript_kind: "scripted" | "deepgram" | "recorded" | "none";
   words: Word[];
   flags: Flag[];
   recaps: RecapMsg[];
@@ -221,6 +235,14 @@ export interface HelloMsg {
   totem: TotemStatus;
   notices: Notice[];
   sim: { headset: boolean; totem: boolean; transcript: boolean };
+}
+
+/** A 64 Hz chunk of the brain-wave trace in microvolts (8 values, 8 times a second). */
+export interface RawMsg {
+  type: "raw";
+  t: number;
+  fs: number;
+  uv: number[];
 }
 
 export interface SessionEndedMsg {
@@ -234,6 +256,7 @@ export type ServerMsg =
   | HelloMsg
   | ({ type: "words"; words: Word[]; final: boolean; t: number })
   | FocusMsg
+  | RawMsg
   | ({ type: "flag_open"; flag: Flag; t: number })
   | ({ type: "flag_close"; flag: Flag; t: number })
   | CatchupMsg
@@ -273,7 +296,9 @@ export interface GapPublic {
   question: { question: string; options: string[] } | null;
   package_source: PackageSource | null;
   error?: string | null;
-  forms_available: Form[];
+  summary?: string | null;
+  artifacts_available?: string[];
+  forms_available?: Form[];
 }
 
 export interface RegenerateResponse {
@@ -307,16 +332,34 @@ export interface SceneGraph {
   steps: SceneStep[];
 }
 
-export interface KeyTermContent {
+export interface KeyIdea {
   term: string;
   definition: string;
   example: string;
 }
-export interface SketchContent {
-  line: string;
-  diagram: SceneGraph;
+export interface WordsContent {
+  summary: string;
+  key_idea: KeyIdea;
 }
-export type ReteachContent = string | KeyTermContent | SketchContent | null;
+export interface ChartContent {
+  applicable: boolean;
+  kind: "bar" | "line";
+  title: string;
+  unit: string;
+  points: { label: string; value: number }[];
+  takeaway: string;
+}
+export interface StepsContent {
+  applicable: boolean;
+  title: string;
+  steps: string[];
+}
+export interface ExampleContent {
+  title: string;
+  lines: string[];
+  result: string;
+}
+export type ReteachContent = WordsContent | string | SceneGraph | ChartContent | StepsContent | ExampleContent | null;
 
 export interface Card {
   id: string;
@@ -329,7 +372,7 @@ export interface Card {
   package_source: PackageSource | null;
   forms_used: Form[];
   question?: { question: string; options: string[] };
-  reteach?: { form: Form; content: ReteachContent; key_term: string | null };
+  reteach?: { form: Form; artifact: ArtifactKind; content: ReteachContent; key_term: string | null };
 }
 
 export interface Progress {
@@ -352,6 +395,15 @@ export interface FormStat {
   post_b: number;
   posterior_mean: number;
   rate: number | null;
+  label?: string;
+  focus?: { mean_focus: number | null; n: number };
+}
+
+export interface Profile {
+  learner: Learner;
+  stats: { streak_days: number; active_days: number; moments_total: number; moments_restudied: number; lectures: number };
+  tally: TallySummary;
+  calibrated: boolean;
 }
 
 export interface TallySummary {

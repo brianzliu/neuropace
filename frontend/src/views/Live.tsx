@@ -111,7 +111,7 @@ export default function Live() {
     try {
       if (mic) await mic.stop();
       await api.endSession(sessionId);
-      nav(`/notes/${sessionId}`);
+      nav(`/done/${sessionId}`);
     } catch (e) {
       setWsError(String(e));
       setEnding(false);
@@ -182,7 +182,7 @@ export default function Live() {
     () => (
       <>
         <button className="btn btn-primary btn-lg pad-btn" onClick={doTap} title={totemKeyboard ? "No pad connected: Space works the same" : "Same as the pad"}>
-          Lost me <span className="kbd">space</span>
+          I'm lost <span className="kbd">space</span>
         </button>
         {hello?.transcript_kind === "deepgram" ? (
           <div className="grp">
@@ -245,8 +245,8 @@ export default function Live() {
           <span className="dot" /> {state.ended ? "ended" : listening ? "listening" : status}
         </span>
         <span className="t-subhead label-2 mono">{mmss(state.t)}</span>
-        {state.headset && state.headset.kind !== "real" ? <Badge tone="warning">simulated headset</Badge> : null}
-        {hello?.transcript_kind === "scripted" ? <Badge tone="warning">practice transcript</Badge> : null}
+        {state.headset && state.headset.kind !== "real" ? <Badge tone="warning">practice headset</Badge> : null}
+        {hello?.transcript_kind === "scripted" ? <Badge tone="warning">practice lecture</Badge> : null}
       </div>
       <div className="row">
         {recorded && hello ? (
@@ -275,7 +275,7 @@ export default function Live() {
             <button className="btn" onClick={() => nav(`/notes/${sessionId}`)}>
               Notes
             </button>
-            <button className="btn" onClick={() => nav(`/replay/${sessionId}`)}>
+            <button className="btn" onClick={() => nav(`/team/replay/${sessionId}`)}>
               Replay
             </button>
             <button className="btn btn-plain" onClick={() => nav("/")}>

@@ -2,7 +2,7 @@
 
 **Event:** HackMIT 2026, Education track. Sat 19 Sep 2026.
 **Source spec:** `~/Downloads/REFLOW-3.md` (the only spec this document derives from; earlier iterations are superseded).
-**Status:** v1.0, frozen for the build. Every requirement below has an ID; the TDD and the tests reference them.
+**Status:** v1.0 for the signal engine, statistics and study. The student-facing product (screens, explanation families, artifacts, preferences) was redefined on 19 Sep in `docs/PRODUCT.md`, which supersedes §5 to §8 below where they differ.
 
 ---
 
