@@ -175,16 +175,14 @@ export default function Review() {
         <div className="review-sheet">
           <div className="progress-row">
             <span>
-              gaps closed <b className="tabular">{progress.gaps_closed}/{progress.gaps_total}</b>
+              moments done <b className="tabular">{progress.gaps_closed}/{progress.gaps_total}</b>
               {progress.gaps_exhausted ? ` (${progress.gaps_exhausted} exhausted)` : ""}
             </span>
             <span className="streak">
-              streak {progress.streak}/{progress.stop_streak}
-            </span>
-            <span>cards {progress.cards_answered}</span>
-            {card ? (
+              {progress.streak}/{progress.stop_streak} in a row
+            </span>{card ? (
               <span className="mono">
-                gap {card.gap_ord + 1} · {range(card.t_start, card.t_end)}
+                moment {card.gap_ord + 1} · {range(card.t_start, card.t_end)}
               </span>
             ) : null}
             {card ? <SourceBadge source={card.package_source} /> : null}
@@ -195,7 +193,7 @@ export default function Review() {
                 <div className="mark">✓</div>
                 <h2 className="t-title2">That is it. Nicely done.</h2>
                 <div className="label-2">
-                  {progress.streak >= progress.stop_streak ? `${progress.stop_streak} straight hits.` : "Every gap is closed or exhausted."} {progress.gaps_closed}/{progress.gaps_total} gaps closed.
+                  {progress.streak >= progress.stop_streak ? `${progress.stop_streak} straight hits.` : "Every gap is closed or exhausted."} {progress.gaps_closed}/{progress.gaps_total} moments done.
                 </div>
                 <div className="row">
                   {learnerId ? <Link className="btn" to={`/tally/${learnerId}`}>What works for you</Link> : null}
