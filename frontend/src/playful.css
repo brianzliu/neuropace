@@ -245,6 +245,17 @@ textarea { font: inherit; width: 100%; padding: .8rem; background: var(--bg); co
 .device-setup { padding-bottom: 1rem; border-bottom: 1px solid var(--line); }
 .device-setup h3 { font-size: 1rem; font-weight: 500; margin: 0; }
 .device-setup label { margin-top: .8rem; }
+/* Main-window tab bar (Agent A). Theme tokens only; no transitions, so
+   reduced-motion is respected by construction. The bar itself scrolls
+   horizontally at 390px so the page never scrolls sideways. */
+.toptabs { max-width: 1600px; width: 100%; margin: 0 auto; padding: 0 4% .7rem; display: flex; gap: .4rem; overflow-x: auto; }
+.toptabs a { flex: 0 0 auto; padding: .5rem .95rem; border-radius: 10px; border: 1px solid transparent; color: var(--muted); font-size: .88rem; text-decoration: none; }
+.toptabs a:hover { color: var(--text); background: var(--bg-3); }
+.toptabs a[aria-current="page"] { color: var(--text); background: var(--bg-2); border-color: var(--line); box-shadow: inset 0 -3px 0 var(--accent); font-weight: 600; }
+/* Per-session / insights sub-navs (shells owned by D/E): same horizontal
+   scroll behaviour, no page-level sideways scroll. */
+.library-subnav, .insights-subnav { display: flex; gap: 1.1rem; overflow-x: auto; padding: .2rem 0 1rem; }
+.library-subnav a, .insights-subnav a { flex: 0 0 auto; }
 /* Agent F (theme polish): forward-compatible chrome for the tab cleanup.
    Agents A–E can use these classes directly; everything resolves through
    theme tokens so Pocket / Paper / Orbit all apply. Status is always
