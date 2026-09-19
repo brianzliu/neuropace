@@ -175,7 +175,7 @@ export default function CurriculumSection({ curriculum, learnerId, onSave }: Cur
               {completed} of {topics.length} covered
             </span>
           </div>
-          <p className="small muted">Marked by you · review results are tracked separately</p>
+          <p className="coverage-note"><span>Your own checkmarks</span><span>Review results tracked separately</span></p>
           <div className="topic-list">
             {topics.map((topic, index) => (
               <label key={index}>

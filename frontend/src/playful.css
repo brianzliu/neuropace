@@ -217,6 +217,21 @@ select {
 .session-history-item a { font-size: .77rem; }
 .session-placeholder { padding: 2rem 0; color: var(--muted); font-size: .85rem; }
 .session-placeholder > span { font-size: 2.5rem; color: var(--accent); }
+/* Session status pills (Agent 2): dot + word, never color-alone. Dots are
+   static — no pulsing animation, so reduced-motion is safe by construction.
+   running → accent, ended/reviewed → good tint, anything else → muted. */
+.session-status.is-running { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+.session-status.is-running i { background: var(--accent); }
+.session-status.is-ended { border-color: color-mix(in srgb, var(--good) 55%, transparent); }
+.session-status.is-ended i { background: var(--good); }
+.session-status.is-other i { background: var(--dim); }
+/* Session icon actions (Agent 2): compact tactile buttons, one wrapped row.
+   Real links keep the global :focus-visible outline; 44px touch targets. */
+.session-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.icon-button { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: .4rem .6rem; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-2); color: var(--text); font-size: 1.05rem; line-height: 1; text-decoration: none; box-shadow: 0 2px 0 var(--surface-edge); }
+.icon-button:hover { background: var(--bg-3); text-decoration: none; }
+.live-open { display: inline-flex; align-items: center; gap: .5rem; min-height: 44px; padding: .5rem 1rem; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-2); box-shadow: 0 2px 0 var(--surface-edge); }
+.live-open:hover { background: var(--bg-3); text-decoration: none; }
 .sidebar-note { background: var(--note); color: var(--note-ink); border-radius: 5px 5px 24px 5px; padding: 1.5rem; transform: rotate(2deg); margin: 2rem .25rem; box-shadow: 0 4px 0 var(--surface-edge); }
 .sidebar-note > span { font-size: 2rem; }
 .sidebar-note p { font-family: var(--display); font-size: 1rem; line-height: 1.7; margin: .4rem 0; }
@@ -224,8 +239,22 @@ select {
 .curriculum-progress { display: flex; align-items: center; gap: 1rem; font-size: .75rem; margin-top: 1.5rem; }
 .curriculum-progress progress { accent-color: var(--accent); flex: 1; min-width: 0; height: 10px; }
 .topic-list { display: grid; gap: .6rem; padding-top: .75rem; }
-.topic-list label { display: flex; flex-direction: row; align-items: center; gap: .7rem; font-weight: 400; padding: .5rem 0; }
-.topic-list input { width: 20px; height: 20px; min-height: 0; }
+.topic-list label { position: relative; display: flex; flex-direction: row; align-items: center; gap: .7rem; font-weight: 400; min-height: 44px; padding: .45rem .4rem; border-radius: 12px; }
+.topic-list label:hover { background: var(--bg-3); }
+/* Tactile toggle: the native checkbox itself, restyled with theme tokens.
+   Stays in the DOM so keyboard, screen readers, and Space keep working. */
+.topic-list input[type="checkbox"] { appearance: none; -webkit-appearance: none; width: 28px; height: 28px; min-height: 0; margin: 0; flex-shrink: 0; border-radius: 9px; border: 2px solid var(--surface-edge); background: var(--bg-2); box-shadow: 0 3px 0 var(--surface-edge); cursor: pointer; transition: transform .08s ease, box-shadow .08s ease, background-color .08s ease; }
+.topic-list input[type="checkbox"]:checked { background: var(--object); border-color: var(--object-dark); }
+.topic-list input[type="checkbox"]:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 var(--surface-edge); }
+.topic-list input[type="checkbox"]:disabled { opacity: .55; cursor: default; box-shadow: none; }
+.topic-list label:has(> input[type="checkbox"]:checked)::after { content: "✓"; position: absolute; left: .4rem; top: 50%; transform: translateY(-50%); width: 28px; line-height: 28px; text-align: center; font-size: 1.05rem; font-weight: 700; color: var(--text); pointer-events: none; }
+/* Footnote captions (no middots): two short stacked lines, honest + muted. */
+.coverage-note, .activity-note { display: grid; gap: .15rem; margin: .6rem 0 0; font-size: .78rem; line-height: 1.5; color: var(--muted); }
+.coverage-note span:last-child, .activity-note span:last-child { color: var(--dim); }
+@media (prefers-reduced-motion: reduce) {
+  .topic-list input[type="checkbox"] { transition: none; }
+  .topic-list input[type="checkbox"]:active:not(:disabled) { transform: none; }
+}
 .syllabus-form { display: grid; gap: 1rem; }
 textarea { font: inherit; width: 100%; padding: .8rem; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 10px; resize: vertical; }
 @media(max-width: 1050px) { .dashboard-grid { grid-template-columns: minmax(0,1fr) 235px; gap: 1.5rem; } .idea-sculpture { width: 100px; transform: scale(.8); transform-origin: right center; } }

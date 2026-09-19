@@ -39,6 +39,6 @@ export default function SessionActivity({ sessions }: { sessions: Dashboard["ses
         <span>{day.date.toLocaleDateString(undefined, { weekday: "short" })}</span>
       </div>)}
     </div>
-    <p className="small muted">Sessions recorded · last 7 days, including practice</p>
+    <p className="activity-note"><span>Sessions recorded</span><span>Last 7 days, including practice</span></p>
   </section>;
 }
