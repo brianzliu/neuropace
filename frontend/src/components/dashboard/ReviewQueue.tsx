@@ -1,14 +1,21 @@
-import { Link } from "react-router-dom";
 import type { Concept } from "../../lib/dashboardTypes";
-import { mmss } from "../../lib/format";
+import ConceptBox from "./ConceptBox";
 
 interface ReviewQueueProps {
   concepts: Concept[] | undefined;
   closed: number;
   hasLearner: boolean;
+  /** Queue-level summary from GET /api/learners/:id/dashboard. Display only. */
+  summary?: string;
+  /** "llm" | "cache" when the model organized the queue; anything else is the rules fallback. */
+  organizationSource?: string;
+  /** True while the organize pass is in flight (the first response is deterministic). */
+  organizing?: boolean;
 }
 
-export default function ReviewQueue({ concepts, closed, hasLearner }: ReviewQueueProps) {
+export default function ReviewQueue({ concepts, closed, hasLearner, summary, organizationSource, organizing }: ReviewQueueProps) {
+  const organized = organizationSource === "llm" || organizationSource === "cache";
+  const sourceLabel = organizing ? "Organizing…" : organized ? "Suggested from your saved notes" : "Unfinished first";
   return (
     <section className="concept-section" aria-label="Concepts to review">
       <div className="dashboard-section-heading">
@@ -19,24 +26,17 @@ export default function ReviewQueue({ concepts, closed, hasLearner }: ReviewQueu
       {!hasLearner ? <p className="muted" role="status">Loading your saved moments…</p>
         : !concepts ? <p className="muted" role="status">Loading your saved moments…</p>
         : concepts.length ? (
-          <div className="concept-list">
-            {concepts.map((concept, i) => (
-              <article className="concept-row" key={concept.id}>
-                <span className="concept-index" aria-hidden="true">{i + 1}</span>
-                <div>
-                  <h3>{concept.title}</h3>
-                  <p>{concept.description}</p>
-                  <Link className="concept-source" to={`/notes/${concept.session_id}`}>
-                    {concept.lecture} · saved at {mmss(concept.t_start)}
-                  </Link>
-                  {concept.status === "exhausted" && <p className="concept-reason">Try a different explanation.</p>}
-                </div>
-                <div className="concept-actions">
-                  <Link className="review-link" to={`/review/${concept.session_id}`}>Review session</Link>
-                </div>
-              </article>
-            ))}
-          </div>
+          <>
+            <div className="concept-summary">
+              {summary?.trim() ? <p>{summary}</p> : null}
+              <span className={"organize-source" + (organized ? " is-suggested" : organizing ? " is-organizing" : "")}>{sourceLabel}</span>
+            </div>
+            <div className="concept-list">
+              {concepts.map((concept, i) => (
+                <ConceptBox key={concept.id} concept={concept} index={i} organized={organized} />
+              ))}
+            </div>
+          </>
         ) : (
           <div className="dashboard-empty">
             <div className="empty-stack" aria-hidden="true"><i /><i /><i><span>✳</span></i></div>
