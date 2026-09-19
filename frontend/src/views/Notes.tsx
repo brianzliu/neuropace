@@ -50,31 +50,31 @@ export default function Notes() {
     <div className="page narrow">
       <div className="page-head">
         <div>
-          <h1 className="t-title1">Gap notes</h1>
-          <div className="sub">Only for the spans you missed: what was said, the key term, and how it connects to what you did hear.</div>
+          <h1 className="t-title1">What you missed</h1>
+          <div className="sub">Only the moments you drifted, taken from the lecture itself: what was said, the key idea, and how it connects to what you did hear.</div>
         </div>
-        <span className="mono t-footnote label-2">{sessionId}</span>
+        
       </div>
       <div className="stack-lg">
         {running ? (
           <div className="card row between">
-            <span>This session is still running.</span>
+            <span>This lecture is still going.</span>
             <span className="row">
               <Link className="btn btn-plain" to={`/live/${sessionId}`}>
-                Back to live
+                Back to the lecture
               </Link>
               <button className="btn btn-primary" onClick={() => void endNow()} disabled={ending}>
-                {ending ? "Building notes…" : "End it and build notes"}
+                {ending ? "Writing your notes…" : "End it and write my notes"}
               </button>
             </span>
           </div>
         ) : null}
-        {!running && data.gaps.length === 0 ? <div className="empty-state">Nothing flagged, nothing to review.</div> : null}
+        {!running && data.gaps.length === 0 ? <div className="empty-state">You stayed with it the whole way. Nothing to review.</div> : null}
         {data.gaps.map((g) => (
           <div key={g.id} className="card">
             <div className="card-header">
               <span className="card-title">
-                Gap {g.ord + 1} <span className="label-2 mono">· {range(g.t_start, g.t_end)}</span>
+                Moment {g.ord + 1} <span className="label-2 mono">· {range(g.t_start, g.t_end)}</span>
               </span>
               <span className="row">
                 <SourceBadge source={g.package_source} />
@@ -95,7 +95,7 @@ export default function Notes() {
                   <div>{g.note.what_was_said}</div>
                 </div>
                 <div className="note-row">
-                  <div className="k">Key term</div>
+                  <div className="k">Key idea</div>
                   <div>
                     <span className="term">{g.note.key_term}</span>
                     <span className="label-2"> · </span>
@@ -103,7 +103,7 @@ export default function Notes() {
                   </div>
                 </div>
                 <div className="note-row">
-                  <div className="k">Connection</div>
+                  <div className="k">How it connects</div>
                   <div className="label-2">{g.note.connection}</div>
                 </div>
               </>
@@ -129,10 +129,10 @@ export default function Notes() {
         {!running && data.gaps.length > 0 ? (
           <div className="row">
             <button className="btn btn-primary btn-lg" onClick={() => nav(`/review/${sessionId}`)} disabled={failed.length > 0} title={failed.length ? "Retry generation first" : ""}>
-              Start review
+              Make it stick
             </button>
             <span className="t-footnote label-2">
-              {failed.length ? "Disabled until every gap has its notes and question." : "One card per gap, check question first. A miss re-teaches it in another form."}
+              {failed.length ? "Waiting for every moment to have its notes." : "One quick question per moment. Miss one and it gets explained a different way."}
             </span>
           </div>
         ) : null}

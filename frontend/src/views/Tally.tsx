@@ -25,10 +25,10 @@ export default function Tally() {
     <div className="page narrow">
       <div className="page-head">
         <div>
-          <h1 className="t-title1">{learner?.name ?? "Learner"}: which form lands</h1>
-          <div className="sub">We don't believe in learning styles. We test it on you, and show you the data.</div>
+          <h1 className="t-title1">What works for {learner?.name ?? "you"}</h1>
+          <div className="sub">Reflow does not assume a learning style. Every explanation you get is scored by whether you answered the question after it, and the winner is what you see next time.</div>
         </div>
-        {tally.enough_data ? <Badge tone="success">enough data</Badge> : <Badge>not enough data yet · {tally.total_attempts}/{tally.needed_attempts} scored cards</Badge>}
+        {tally.enough_data ? <Badge tone="success">enough data</Badge> : <Badge>still learning · {tally.total_attempts}/{tally.needed_attempts} answers</Badge>}
       </div>
       <div className="stack-lg">
         <div className="card" style={{ padding: 0 }}>
@@ -67,10 +67,11 @@ export default function Tally() {
             </tbody>
           </table>
         </div>
-        <div className="t-footnote label-2">
-          A rescue is a form shown right before a correct answer. Scored by quiz answers only; the headset never updates this. The pick is a Thompson sample over the posteriors, so untried forms keep getting explored.
-        </div>
-        <Group title="Population prior" note="New learners start from the average across all learners (pseudo-count 2).">
+        <details className="disclosure">
+          <summary>How the numbers work</summary>
+          <div className="body">A rescue is an explanation shown right before a correct answer. Only quiz answers count; the headset never changes this. Untried forms keep getting a turn, and new learners start from the average across everyone.</div>
+        </details>
+        <Group title="Everyone's average (starting point)">
           {FORMS.map((f) => (
             <Row key={f} label={FORM_LABEL[f]}>
               <span className="mono">

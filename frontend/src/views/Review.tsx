@@ -156,7 +156,7 @@ export default function Review() {
     return (
       <div className="page narrow">
         <div className="card stack">
-          <div className="t-headline">Review is not ready</div>
+          <div className="t-headline">Not quite ready</div>
           <div className="label-2">{err}</div>
           <div className="row">
             <Link className="btn" to={`/notes/${sessionId}`}>
@@ -193,12 +193,12 @@ export default function Review() {
             {phase === "done" || !card ? (
               <div className="done">
                 <div className="mark">✓</div>
-                <h2 className="t-title2">Review done</h2>
+                <h2 className="t-title2">That is it. Nicely done.</h2>
                 <div className="label-2">
                   {progress.streak >= progress.stop_streak ? `${progress.stop_streak} straight hits.` : "Every gap is closed or exhausted."} {progress.gaps_closed}/{progress.gaps_total} gaps closed.
                 </div>
                 <div className="row">
-                  {learnerId ? <Link className="btn" to={`/tally/${learnerId}`}>Your tally</Link> : null}
+                  {learnerId ? <Link className="btn" to={`/tally/${learnerId}`}>What works for you</Link> : null}
                   {lectureId ? <Link className="btn" to={`/lossmap/${lectureId}`}>Loss map</Link> : null}
                   <Link className="btn btn-plain" to={`/notes/${sessionId}`}>Notes</Link>
                 </div>

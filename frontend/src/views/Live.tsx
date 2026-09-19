@@ -38,6 +38,23 @@ export default function Live() {
   const [micError, setMicError] = useState<string | null>(null);
   const [simState, setSimState] = useState<SimState>("focused");
   const [calPhase, setCalPhase] = useState<CalPhase | null>(null);
+  const [details, setDetails] = useState<boolean>(() => {
+    try {
+      return new URLSearchParams(window.location.search).get("details") === "1" || localStorage.getItem("reflow.details") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const toggleDetails = useCallback(() => {
+    setDetails((v) => {
+      try {
+        localStorage.setItem("reflow.details", v ? "0" : "1");
+      } catch {
+        // ignore
+      }
+      return !v;
+    });
+  }, []);
   const sockRef = useRef<SessionSocket | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -66,8 +83,7 @@ export default function Live() {
 
   const doTap = useCallback(() => {
     send({ type: "tap" });
-    const kind = stateRef.current.totem?.kind;
-    flash(kind === "real" ? "TAP" : "KEY TAP", "neutral");
+    flash("Catching you up", "neutral");
   }, [send]);
   const doForce = useCallback(() => {
     send({ type: "force_flag" });
@@ -165,47 +181,14 @@ export default function Live() {
   const controls = useMemo(
     () => (
       <>
-        <button className="btn btn-primary btn-lg" onClick={doTap} title={totemKeyboard ? "Keyboard fallback: no Arduino pad detected" : "Same as the pad"}>
+        <button className="btn btn-primary btn-lg pad-btn" onClick={doTap} title={totemKeyboard ? "No pad connected: Space works the same" : "Same as the pad"}>
           Lost me <span className="kbd">space</span>
         </button>
-        <button className="btn" onClick={doForce} title="Opens an EEG-style flag without the headset (labelled simulated)">
-          Force flag <span className="kbd">L</span>
-        </button>
-        <button className="btn" onClick={() => setCycleToken((x) => x + 1)} disabled={!state.catchup}>
-          Other form <span className="kbd">F</span>
-        </button>
-        {showSim ? (
-          <div className="grp">
-            <span className="sep" />
-            <span className="cap">headset</span>
-            <div className="segmented sm">
-              {(["focused", "drifting", "poor"] as SimState[]).map((st, i) => (
-                <button key={st} className={simState === st ? "is-active" : ""} onClick={() => doSim(st)}>
-                  {st} <span className="kbd">{i + 1}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : null}
-        {showCal ? (
-          <div className="grp">
-            <span className="sep" />
-            <span className="cap">calibrate</span>
-            <div className="segmented sm">
-              {CAL.map((c) => (
-                <button key={c.k} className={calPhase === c.k ? "is-active" : ""} onClick={() => doCal(c.k)}>
-                  {c.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : null}
         {hello?.transcript_kind === "deepgram" ? (
           <div className="grp">
-            <span className="sep" />
             {mic ? (
               <button className="btn" onClick={() => void stopMic()}>
-                Stop microphone <span className="t-footnote label-2">{mic.sampleRate} Hz</span>
+                Stop microphone
               </button>
             ) : (
               <button className="btn btn-primary" onClick={() => void startMic()}>
@@ -215,34 +198,71 @@ export default function Live() {
             {micError ? <span className="t-footnote error-text">{micError}</span> : null}
           </div>
         ) : null}
+        {details ? (
+          <>
+            <span className="sep" />
+            <span className="cap">demo</span>
+            <button className="btn btn-sm" onClick={doForce} title="Opens an EEG-style flag without the headset (labelled simulated)">
+              Force flag <span className="kbd">L</span>
+            </button>
+            <button className="btn btn-sm" onClick={() => setCycleToken((x) => x + 1)} disabled={!state.catchup}>
+              Other form <span className="kbd">F</span>
+            </button>
+            {showSim ? (
+              <div className="segmented sm">
+                {(["focused", "drifting", "poor"] as SimState[]).map((st, i) => (
+                  <button key={st} className={simState === st ? "is-active" : ""} onClick={() => doSim(st)}>
+                    {st} <span className="kbd">{i + 1}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            {showCal ? (
+              <div className="segmented sm">
+                {CAL.map((c) => (
+                  <button key={c.k} className={calPhase === c.k ? "is-active" : ""} onClick={() => doCal(c.k)}>
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </>
+        ) : null}
         <button className="btn btn-danger right" onClick={() => void doEnd()} disabled={ending}>
           {ending ? "Ending…" : "End lecture"} <span className="kbd">E</span>
         </button>
       </>
     ),
-    [doTap, doForce, doSim, doCal, state.catchup, showSim, showCal, simState, calPhase, hello?.transcript_kind, mic, ending, micError, doEnd, totemKeyboard],
+    [doTap, doForce, doSim, doCal, state.catchup, showSim, showCal, simState, calPhase, hello?.transcript_kind, mic, ending, micError, doEnd, totemKeyboard, details],
   );
 
+  const listening = status === "open" && !state.ended;
   const head = (
     <div className="stage-head">
       <div className="row">
-        <span className="t-title3">{hello?.lecture?.title ?? (hello?.transcript_kind === "deepgram" ? "Live microphone" : "Session")}</span>
-        <span className="t-footnote label-2">
-          {hello?.learner.name} · {hello?.mode} · <span className="mono">{mmss(state.t)}</span>
+        <span className="t-title2">{hello?.lecture?.title ?? (hello?.transcript_kind === "deepgram" ? "Live lecture" : "Lecture")}</span>
+        <span className={"pill " + (listening ? "live" : "")}>
+          <span className="dot" /> {state.ended ? "ended" : listening ? "listening" : status}
         </span>
-        <Badge tone={status === "open" ? "success" : status === "failed" || status === "closed" ? "danger" : "neutral"}>{status}</Badge>
-        {state.ended ? <Badge tone="accent">ended · {state.ended.gaps} gaps</Badge> : null}
+        <span className="t-subhead label-2 mono">{mmss(state.t)}</span>
+        {state.headset && state.headset.kind !== "real" ? <Badge tone="warning">simulated headset</Badge> : null}
+        {hello?.transcript_kind === "scripted" ? <Badge tone="warning">practice transcript</Badge> : null}
       </div>
-      {recorded && hello ? (
-        <SessionPlayer
-          lectureId={hello.lecture?.id ?? null}
-          hasMedia={!!hello.lecture?.has_media}
-          duration={hello.lecture?.duration ?? null}
-          onTime={onTime}
-          pauseSeq={state.pauseRequest?.seq ?? 0}
-          onResume={() => setState((s) => clearCatchup(s))}
-        />
-      ) : null}
+      <div className="row">
+        {recorded && hello ? (
+          <SessionPlayer
+            lectureId={hello.lecture?.id ?? null}
+            hasMedia={!!hello.lecture?.has_media}
+            duration={hello.lecture?.duration ?? null}
+            onTime={onTime}
+            pauseSeq={state.pauseRequest?.seq ?? 0}
+            onResume={() => setState((s) => clearCatchup(s))}
+          />
+        ) : null}
+        <button className={"btn btn-sm" + (details ? " is-on" : "")} onClick={toggleDetails} title="Signal trace, headset and totem status, rolling recaps">
+          {details ? "Hide details" : "Details"}
+        </button>
+      </div>
     </div>
   );
 
@@ -278,6 +298,7 @@ export default function Live() {
       freezeCatchup={freeze}
       controls={controls}
       head={head}
+      details={details}
     />
   );
 }

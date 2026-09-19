@@ -61,6 +61,10 @@ What was checked, how, and what is still unverified. Re-run the commands before 
 | Microphone path through the server | WebSocket `audio_start` + binary PCM into a `transcript=deepgram` session | words broadcast on lecture time, tap produced a catch-up from the live transcript, gap built at session end |
 | OpenAI | not verified: no key on this machine yet | sessions now refuse to start without the key; the client is covered by tests with a fake OpenAI (strict schema, cache, retry, timeout, reasoning-param fallback) |
 
+## Consumer pass (19 Sep, late evening)
+
+After the user's note that the app read as a developer tool, the shell became a sidebar-and-content window and every student-facing screen was rebuilt around one decision at a time: Home is "Ready when you are" with learner chips, lecture cards and one "Start listening" button; the live screen is the transcript, a calm focus ring with a sentence, the catch-up HUD and one "Lost me" button; notes and review use plain-language copy ("What you missed", "Make it stick", "What works for you"). Ports, z-scores, headset and pad status, rolling recaps, calibration and the simulated-headset keys now live behind "Details" on the live screen and "Advanced options" under Setup on Home, so demos and judges can still see everything. Verified in the browser (ego-browser) in light and dark.
+
 ## Design system pass (19 Sep, evening)
 
 The frontend was rebuilt on a macOS-style design system (tokens for light and dark, toolbar with segmented navigation and theme control, grouped inset lists, capsules, HUD catch-up card, notification-style chip, sheet review card). Verified with `pnpm typecheck`, `pnpm build`, and ego-browser screenshots of every view in light and dark: Home, Live (Space tap, HUD, chip, focus trace), Notes, Review (question, the four re-teach forms, diagram, done), Tally, Loss map, Replay, Quiz. Two fixes after review: the HUD now sits over the document column instead of covering the inspector, and the HUD and chip are more opaque so they stay legible over the trace in dark mode.

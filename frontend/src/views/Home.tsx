@@ -4,12 +4,23 @@ import { api, errorText, type SessionCreate } from "../lib/api";
 import type { Doctor, LectureFull, Learner, SessionPublic } from "../lib/types";
 import { mmss } from "../lib/format";
 import { Badge, StatusDot } from "../components/Badges";
-import { Group, Row } from "../components/Inspector";
 
 const LS_KEY = "reflow.learner";
 type HeadsetChoice = "auto" | "sim" | "fake" | "custom";
 type TotemChoice = "auto" | "keyboard" | "custom";
 
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return (parts.length ? parts.map((p) => p[0]!).slice(0, 2).join("") : "?").toUpperCase();
+}
+
+function statusLabel(s: SessionPublic): { text: string; tone: "success" | "accent" | "neutral" } {
+  if (s.status === "running") return { text: "Listening now", tone: "success" };
+  if (s.status === "reviewed") return { text: "Reviewed", tone: "accent" };
+  return { text: s.gaps ? "Notes ready" : "Nothing missed", tone: "neutral" };
+}
+
+/** Student-facing start screen: two decisions and a button. Everything technical lives under Setup. */
 export default function Home() {
   const nav = useNavigate();
   const [learners, setLearners] = useState<Learner[]>([]);
@@ -17,6 +28,7 @@ export default function Home() {
   const [sessions, setSessions] = useState<SessionPublic[]>([]);
   const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [newName, setNewName] = useState("");
+  const [adding, setAdding] = useState(false);
   const [headsetChoice, setHeadsetChoice] = useState<HeadsetChoice>("auto");
   const [customHeadset, setCustomHeadset] = useState("");
   const [totemChoice, setTotemChoice] = useState<TotemChoice>("auto");
@@ -52,7 +64,7 @@ export default function Home() {
       const [l, lec, s] = await Promise.all([api.learners(), api.lectures(), api.sessions()]);
       setLearners(l.learners);
       setLectures(lec.lectures);
-      setSessions(s.sessions.slice(0, 10));
+      setSessions(s.sessions.slice(0, 6));
       setForm((f) => ({
         ...f,
         learner_id: f.learner_id && l.learners.some((x) => x.id === f.learner_id) ? f.learner_id : (l.learners[0]?.id ?? ""),
@@ -72,8 +84,10 @@ export default function Home() {
     try {
       const l = await api.createLearner(newName.trim());
       setNewName("");
+      setAdding(false);
       setLearners((xs) => xs.concat(l));
       setForm((f) => ({ ...f, learner_id: l.id }));
+      localStorage.setItem(LS_KEY, l.id);
     } catch (e) {
       setErr(errorText(e));
     }
@@ -95,230 +109,263 @@ export default function Home() {
   };
 
   const learner = learners.find((l) => l.id === form.learner_id);
-  const liveMic = form.mode === "live" && !form.lecture_id;
+  const liveMic = !form.lecture_id;
   const lectureById = (id: string | null) => lectures.find((l) => l.id === id);
+  const openaiOk = !!doctor && doctor.keys.openai && doctor.openai.ok;
+  const deepgramOk = !!doctor && doctor.keys.deepgram && doctor.deepgram.ok;
 
   return (
     <div className="page">
-      <div className="page-head">
-        <div>
-          <h1 className="t-large">Reflow</h1>
-          <div className="sub">It notices the moment a lecture loses you, catches you up in one glance, and re-teaches what you missed until it lands.</div>
+      <header className="hero">
+        <h1 className="t-large">Ready when you are.</h1>
+        <p className="sub">Put the headset on and start the lecture. If you drift, Reflow notices, catches you up in one line, and afterwards teaches you only what you missed.</p>
+      </header>
+
+      {err ? (
+        <div className="callout danger">
+          <b>Could not start.</b> {err}
         </div>
-      </div>
-      {err ? <div className="card error-text" style={{ marginBottom: 16 }}>{err}</div> : null}
+      ) : null}
+
       <div className="home-grid">
         <div className="stack-lg">
-          <Group title="Learner">
-            <Row label="learner">
-              <select className="select" value={form.learner_id} onChange={(e) => setForm({ ...form, learner_id: e.target.value })}>
-                {learners.length === 0 ? <option value="">create one first</option> : null}
+          <section className="sheet setup">
+            <div className="setup-sec">
+              <div className="setup-head">
+                <h2 className="t-title3">Who is listening?</h2>
+              </div>
+              <div className="chips">
                 {learners.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.name}
-                    {l.baseline_mu !== null ? " (stored baseline)" : ""}
-                  </option>
+                  <button key={l.id} className={"chip" + (form.learner_id === l.id ? " selected" : "")} onClick={() => setForm({ ...form, learner_id: l.id })}>
+                    <span className="avatar sm">{initials(l.name)}</span>
+                    <span>{l.name}</span>
+                  </button>
                 ))}
-              </select>
-            </Row>
-            <Row label="new learner">
-              <input className="field" value={newName} placeholder="name" onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void addLearner()} />
-              <button className="btn" onClick={() => void addLearner()}>
-                Add
+                {adding ? (
+                  <span className="chip editing">
+                    <input className="field" autoFocus value={newName} placeholder="your name" onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => (e.key === "Enter" ? void addLearner() : e.key === "Escape" ? setAdding(false) : undefined)} />
+                    <button className="btn btn-primary btn-sm" onClick={() => void addLearner()}>
+                      Add
+                    </button>
+                  </span>
+                ) : (
+                  <button className="chip add" onClick={() => setAdding(true)}>
+                    <span className="plus">+</span> New
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="setup-sec">
+              <div className="setup-head">
+                <h2 className="t-title3">What are you listening to?</h2>
+              </div>
+              <div className="lecture-cards">
+                {lectures.map((l) => {
+                  const selected = form.lecture_id === l.id;
+                  return (
+                    <button key={l.id} className={"lecture-card" + (selected ? " selected" : "")} onClick={() => setForm({ ...form, lecture_id: l.id })}>
+                      <span className="lc-kind">{l.kind === "media" ? "Recorded lecture" : "Practice lecture"}</span>
+                      <span className="lc-title">{l.title}</span>
+                      <span className="lc-meta">
+                        {mmss(l.duration)} · {l.segments?.length ?? 0} parts
+                      </span>
+                    </button>
+                  );
+                })}
+                <button className={"lecture-card" + (liveMic ? " selected" : "")} onClick={() => setForm({ ...form, lecture_id: null, mode: "live" })}>
+                  <span className="lc-kind">Live</span>
+                  <span className="lc-title">A lecture happening now</span>
+                  <span className="lc-meta">{deepgramOk ? "Uses your laptop microphone." : "Needs the transcription key first."}</span>
+                </button>
+              </div>
+            </div>
+
+            <footer className="setup-foot">
+              <button className="btn btn-primary btn-lg" disabled={!form.learner_id || busy || (liveMic && !deepgramOk)} onClick={() => void start()}>
+                {busy ? "Starting…" : "Start listening"}
               </button>
-            </Row>
-          </Group>
-          <Group
-            title="Lecture"
-            note={
-              liveMic && doctor && !doctor.keys.deepgram
-                ? "Live microphone needs DEEPGRAM_API_KEY. Pick a scripted lecture to rehearse without it."
-                : form.lecture_id && form.mode === "live"
-                  ? "Scripted lecture: the transcript is replayed in real time and labelled as such. Space taps, L forces a flag, 1/2/3 drive a simulated headset, E ends."
-                  : undefined
-            }
-          >
-            <Row label="lecture">
-              <select className="select" style={{ maxWidth: 360 }} value={form.lecture_id ?? ""} onChange={(e) => setForm({ ...form, lecture_id: e.target.value || null })}>
-                <option value="">Live microphone (Deepgram)</option>
-                {lectures.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.title} · {mmss(l.duration)} · {l.segments?.length ?? 0} segments
-                  </option>
-                ))}
-              </select>
-            </Row>
-          </Group>
-          <Group title="Session">
-            <Row label="mode">
-              <div className="segmented sm">
-                <button className={form.mode === "live" ? "is-active" : ""} onClick={() => setForm({ ...form, mode: "live" })}>
-                  live
-                </button>
-                <button className={form.mode === "recorded" ? "is-active" : ""} onClick={() => setForm({ ...form, mode: "recorded" })}>
-                  recorded
-                </button>
-              </div>
-            </Row>
-            <Row label="catch-ups">
-              <div className="segmented sm">
-                <button className={form.catchup_policy === "always" ? "is-active" : ""} onClick={() => setForm({ ...form, catchup_policy: "always" })}>
-                  always show
-                </button>
-                <button className={form.catchup_policy === "randomized" ? "is-active" : ""} onClick={() => setForm({ ...form, catchup_policy: "randomized" })}>
-                  randomized (study)
-                </button>
-              </div>
-            </Row>
-            <Row label="baseline">
-              <input className="field field-num" type="number" min={5} value={form.baseline_seconds} onChange={(e) => setForm({ ...form, baseline_seconds: Number(e.target.value) })} />
-              <span className="t-footnote label-2">s</span>
-              <div className="segmented sm">
-                <button className={form.baseline_seconds === 30 ? "is-active" : ""} onClick={() => setForm({ ...form, baseline_seconds: 30 })}>
-                  30 rehearsal
-                </button>
-                <button className={form.baseline_seconds === 180 ? "is-active" : ""} onClick={() => setForm({ ...form, baseline_seconds: 180 })}>
-                  180 spec
-                </button>
-              </div>
-            </Row>
-            <Row label={<span>stored baseline<div className="t-footnote label-2">{learner && learner.baseline_mu !== null ? "use this learner's calibrated baseline" : "none stored for this learner yet"}</div></span>}>
-              <input type="checkbox" className="switch" checked={!!form.use_stored_baseline} disabled={!learner || learner.baseline_mu === null} onChange={(e) => setForm({ ...form, use_stored_baseline: e.target.checked })} />
-            </Row>
-            <Row label="headset">
-              <select className="select" value={headsetChoice} onChange={(e) => onHeadsetChoice(e.target.value)}>
-                <option value="auto">auto (MindWave if paired, else simulated)</option>
-                <option value="sim">simulated EEG</option>
-                <option value="fake">pipeline synthetic EEG</option>
-                <option value="custom">custom port or replay</option>
-              </select>
-            </Row>
-            {headsetChoice === "custom" ? (
-              <Row label="headset port">
-                <input
-                  className="field"
-                  style={{ width: 300 }}
-                  value={customHeadset}
-                  placeholder="COM3, /dev/cu.MindWave…, replay:sessions/…"
-                  onChange={(e) => {
-                    setCustomHeadset(e.target.value);
-                    setForm({ ...form, headset: e.target.value || "auto" });
-                  }}
-                />
-              </Row>
-            ) : null}
-            <Row label="totem">
-              <select className="select" value={totemChoice} onChange={(e) => onTotemChoice(e.target.value)}>
-                <option value="auto">auto (Arduino if plugged in, else keyboard)</option>
-                <option value="keyboard">keyboard</option>
-                <option value="custom">custom port</option>
-              </select>
-            </Row>
-            {totemChoice === "custom" ? (
-              <Row label="totem port">
-                <input
-                  className="field"
-                  style={{ width: 300 }}
-                  value={customTotem}
-                  placeholder="COM5 or /dev/cu.usbmodem…"
-                  onChange={(e) => {
-                    setCustomTotem(e.target.value);
-                    setForm({ ...form, totem: e.target.value || "auto" });
-                  }}
-                />
-              </Row>
-            ) : null}
-            {form.mode === "recorded" ? (
-              <Row label={<span>auto-pause<div className="t-footnote label-2">pause the video and show the card on an EEG flag</div></span>}>
-                <input type="checkbox" className="switch" checked={!!form.auto_pause} onChange={(e) => setForm({ ...form, auto_pause: e.target.checked })} />
-              </Row>
-            ) : null}
-          </Group>
-          <div className="row">
-            <button className="btn btn-primary btn-lg" disabled={!form.learner_id || busy} onClick={() => void start()}>
-              {busy ? "Starting…" : "Start session"}
-            </button>
-            {learner ? <Link className="t-subhead" to={`/tally/${learner.id}`}>Tally for {learner.name}</Link> : null}
-            {form.lecture_id ? <Link className="t-subhead" to={`/lossmap/${form.lecture_id}`}>Loss map</Link> : null}
+              <span className="label-2 t-subhead">
+                Feel lost? Press <kbd className="kbd">space</kbd> or tap the pad. You get one line, then keep listening.
+              </span>
+            </footer>
+          </section>
+
+          {doctor && !openaiOk ? (
+            <div className="callout warning">
+              <b>Notes need a key.</b> Catch-ups, notes and review cards are written by OpenAI. Add <code>OPENAI_API_KEY</code> to <code>.env</code> and restart, then start listening.
+            </div>
+          ) : null}
+        </div>
+
+        <aside className="stack-lg">
+          <div className="card">
+            <div className="card-header">
+              <span className="card-title">Your lectures</span>
+            </div>
+            {sessions.length === 0 ? <div className="label-2 t-subhead">Nothing yet. Your first lecture shows up here.</div> : null}
+            <div className="session-list">
+              {sessions.map((s) => {
+                const st = statusLabel(s);
+                const primary = s.status === "running" ? `/live/${s.id}` : s.status === "ended" && s.gaps ? `/notes/${s.id}` : s.status === "reviewed" ? `/review/${s.id}` : `/notes/${s.id}`;
+                return (
+                  <div key={s.id} className="session-item">
+                    <div className="si-main">
+                      <div className="si-title">{lectureById(s.lecture_id)?.title ?? (s.transcript_kind === "deepgram" ? "Live lecture" : "Lecture")}</div>
+                      <div className="si-meta">
+                        {learners.find((l) => l.id === s.learner_id)?.name ?? "someone"} · {s.gaps ? `${s.gaps} moment${s.gaps === 1 ? "" : "s"} missed` : `${s.flags.length} flag${s.flags.length === 1 ? "" : "s"}`}
+                      </div>
+                    </div>
+                    <Badge tone={st.tone}>{st.text}</Badge>
+                    <Link className="btn btn-sm" to={primary}>
+                      Open
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
-        <div className="stack-lg">
-          <SystemGroup d={doctor} />
-          <Group title="Recent sessions">
-            {sessions.length === 0 ? <div className="group-row label-2">none yet</div> : null}
-            {sessions.map((s) => (
-              <div key={s.id} className="session-row">
-                <div>
-                  <div className="t-subhead">
-                    {lectureById(s.lecture_id)?.title ?? (s.transcript_kind === "deepgram" ? "Live microphone" : "Session")}
-                    <span className="label-2"> · {learners.find((l) => l.id === s.learner_id)?.name ?? s.learner_id}</span>
-                  </div>
-                  <div className="meta">
-                    <span className="mono">{s.id}</span>
-                    <span>{s.flags.length} flags · {s.gaps} gaps</span>
-                  </div>
-                </div>
-                <Badge tone={s.status === "running" ? "success" : s.status === "reviewed" ? "accent" : "neutral"}>{s.status}</Badge>
-                <div className="links">
-                  {s.status === "running" ? <Link to={`/live/${s.id}`}>live</Link> : null}
-                  <Link to={`/notes/${s.id}`}>notes</Link>
-                  <Link to={`/review/${s.id}`}>review</Link>
-                  <Link to={`/replay/${s.id}`}>replay</Link>
-                  {s.lecture_id ? <Link to={`/quiz/${s.id}`}>quiz</Link> : null}
-                </div>
+
+          <div className="card">
+            <div className="card-header">
+              <span className="card-title">Setup</span>
+              {doctor ? <span className="label-2 t-footnote">{doctor.platform}</span> : null}
+            </div>
+            {!doctor ? (
+              <div className="label-2 t-subhead">Checking…</div>
+            ) : (
+              <div className="status-list">
+                <StatusLine ok={doctor.headset.kind === "real"} tone={doctor.headset.kind === "real" ? "ok" : "warn"} label="Headset" value={doctor.headset.kind === "real" ? "Connected" : "Not connected · simulated for now"} />
+                <StatusLine ok={doctor.totem.kind === "real"} tone={doctor.totem.kind === "real" ? "ok" : "accent"} label="Pad" value={doctor.totem.kind === "real" ? "Connected" : "Not connected · press Space instead"} />
+                <StatusLine ok={deepgramOk} tone={deepgramOk ? "ok" : "bad"} label="Transcription" value={deepgramOk ? "Ready" : "Needs DEEPGRAM_API_KEY"} />
+                <StatusLine ok={openaiOk} tone={openaiOk ? "ok" : "bad"} label="Notes" value={openaiOk ? "Ready" : "Needs OPENAI_API_KEY"} />
               </div>
-            ))}
-          </Group>
-        </div>
+            )}
+            <details className="disclosure" style={{ marginTop: 12 }}>
+              <summary>Advanced options</summary>
+              <div className="adv">
+                <label className="opt">
+                  <span className="opt-k">Mode</span>
+                  <span className="segmented sm">
+                    <button className={form.mode === "live" ? "is-active" : ""} onClick={() => setForm({ ...form, mode: "live" })}>
+                      live
+                    </button>
+                    <button className={form.mode === "recorded" ? "is-active" : ""} disabled={!form.lecture_id} onClick={() => setForm({ ...form, mode: "recorded" })}>
+                      recorded
+                    </button>
+                  </span>
+                </label>
+                <label className="opt">
+                  <span className="opt-k">Baseline</span>
+                  <span className="row">
+                    <span className="segmented sm">
+                      <button className={form.baseline_seconds === 30 ? "is-active" : ""} onClick={() => setForm({ ...form, baseline_seconds: 30 })}>
+                        30 s
+                      </button>
+                      <button className={form.baseline_seconds === 180 ? "is-active" : ""} onClick={() => setForm({ ...form, baseline_seconds: 180 })}>
+                        3 min
+                      </button>
+                    </span>
+                    <input className="field field-num" type="number" min={5} value={form.baseline_seconds} onChange={(e) => setForm({ ...form, baseline_seconds: Number(e.target.value) })} />
+                  </span>
+                </label>
+                <label className="opt">
+                  <span className="opt-k">Catch-ups</span>
+                  <span className="segmented sm">
+                    <button className={form.catchup_policy === "always" ? "is-active" : ""} onClick={() => setForm({ ...form, catchup_policy: "always" })}>
+                      always
+                    </button>
+                    <button className={form.catchup_policy === "randomized" ? "is-active" : ""} onClick={() => setForm({ ...form, catchup_policy: "randomized" })}>
+                      randomized (study)
+                    </button>
+                  </span>
+                </label>
+                <label className="opt">
+                  <span className="opt-k">Stored baseline</span>
+                  <span className="row">
+                    <input type="checkbox" className="switch" checked={!!form.use_stored_baseline} disabled={!learner || learner.baseline_mu === null} onChange={(e) => setForm({ ...form, use_stored_baseline: e.target.checked })} />
+                    <span className="label-2 t-footnote">{learner && learner.baseline_mu !== null ? "skip the first minutes" : "none stored yet"}</span>
+                  </span>
+                </label>
+                <label className="opt">
+                  <span className="opt-k">Headset</span>
+                  <select className="select popup" value={headsetChoice} onChange={(e) => onHeadsetChoice(e.target.value)}>
+                    <option value="auto">auto</option>
+                    <option value="sim">simulated EEG</option>
+                    <option value="fake">pipeline synthetic EEG</option>
+                    <option value="custom">custom port or replay</option>
+                  </select>
+                </label>
+                {headsetChoice === "custom" ? (
+                  <label className="opt">
+                    <span className="opt-k">Headset port</span>
+                    <input
+                      className="field wide"
+                      value={customHeadset}
+                      placeholder="COM3, /dev/cu.MindWave…, replay:sessions/…"
+                      onChange={(e) => {
+                        setCustomHeadset(e.target.value);
+                        setForm({ ...form, headset: e.target.value || "auto" });
+                      }}
+                    />
+                  </label>
+                ) : null}
+                <label className="opt">
+                  <span className="opt-k">Pad</span>
+                  <select className="select popup" value={totemChoice} onChange={(e) => onTotemChoice(e.target.value)}>
+                    <option value="auto">auto</option>
+                    <option value="keyboard">keyboard</option>
+                    <option value="custom">custom port</option>
+                  </select>
+                </label>
+                {totemChoice === "custom" ? (
+                  <label className="opt">
+                    <span className="opt-k">Pad port</span>
+                    <input
+                      className="field wide"
+                      value={customTotem}
+                      placeholder="COM5 or /dev/cu.usbmodem…"
+                      onChange={(e) => {
+                        setCustomTotem(e.target.value);
+                        setForm({ ...form, totem: e.target.value || "auto" });
+                      }}
+                    />
+                  </label>
+                ) : null}
+                {form.mode === "recorded" ? (
+                  <label className="opt">
+                    <span className="opt-k">Auto-pause</span>
+                    <span className="row">
+                      <input type="checkbox" className="switch" checked={!!form.auto_pause} onChange={(e) => setForm({ ...form, auto_pause: e.target.checked })} />
+                      <span className="label-2 t-footnote">pause the video on a flag</span>
+                    </span>
+                  </label>
+                ) : null}
+                {learner ? (
+                  <Link className="t-footnote" to={`/tally/${learner.id}`}>
+                    What works for {learner.name}
+                  </Link>
+                ) : null}
+                {form.lecture_id ? (
+                  <Link className="t-footnote" to={`/lossmap/${form.lecture_id}`}>
+                    Where the room drifted
+                  </Link>
+                ) : null}
+              </div>
+            </details>
+          </div>
+        </aside>
       </div>
     </div>
   );
 }
 
-function SystemGroup({ d }: { d: Doctor | null }) {
-  if (!d) {
-    return (
-      <Group title="System">
-        <Row label="checking…" />
-      </Group>
-    );
-  }
-  const totemKeyboard = d.totem.kind !== "real";
+function StatusLine({ ok, tone, label, value }: { ok: boolean; tone: "ok" | "warn" | "bad" | "accent"; label: string; value: string }) {
   return (
-    <Group title="System" note={d.platform ? `platform ${d.platform} · data ${d.data_dir}` : undefined}>
-      <Row label={<span className="row"><StatusDot state={d.keys.deepgram ? (d.deepgram.ok ? "ok" : "warn") : "off"} />Deepgram</span>}>
-        {d.keys.deepgram ? <Badge tone={d.deepgram.ok ? "success" : "warning"}>{d.deepgram.ok ? "reachable" : d.deepgram.reason ?? "not reachable"}</Badge> : <Badge>no key</Badge>}
-      </Row>
-      <Row
-        label={
-          <span>
-            <span className="row"><StatusDot state={d.keys.openai && d.openai.ok ? "ok" : "bad"} />OpenAI</span>
-            {!(d.keys.openai && d.openai.ok) && d.openai.required !== false ? (
-              <div className="t-footnote error-text">required: recaps, notes and review cards need OPENAI_API_KEY</div>
-            ) : null}
-          </span>
-        }
-      >
-        {d.keys.openai && d.openai.ok ? (
-          <Badge tone="success">{d.openai.model}</Badge>
-        ) : (
-          <Badge tone="danger">{d.keys.openai ? `${d.openai.model} unavailable` : "no key"}</Badge>
-        )}
-      </Row>
-      <Row label={<span className="row"><StatusDot state={d.headset.kind === "real" ? "ok" : "warn"} />headset</span>}>
-        <span className="mono t-footnote">{d.headset.port ?? ""}</span>
-        <Badge tone={d.headset.kind === "real" ? "success" : "warning"}>{d.headset.kind === "real" ? "MindWave" : "simulated"}</Badge>
-      </Row>
-      <Row label={<span className="row"><StatusDot state={totemKeyboard ? "accent" : "ok"} />totem</span>}>
-        <span className="mono t-footnote">{d.totem.port ?? ""}</span>
-        <Badge tone={totemKeyboard ? "neutral" : "success"}>{totemKeyboard ? "keyboard fallback" : "Arduino"}</Badge>
-      </Row>
-      <Row label={<span className="row"><StatusDot state={d.frontend_built ? "ok" : "bad"} />frontend</span>}>
-        <Badge tone={d.frontend_built ? "success" : "danger"}>{d.frontend_built ? "built" : "not built"}</Badge>
-      </Row>
-      <Row label="baseline">
-        <span className="mono">{d.baseline_seconds}s</span>
-      </Row>
-    </Group>
+    <div className="status-line">
+      <StatusDot state={tone} />
+      <span className="sl-label">{label}</span>
+      <span className={"sl-value" + (!ok && tone === "bad" ? " error-text" : "")}>{value}</span>
+    </div>
   );
 }

@@ -147,6 +147,7 @@ export default function Replay() {
   );
   return (
     <LiveStage
+      details={true}
       state={state}
       onCatchupExpire={() => setState((s) => clearCatchup(s))}
       onCatchupDismiss={() => setState((s) => clearCatchup(s))}

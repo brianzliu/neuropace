@@ -9,7 +9,7 @@ export default function TallyPanel({ tally, compact }: { tally: TallySummary; co
     : `Best form so far: ${FORM_LABEL[tally.rank[0]]}.`;
   return (
     <Group
-      title="Your tally"
+      title="What works for you"
       note={
         <>
           {note}
