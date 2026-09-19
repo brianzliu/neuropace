@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 import json
 import shutil
@@ -22,6 +23,7 @@ from ..core.session import SessionRuntime
 from ..core.study import analyze, lossmap_inputs
 from ..doctor import run_doctor
 from ..ids import new_id
+from ..signal.headset import resolve_headset
 from ..transcribe.scripted import script_from_text
 
 router = APIRouter()
@@ -262,7 +264,9 @@ async def create_session(body: SessionIn, request: Request):
         seed=seed,
         auto_pause=body.auto_pause,
     )
-    hp = settings.headset_port if body.headset == "auto" else body.headset
+    hp = await asyncio.to_thread(
+        resolve_headset, settings.headset_port if body.headset == "auto" else body.headset
+    )
     tp = "sim" if body.totem == "sim" else settings.totem_port
     rt = SessionRuntime(
         settings, db, app.state.llm, sess, learner, lecture, tk, headset_port=hp, totem_port=tp

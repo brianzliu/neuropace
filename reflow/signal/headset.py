@@ -28,14 +28,21 @@ def list_serial_ports() -> list[tuple[str, str]]:
     return [(p.device, p.description or "") for p in list_ports.comports()]
 
 
-def autodetect_headset_port() -> str | None:
-    for dev, desc in list_serial_ports():
-        name = (dev + " " + desc).lower()
-        if "mindwave" in name or "neurosky" in name or "thinkgear" in name:
-            if dev.startswith("/dev/tty."):
-                return dev.replace("/dev/tty.", "/dev/cu.")
-            return dev
-    return None
+def autodetect_headset_port(probe: bool = True) -> str | None:
+    """Delegates to mindwave.ports (name match on macOS/Linux, probed Bluetooth COM ports on Windows)."""
+    from mindwave.ports import find_headset_port
+
+    return find_headset_port(probe=probe)
+
+
+def resolve_headset(setting: str | None, probe: bool = True) -> str:
+    """Turn a session/env headset setting into a concrete one before the runtime is built.
+    "auto"/None becomes a device path (probing may take a second or two per candidate) or "sim"."""
+    s = (setting or "auto").strip()
+    if s != "auto":
+        return s
+    port = autodetect_headset_port(probe=probe)
+    return port or "sim"
 
 
 class SimulatedHeadset:

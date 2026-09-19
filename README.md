@@ -63,6 +63,19 @@ Real sessions are recorded by the pipeline under `data/eeg/<stamp>/`. The pipeli
 
 Two copies of the evaluation toolkit exist on purpose: the root `reflow_eval.py` is the pipeline team's pre-registered version (yoked random-timing control, `power` command); `reflow/eval/reflow_eval.py` is the REFLOW-3 version that `reflow study-analyze` uses.
 
+## Platforms
+
+| | macOS | Windows |
+|---|---|---|
+| Toolchain | uv, pnpm, arduino-cli via Homebrew | uv, pnpm, arduino-cli installers; `copy .env.example .env` instead of `cp` |
+| Headset port | `/dev/cu.MindWaveMobile-SerialPo` after pairing in System Settings; found by name | two "Standard Serial over Bluetooth link (COMn)" ports per paired device with no name; auto-detect probes each for ThinkGear packets (headset must be on), or set `REFLOW_HEADSET_PORT=COM3` (the outgoing port) |
+| Totem port | `/dev/cu.usbmodem…`, found by name | "USB Serial Device (COMn)", found by Arduino's USB vendor id 0x2341 |
+| `run_pipeline.py` keys | termios (any terminal) | msvcrt (cmd, PowerShell) |
+| `monitor.py` | matplotlib macosx backend: `uv run --group monitor python monitor.py --fake` | matplotlib TkAgg; same command |
+| Status | this build was developed and verified here (tests, smoke, browser) | code reviewed for Windows paths, COM naming, console encoding and event loop; not yet executed on a Windows machine |
+
+`uv run reflow doctor` prints the platform and every serial port with its hardware id, which is the first thing to check when a device is not picked up.
+
 ## Commands
 
 | Command | Purpose |

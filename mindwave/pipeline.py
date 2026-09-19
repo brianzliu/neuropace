@@ -6,7 +6,7 @@ in-process, over the WebSocket feed, or read the session files afterwards.
 In-process use:
 
     from mindwave import Pipeline, MindWaveSource
-    pipe = Pipeline(MindWaveSource("COM3"))
+    pipe = Pipeline(MindWaveSource())  # port found automatically; or MindWaveSource("COM3")
     pipe.serve()                       # optional: WebSocket feed on ws://127.0.0.1:8765
     pipe.calibrate("eyes_closed")      # then "easy", "hard", "done" — or pipe.auto_calibrate()
     for frame in pipe.frames():        # blocks; one FeatureFrame per second

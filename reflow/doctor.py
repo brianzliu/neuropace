@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 from pathlib import Path
 
 import httpx
 
-from ._ports import list_serial_ports
+from mindwave.ports import list_serial_ports
+
 from .config import Settings
 from .signal.headset import autodetect_headset_port
 from .totem.bridge import autodetect_totem_port
@@ -54,7 +56,11 @@ async def run_doctor(s: Settings) -> dict:
     dg, oa = await asyncio.gather(
         check_deepgram(s.deepgram_api_key), check_openai(s.openai_api_key, s.openai_model)
     )
-    hp = "sim" if s.headset_port == "sim" else (s.headset_port or autodetect_headset_port())
+    hp = (
+        "sim"
+        if s.headset_port == "sim"
+        else (s.headset_port or await asyncio.to_thread(autodetect_headset_port))
+    )
     tp = "sim" if s.totem_port == "sim" else (s.totem_port or autodetect_totem_port(exclude=hp))
     return {
         "keys": {"deepgram": bool(s.deepgram_api_key), "openai": bool(s.openai_api_key)},
@@ -71,7 +77,11 @@ async def run_doctor(s: Settings) -> dict:
             "kind": "simulated" if not tp or tp == "sim" else "real",
             "setting": s.totem_port,
         },
-        "serial_ports": [{"device": d, "description": x} for d, x in list_serial_ports()],
+        "platform": sys.platform,
+        "serial_ports": [
+            {"device": p.device, "description": p.description, "hwid": p.hwid, "vid": p.vid}
+            for p in list_serial_ports()
+        ],
         "frontend_built": (FRONTEND_DIST / "index.html").exists(),
         "data_dir": str(s.data_dir.resolve()),
         "baseline_seconds": s.baseline_seconds,

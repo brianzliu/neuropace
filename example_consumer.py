@@ -1,6 +1,6 @@
 """Minimal consumer of the pipeline: the shape any downstream code takes.
 
-    python example_consumer.py            # live headset on COM3
+    python example_consumer.py            # live headset (port found automatically)
     python example_consumer.py --fake     # synthetic EEG, runs a short auto-calibration
     python example_consumer.py --ws       # instead: subscribe to a running run_pipeline.py over WebSocket
 
@@ -19,7 +19,7 @@ from mindwave import FakeSource, MindWaveSource, Pipeline
 
 
 def run_in_process(fake: bool) -> None:
-    source = FakeSource() if fake else MindWaveSource("COM3")
+    source = FakeSource() if fake else MindWaveSource()  # port=None: find it (COMn / /dev/cu.MindWave...)
     pipe = Pipeline(source)
     pipe.serve()                                    # optional: WebSocket feed on ws://127.0.0.1:8765
     pipe.start()

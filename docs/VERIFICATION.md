@@ -6,7 +6,7 @@ What was checked, how, and what is still unverified. Re-run the commands before 
 
 | Check | Command | Result |
 |---|---|---|
-| Backend unit + integration tests (parser, features, blinks, spans, recaps, LLM client with a fake OpenAI, tally, review, loss map, session runtime, REST + WebSocket real-time flow, study analysis, Deepgram client parsing, mindwave bridge on `FakeSource` with a byte-level cross-check of both ThinkGear parsers) | `uv run pytest -q` | 61 passed in about 22 s, no network, no hardware |
+| Backend unit + integration tests (parser, features, blinks, spans, recaps, LLM client with a fake OpenAI, tally, review, loss map, session runtime, REST + WebSocket real-time flow, study analysis, Deepgram client parsing, mindwave bridge on `FakeSource` with a byte-level cross-check of both ThinkGear parsers, port detection on macOS and Windows listings with a fake serial module) | `uv run pytest -q` | 65 passed in about 23 s, no network, no hardware |
 | Lint | `uv run ruff check reflow tests scripts` | clean (the spec's three sim scripts are kept verbatim and excluded from style rules) |
 | Frontend types + build | `cd frontend && pnpm typecheck && pnpm build` | 0 errors, 67 modules, `dist/` served by the backend |
 | Firmware | `arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi firmware/totem` and `:minima` | both compile (57 KB / 44 KB) |
@@ -22,6 +22,17 @@ What was checked, how, and what is still unverified. Re-run the commands before 
 | Live view on the fake headset | ego-browser: "fake headset" badge, calibration buttons, "calibrating: eyes_closed" chip | renders |
 | Real MindWave through the bridge | not verified: no headset on this machine | the pipeline itself was validated on a real head by its author (`EEG_PIPELINE.md`); `auto` picks it up when a `MindWave` serial port is present |
 
+## Platforms
+
+| Check | How | Result |
+|---|---|---|
+| macOS: `run_pipeline.py` without a headset | `uv run python run_pipeline.py --no-ws --no-log` | clear message listing the serial ports, exit 2 (no more silent `COM3` default) |
+| macOS: console keys in `run_pipeline.py` | driven through a pseudo-terminal: `d`, `2`, `b` | `[key] fake state -> drowsy`, `[key] calibrate easy`, `[key] fake blink` (termios poller; Windows keeps msvcrt) |
+| macOS: `monitor.py --fake` | launched for 8 s | window opens, no traceback (matplotlib via `uv run --group monitor`) |
+| macOS: `example_consumer.py --fake` | 6 s | frames printed, auto-calibration prompts |
+| Windows port naming | unit tests with a Windows-style listing (two `BTHENUM` COM ports, `USB Serial Device` totem) and a fake serial module | the outgoing Bluetooth port is found by probing for ThinkGear packets; never guessed without probing; the totem is found by Arduino's vendor id |
+| Windows execution | none available here | not run; the code was reviewed for path handling, COM names, console encoding (ASCII output only) and the asyncio/threads mix |
+
 ## Against real services
 
 | Check | How | Result |
@@ -33,7 +44,7 @@ What was checked, how, and what is still unverified. Re-run the commands before 
 
 ## In the browser (ego-browser, built frontend served by the backend)
 
-Home (doctor strip, session form) → live session on the scripted demo lecture with simulated headset and totem → `T` tap showed the one-line catch-up in under a second with the form label and OFFLINE badge → `F` cycled the form → `2` (drifting) produced an EEG flag: drop band on the trace, "catch-up ready" chip, totem pulse in the status strip → chip opened the card → `E` ended the session → notes page with the gap, key term and connection → review: question card, `D` walked through plain, key term, analogy and the sketch form with the stepped diagram, Continue → question → hit → done screen → tally page ("not enough data yet (1/12)", population prior shown) → loss map (n = 3, peak 40 s window, segment ranking, reveal of the planted segment) → replay page (108 events, speed selector) → quiz page (15 items, phase selector).
+Home (doctor strip, session form; headset choices auto / sim / fake / custom) → live session on the scripted demo lecture with simulated headset and totem → `T` tap showed the one-line catch-up in under a second with the form label and OFFLINE badge → `F` cycled the form → `2` (drifting) produced an EEG flag: drop band on the trace, "catch-up ready" chip, totem pulse in the status strip → chip opened the card → `E` ended the session → notes page with the gap, key term and connection → review: question card, `D` walked through plain, key term, analogy and the sketch form with the stepped diagram, Continue → question → hit → done screen → tally page ("not enough data yet (1/12)", population prior shown) → loss map (n = 3, peak 40 s window, segment ranking, reveal of the planted segment) → replay page (108 events, speed selector) → quiz page (15 items, phase selector).
 
 Screenshots from that pass were taken during the session and are not part of the repo.
 

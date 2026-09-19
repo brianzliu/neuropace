@@ -14,16 +14,30 @@ TOTEM_BAUD = 115200
 TapCallback = Callable[[float], None]  # called with wall-clock monotonic time of the tap
 
 
-def autodetect_totem_port(exclude: str | None = None) -> str | None:
-    from .._ports import list_serial_ports
+ARDUINO_VID = 0x2341
 
-    for dev, desc in list_serial_ports():
-        name = (dev + " " + desc).lower()
-        if dev == exclude:
+
+def autodetect_totem_port(exclude: str | None = None) -> str | None:
+    """An Arduino by USB vendor id (Windows shows only "USB Serial Device (COMn)"), or by name on macOS/Linux."""
+    try:
+        from serial.tools import list_ports
+    except ImportError:  # pragma: no cover
+        return None
+    for p in list_ports.comports():
+        dev = p.device
+        if dev.startswith("/dev/tty."):
+            dev = "/dev/cu." + dev[len("/dev/tty.") :]
+        if exclude and dev == exclude:
             continue
-        if ("usbmodem" in name or "arduino" in name or "uno" in name) and "mindwave" not in name:
-            if dev.startswith("/dev/tty."):
-                return dev.replace("/dev/tty.", "/dev/cu.")
+        text = f"{dev} {p.description or ''} {p.hwid or ''}".lower()
+        if "mindwave" in text or "bthenum" in text:
+            continue
+        if (
+            getattr(p, "vid", None) == ARDUINO_VID
+            or "usbmodem" in text
+            or "arduino" in text
+            or " uno" in f" {text}"
+        ):
             return dev
     return None
 

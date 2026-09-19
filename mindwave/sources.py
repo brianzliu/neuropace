@@ -28,11 +28,16 @@ class Source(Protocol):
 
 
 class MindWaveSource:
-    """The headset on a Bluetooth SPP COM port (the *outgoing* port; COM3 on this machine)."""
+    """The headset on a Bluetooth SPP serial port: the *outgoing* COM port on Windows (COM3 on the
+    machine this was written on), /dev/cu.MindWaveMobile-SerialPo on macOS, /dev/rfcomm0 on Linux.
+    port=None (or "auto") finds it with ports.find_headset_port(); the last resort is COM3."""
 
     fs = FS
 
-    def __init__(self, port: str = "COM3", baud: int = 57600) -> None:
+    def __init__(self, port: str | None = None, baud: int = 57600) -> None:
+        if port is None or port == "auto":
+            from .ports import find_headset_port
+            port = find_headset_port() or "COM3"
         self.port = port
         self._q: queue.Queue = queue.Queue(maxsize=16384)
         self._reader = ThinkGearReader(port, self._q, baud)

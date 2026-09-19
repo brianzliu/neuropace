@@ -13,6 +13,13 @@ export default function Home() {
   const [sessions, setSessions] = useState<SessionPublic[]>([]);
   const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [newName, setNewName] = useState("");
+  const [headsetChoice, setHeadsetChoice] = useState<"auto" | "sim" | "fake" | "custom">("auto");
+  const [customHeadset, setCustomHeadset] = useState("");
+  const onHeadsetChoice = (v: string) => {
+    const choice = (["auto", "sim", "fake", "custom"].includes(v) ? v : "auto") as "auto" | "sim" | "fake" | "custom";
+    setHeadsetChoice(choice);
+    setForm((f) => ({ ...f, headset: choice === "custom" ? customHeadset || "auto" : choice }));
+  };
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState<SessionCreate>(() => ({
@@ -152,10 +159,22 @@ export default function Home() {
             </label>
             <label>
               headset
-              <select value={form.headset} onChange={(e) => setForm({ ...form, headset: e.target.value as "auto" | "sim" })}>
-                <option value="auto">auto-detect (simulate if none)</option>
-                <option value="sim">simulated</option>
+              <select value={headsetChoice} onChange={(e) => onHeadsetChoice(e.target.value)}>
+                <option value="auto">auto-detect (real MindWave if paired, else simulated)</option>
+                <option value="sim">simulated (Reflow synthetic EEG)</option>
+                <option value="fake">fake (mindwave pipeline synthetic EEG)</option>
+                <option value="custom">custom: port, replay:&lt;dir&gt; or serial:&lt;port&gt;</option>
               </select>
+              {headsetChoice === "custom" ? (
+                <input
+                  value={customHeadset}
+                  placeholder="COM3, /dev/cu.MindWaveMobile-SerialPo, replay:sessions/20260919-120000"
+                  onChange={(e) => {
+                    setCustomHeadset(e.target.value);
+                    setForm({ ...form, headset: e.target.value || "auto" });
+                  }}
+                />
+              ) : null}
             </label>
             <label>
               totem

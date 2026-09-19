@@ -29,7 +29,7 @@ export interface SessionCreate {
   baseline_seconds?: number;
   use_stored_baseline?: boolean;
   auto_pause?: boolean;
-  headset?: "auto" | "sim";
+  headset?: string; // auto | sim | fake | replay:<dir> | serial:<port> | a device path
   totem?: "auto" | "sim";
   transcript?: "auto" | "scripted" | "deepgram" | "recorded";
   seed?: number;

@@ -172,6 +172,11 @@ clip on the fleshy earlobe with both metal contacts touching. Windows lists pair
 switched on before the port opens; the reader retries every 2 s and reports the error in
 `status()`.
 
+Ports: `--port auto` (the default) finds the headset with `mindwave/ports.py`: by name on macOS
+(`/dev/cu.MindWaveMobile-SerialPo`) and Linux (`/dev/rfcomm0`), and on Windows by probing the
+anonymous Bluetooth COM ports for ThinkGear packets (the outgoing one answers). Name the port
+explicitly if probing is too slow or the headset is off.
+
 ## 8. Module map
 
 | file | job |
