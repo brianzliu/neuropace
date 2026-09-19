@@ -64,15 +64,16 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     print(
         "deepgram    :", "ok" if res["deepgram"].get("ok") else res["deepgram"].get("reason", res["deepgram"])
     )
+    oa = res["openai"]
     print(
         "openai model:",
-        res["openai"].get("model"),
-        "ok" if res["openai"].get("ok") else res["openai"].get("reason", ""),
+        oa.get("model"),
+        "ok" if oa.get("ok") else ("REQUIRED, " if oa.get("required") else "") + str(oa.get("reason", "")),
     )
     if res["openai"].get("alternatives"):
         print("   available:", ", ".join(res["openai"]["alternatives"]))
     print("headset     :", res["headset"]["kind"], res["headset"]["port"] or "(none found -> simulated)")
-    print("totem       :", res["totem"]["kind"], res["totem"]["port"] or "(none found -> simulated)")
+    print("totem       :", res["totem"]["kind"], res["totem"]["port"] or "(none found -> keyboard fallback)")
     print("frontend    :", "built" if ok else "NOT built: cd frontend && pnpm install && pnpm build")
     return 0
 
