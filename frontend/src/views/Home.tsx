@@ -6,18 +6,20 @@ import ReviewQueue from "../components/dashboard/ReviewQueue";
 import SessionsSidebar from "../components/dashboard/SessionsSidebar";
 import CurriculumSection from "../components/dashboard/CurriculumSection";
 import SessionActivity from "../components/dashboard/SessionActivity";
+import { readLocalSetting, writeLocalSetting } from "../lib/storage";
 
 /** Learner-owned dashboard. Preserve an existing profile; new devices use the default learner. */
 export default function Home() {
-  const [learnerId, setLearnerId] = useState(() => localStorage.getItem("reflow.learner") ?? "");
+  const [learnerId, setLearnerId] = useState(() => readLocalSetting("learner") ?? "");
   const [data, setData] = useState<Dashboard | null>(null);
+  const [organizing, setOrganizing] = useState(false);
   const [error, setError] = useState("");
   const generation = useRef(0);
 
   useEffect(() => {
     let active = true;
     api.learners().then(async ({ learners }) => {
-      const saved = localStorage.getItem("reflow.learner");
+      const saved = readLocalSetting("learner");
       const learner = learners.find(item => item.id === saved) ?? await api.learner("me");
       if (active) setLearnerId(learner.id);
     }).catch(e => { if (active) setError(String(e)); });
@@ -27,8 +29,9 @@ export default function Home() {
   useEffect(() => {
     const version = ++generation.current;
     setData(null); setError("");
+    setOrganizing(false);
     if (!learnerId) return;
-    localStorage.setItem("reflow.learner", learnerId);
+    writeLocalSetting("learner", learnerId);
     let active = true;
     let loading = false;
     const load = async (organize = false) => {
@@ -42,7 +45,9 @@ export default function Home() {
     };
     void load().then(async () => {
       if (!active) return;
+      setOrganizing(true);
       await load(true);
+      if (active) setOrganizing(false);
     });
     const refresh = () => { if (document.visibilityState === "visible") void load(true); };
     window.addEventListener("focus", refresh);
@@ -71,6 +76,9 @@ export default function Home() {
           concepts={data?.concepts}
           closed={data?.closed ?? 0}
           hasLearner={Boolean(learnerId)}
+          summary={data?.summary}
+          organizationSource={data?.organization_source}
+          organizing={organizing}
         />
         <SessionActivity sessions={data?.sessions} />
         <CurriculumSection
@@ -79,7 +87,7 @@ export default function Home() {
           onSave={saveCurriculum}
         />
       </div>
-      <SessionsSidebar sessions={data?.sessions} />
+      <SessionsSidebar sessions={data?.sessions} concepts={data?.concepts} closed={data?.closed ?? 0} />
     </div>
   </div>;
 }

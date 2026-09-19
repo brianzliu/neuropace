@@ -31,7 +31,7 @@ export default function App() {
   const compact = /^\/(session|live|restudy|replay)(\/|$)/.test(pathname) || pathname.includes("/replay/") || /^\/library\/[^/]+\/(review|replay)/.test(pathname);
   return <div className={"app" + (compact ? " app-compact" : "")}>
     <header className="topbar">
-      <Link to="/" className="brand"><span className="brand-dot" />NeuroPace</Link>
+      <Link to="/" className="brand"><span className="brand-mark" aria-hidden="true"><i /><i /><i /></span>NeuroPace</Link>
       {compact ? <Link to="/">Dashboard</Link> : <TopTabs />}
     </header>
     <main className="main">
