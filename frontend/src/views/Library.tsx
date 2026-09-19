@@ -144,7 +144,7 @@ export function LibraryFrame({ sessionId, tab, children }: { sessionId: string; 
             ) : null}
           </div>
         </div>
-        <nav className="library-tabs" aria-label="Session sections" style={{ display: "flex", gap: ".35rem", overflowX: "auto", paddingBottom: ".35rem", marginBottom: ".75rem" }}>
+        <nav className="library-tabs" aria-label="Session sections">
           {TABS.map((t) => {
             if (t.id === "quiz" && !showQuiz) return null;
             const active = t.id === tab;
@@ -154,7 +154,6 @@ export function LibraryFrame({ sessionId, tab, children }: { sessionId: string; 
                 to={libraryHref(sessionId, t.id, inLibrary)}
                 className={"library-tab" + (active ? " active" : "")}
                 aria-current={active ? "page" : undefined}
-                style={{ flex: "0 0 auto", whiteSpace: "nowrap" }}
               >
                 {t.label}
               </Link>
