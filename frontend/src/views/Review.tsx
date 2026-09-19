@@ -8,11 +8,22 @@ import { SimFlash, SourceBadge } from "../components/Badges";
 import Dissolve from "../components/Dissolve";
 import Diagram from "../components/Diagram";
 import TallyPanel from "../components/TallyPanel";
+import { LibraryFrame, useLibrary } from "./Library";
 
 type Phase = "idle" | "answering" | "feedback" | "dissolving" | "reteach" | "done";
 
 export default function Review() {
   const { sessionId = "" } = useParams();
+  const library = useLibrary();
+  if (library) return <ReviewSession sessionId={library.sessionId} />;
+  return (
+    <LibraryFrame sessionId={sessionId} tab="review">
+      <ReviewSession sessionId={sessionId} />
+    </LibraryFrame>
+  );
+}
+
+function ReviewSession({ sessionId }: { sessionId: string }) {
   const [card, setCard] = useState<Card | null>(null);
   const [progress, setProgress] = useState<Progress | null>(null);
   const [tally, setTally] = useState<TallySummary | null>(null);
@@ -183,10 +194,9 @@ export default function Review() {
                 {progress.streak >= progress.stop_streak ? `${progress.stop_streak} straight hits.` : "Every gap is closed or exhausted."} {progress.gaps_closed}/{progress.gaps_total} gaps closed.
               </div>
               <div className="row">
+                <Link to="/">Back to Dashboard — your review queue is updated</Link>
                 {learnerId ? <Link to={`/tally/${learnerId}`}>your tally</Link> : null}
                 {lectureId ? <Link to={`/lossmap/${lectureId}`}>lecture loss map</Link> : null}
-                <Link to={`/notes/${sessionId}`}>notes</Link>
-                <Link to="/">home</Link>
               </div>
             </div>
           ) : card.kind === "question" && card.question ? (

@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import type { HelloMsg, LectureFull, ServerMsg, SessionPublic } from "../lib/types";
 import { clearCatchup, initialState, openChip, reduce, type SessionState } from "../lib/sessionState";
 import LiveStage from "../components/LiveStage";
 import { mmss } from "../lib/format";
+import { LibraryFrame, useLibrary } from "./Library";
 
 const DEFAULT_CONFIG: HelloMsg["config"] = {
   baseline_seconds: 180, lead_in_seconds: 8, recap_period_seconds: 20, recap_window_seconds: 30, catchup_ttl_seconds: 6,
@@ -12,9 +13,19 @@ const DEFAULT_CONFIG: HelloMsg["config"] = {
   forms: ["plain", "keyterm", "analogy", "sketch"],
 };
 
-/** Plays a session's event log at speed through the same stage as the live view (FR-L14). */
 export default function Replay() {
   const { sessionId = "" } = useParams();
+  const library = useLibrary();
+  if (library) return <ReplaySession sessionId={library.sessionId} />;
+  return (
+    <LibraryFrame sessionId={sessionId} tab="replay">
+      <ReplaySession sessionId={sessionId} />
+    </LibraryFrame>
+  );
+}
+
+/** Plays a session's event log at speed through the same stage as the live view (FR-L14). */
+function ReplaySession({ sessionId }: { sessionId: string }) {
   const [events, setEvents] = useState<ServerMsg[]>([]);
   const [state, setState] = useState<SessionState>(initialState);
   const [speed, setSpeed] = useState(4);
@@ -111,8 +122,6 @@ export default function Replay() {
         <button className="ghost" onClick={() => setCycleToken((x) => x + 1)} disabled={!state.catchup}>
           other form (F)
         </button>
-        <Link to={`/notes/${sessionId}`}>notes</Link>
-        <Link to={`/review/${sessionId}`}>review</Link>
       </div>
     </div>
   );

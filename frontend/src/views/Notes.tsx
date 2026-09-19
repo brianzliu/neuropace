@@ -4,13 +4,25 @@ import { api } from "../lib/api";
 import type { NotesResponse } from "../lib/types";
 import { range } from "../lib/format";
 import { SourceBadge } from "../components/Badges";
+import { LibraryFrame, libraryHref, useLibrary } from "./Library";
 
 export default function Notes() {
   const { sessionId = "" } = useParams();
+  const library = useLibrary();
+  if (library) return <NotesBody sessionId={library.sessionId} />;
+  return (
+    <LibraryFrame sessionId={sessionId} tab="notes">
+      <NotesBody sessionId={sessionId} />
+    </LibraryFrame>
+  );
+}
+
+function NotesBody({ sessionId }: { sessionId: string }) {
   const nav = useNavigate();
   const [data, setData] = useState<NotesResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [ending, setEnding] = useState(false);
+  const library = useLibrary();
 
   const load = () => api.notes(sessionId).then(setData).catch((e) => setErr(String(e)));
   useEffect(() => {
@@ -34,15 +46,6 @@ export default function Notes() {
   const running = data.session.status === "running";
   return (
     <div className="col">
-      <div className="row" style={{ justifyContent: "space-between" }}>
-        <h1 style={{ margin: 0 }}>Gap notes</h1>
-        <div className="row">
-          <span className="muted small mono">{sessionId}</span>
-          <Link to={`/replay/${sessionId}`}>replay</Link>
-          {data.session.lecture_id ? <Link to={`/quiz/${sessionId}`}>quiz</Link> : null}
-          <Link to="/">home</Link>
-        </div>
-      </div>
       <div className="muted">Notes only for the spans you missed: what was said, the key term, and how it connects to what you did hear.</div>
       {running ? (
         <div className="panel row">
@@ -86,7 +89,7 @@ export default function Notes() {
       ))}
       {!running && data.gaps.length > 0 ? (
         <div className="row">
-          <button className="primary" onClick={() => nav(`/review/${sessionId}`)}>
+          <button className="primary" onClick={() => nav(libraryHref(sessionId, "review", library?.inLibrary ?? true))}>
             Start review
           </button>
           <span className="muted small">one card per gap, check question first; a miss re-teaches it in another form</span>

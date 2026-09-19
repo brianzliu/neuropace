@@ -2,9 +2,20 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import type { QuizGet, QuizResult } from "../lib/types";
+import { LibraryFrame, useLibrary } from "./Library";
 
 export default function Quiz() {
   const { sessionId = "" } = useParams();
+  const library = useLibrary();
+  if (library) return <QuizSession sessionId={library.sessionId} />;
+  return (
+    <LibraryFrame sessionId={sessionId} tab="quiz">
+      <QuizSession sessionId={sessionId} />
+    </LibraryFrame>
+  );
+}
+
+function QuizSession({ sessionId }: { sessionId: string }) {
   const [data, setData] = useState<QuizGet | null>(null);
   const [phase, setPhase] = useState<"before" | "after">("before");
   const [answers, setAnswers] = useState<Record<string, number>>({});
@@ -31,21 +42,16 @@ export default function Quiz() {
   return (
     <div className="col" style={{ maxWidth: 900 }}>
       <div className="row" style={{ justifyContent: "space-between" }}>
-        <h1 style={{ margin: 0 }}>Final quiz</h1>
-        <div className="row">
-          <label>
-            phase
-            <select value={phase} onChange={(e) => { setPhase(e.target.value as "before" | "after"); setResult(null); setAnswers({}); }}>
-              <option value="before">before review</option>
-              <option value="after">after review</option>
-            </select>
-          </label>
-          <Link to={`/notes/${sessionId}`}>notes</Link>
-          <Link to="/">home</Link>
+        <div className="muted small">
+          {data.items.length} items. {prior.length ? `Already submitted for this phase: ${prior.filter((a) => a.correct).length}/${prior.length} correct (resubmitting replaces).` : "Not submitted yet for this phase."}
         </div>
-      </div>
-      <div className="muted small">
-        {data.items.length} items. {prior.length ? `Already submitted for this phase: ${prior.filter((a) => a.correct).length}/${prior.length} correct (resubmitting replaces).` : "Not submitted yet for this phase."}
+        <label>
+          phase
+          <select value={phase} onChange={(e) => { setPhase(e.target.value as "before" | "after"); setResult(null); setAnswers({}); }}>
+            <option value="before">before review</option>
+            <option value="after">after review</option>
+          </select>
+        </label>
       </div>
       {data.items.length === 0 ? <div className="panel">this session's lecture has no quiz items</div> : null}
       {data.items.map((it, n) => (
@@ -82,6 +88,7 @@ export default function Quiz() {
               <button className="ghost" onClick={() => { setResult(null); setAnswers({}); }}>
                 answer again
               </button>
+              <Link to="/">Back to Dashboard — your review queue is updated</Link>
             </>
           )}
         </div>
