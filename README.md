@@ -41,9 +41,27 @@ Frontend development with hot reload: `cd frontend && pnpm dev` (proxies `/api`,
 
 ## Hardware
 
-- **Headset:** pair the MindWave Mobile 2 over Bluetooth Classic. It appears as `/dev/cu.MindWaveMobile-SerialPort` (or similar) and is auto-detected. Force a port with `REFLOW_HEADSET_PORT`, or `REFLOW_HEADSET_PORT=sim` to simulate.
+- **Headset:** pair the MindWave Mobile 2 over Bluetooth Classic. It appears as `/dev/cu.MindWaveMobile-SerialPort` (or similar; COM3 on Windows) and is auto-detected; the team's `mindwave/` pipeline reads it (see the EEG bridge section). Force a port with `REFLOW_HEADSET_PORT`, or `REFLOW_HEADSET_PORT=sim` to simulate.
 - **Totem:** flash `firmware/totem/totem.ino` to an UNO R4 WiFi (or Minima) with `arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi firmware/totem && arduino-cli upload -p /dev/cu.usbmodemXXXX --fqbn arduino:renesas_uno:unor4wifi firmware/totem`. Jumper D2 to a foil pad. The board is auto-detected on `usbmodem*`; `REFLOW_TOTEM_PORT=sim` simulates it. If capacitive touch misbehaves, set `USE_CAPTOUCH 0` in the sketch and wire a pushbutton between D2 and GND.
 - **Hour-1 gate:** with the headset on a real forehead the live view must show blink ticks on the trace. If it does not, the raw stream is not real; fix pairing before anything else.
+
+## EEG bridge (`mindwave/`)
+
+The headset front end is the team's standalone `mindwave/` pipeline, built and validated on the real MindWave Mobile 2: ThinkGear reader with reconnect, 4 s Welch windows, blink detection in its own 0.5 to 8 Hz band, three-anchor calibration (eyes closed, easy, hard), session recording and bit-exact replay. Read [`EEG_PIPELINE.md`](EEG_PIPELINE.md) and [`mindwave/README.md`](mindwave/README.md) before touching it.
+
+Reflow consumes it in-process: the pipeline turns raw into one `FeatureFrame` per second, and Reflow's focus engine applies the spec's own-baseline z-score, 15 s window and drop detector on the frame's `engagement` index (log10 beta minus log10(alpha plus theta), the same E = beta/(alpha+theta) on a log scale). Session start options:
+
+| `headset` | What runs |
+|---|---|
+| `auto` | a paired MindWave if a port is found (`mindwave.MindWaveSource`), otherwise Reflow's simulator |
+| `sim` | Reflow's synthetic EEG (`focused` / `drifting` / `poor`), the demo keys 1/2/3 |
+| `fake` | the pipeline's own `FakeSource` (keys map focused to easy, drifting to drowsy, poor to off) |
+| `replay:<dir>` | the pipeline's `ReplaySource` on a recorded `sessions/<stamp>` directory |
+| `serial:<port>` | Reflow's minimal raw ThinkGear reader, for debugging only |
+
+Real sessions are recorded by the pipeline under `data/eeg/<stamp>/`. The pipeline's calibration can be driven from the live view (eyes closed, easy, hard, done) and its go/no-go from `EEG_PIPELINE.md` §7 applies unchanged. The standalone tools still work: `uv run python run_pipeline.py --fake` (use `--ws-port 8766` while Reflow is serving on 8765) and `uv run --group monitor python monitor.py --fake`.
+
+Two copies of the evaluation toolkit exist on purpose: the root `reflow_eval.py` is the pipeline team's pre-registered version (yoked random-timing control, `power` command); `reflow/eval/reflow_eval.py` is the REFLOW-3 version that `reflow study-analyze` uses.
 
 ## Commands
 
@@ -64,6 +82,7 @@ Frontend development with hot reload: `cd frontend && pnpm dev` (proxies `/api`,
 
 ```
 reflow/        Python package: signal engine, totem bridge, Deepgram, OpenAI, session runtime, review, tally, loss map, API, CLI
+mindwave/      the team's standalone MindWave pipeline (headset -> calibrated FeatureFrame per second); run_pipeline.py, monitor.py, example_consumer.py use it directly
 frontend/      Vite + React app (live, notes, review, tally, loss map, replay, quiz)
 firmware/      UNO R4 totem sketch
 study/         lecture script with the planted flaw, quiz, protocol
