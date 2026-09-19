@@ -181,7 +181,7 @@ async def discover():
     try:
         found = await BleakScanner.discover(timeout=5, service_uuids=[SERVICE])
         return {
-            "devices": [{"name": d.name or "Reflow UNO Q", "address": d.address} for d in found],
+            "devices": [{"name": d.name or "NeuroPace UNO Q", "address": d.address} for d in found],
             "error": None,
         }
     except Exception as exc:  # noqa: BLE001

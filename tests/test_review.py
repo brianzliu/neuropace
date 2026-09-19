@@ -1,10 +1,10 @@
 import numpy as np
 import pytest
 
-from reflow.config import FORMS, Settings
-from reflow.core.review import ReviewEngine
-from reflow.llm.fallback import gap_package
-from reflow.store.db import DB
+from neuropace.config import FORMS, Settings
+from neuropace.core.review import ReviewEngine
+from neuropace.llm.fallback import gap_package
+from neuropace.store.db import DB
 
 TEXT = "Radio travels at the speed of light. Multiply the delay by the speed of light and you get the distance. One distance puts you on a sphere. Three spheres give two points. A fourth satellite fixes the clock error."
 

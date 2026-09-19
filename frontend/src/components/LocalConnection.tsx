@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { backendFetch, backendOrigin, needsPairing, pairingToken } from "../lib/backend";
+import { writeSessionSetting } from "../lib/storage";
 
 export default function LocalConnection({ children }: { children: ReactNode }) {
   const [connected, setConnected] = useState(!needsPairing);
@@ -9,7 +10,7 @@ export default function LocalConnection({ children }: { children: ReactNode }) {
   const connect = async () => {
     setBusy(true); setError("");
     try {
-      sessionStorage.setItem("reflow.pairing", token.trim());
+      writeSessionSetting("pairing", token.trim());
       const response = await backendFetch("/api/bridge/check", { signal: AbortSignal.timeout(10000) });
       if (response.status === 401) throw new Error("The pairing code has changed. Copy the code from the running NeuroPace service.");
       if (!response.ok) throw new Error("Connection refused. Check the allowed website address in your local service settings.");

@@ -79,7 +79,7 @@ def run(path: str) -> dict:
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     if not argv:
-        print("usage: reflow kaggle-check PATH/EEG_data.csv")
+        print("usage: neuropace kaggle-check PATH/EEG_data.csv")
         return 2
     res = run(argv[0])
     for k, v in res.items():

@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { api, errorText } from "../lib/api";
 import DeepgramSettings from "../components/DeepgramSettings";
 import ModelSettings from "../components/ModelSettings";
+import { readLocalSetting } from "../lib/storage";
 import type { LectureFull, SessionPublic } from "../lib/types";
 
 /** Main's direct recording flow in the separate Pocket Studio window. */
@@ -14,7 +15,7 @@ export default function Setup() {
   const [error, setError] = useState("");
   useEffect(() => {
     let alive = true;
-    const learnerId = localStorage.getItem("reflow.learner") || "me";
+    const learnerId = readLocalSetting("learner") || "me";
     Promise.allSettled([api.lectures(), api.learner(learnerId).then(l => api.sessions({learner_id: l.id}))]).then(([lectures, sessions]) => {
       if (!alive) return;
       if (lectures.status === "fulfilled") setPractice(lectures.value.lectures.find(l => l.kind === "scripted") ?? null);
@@ -25,7 +26,7 @@ export default function Setup() {
   const start = async (lectureId: string | null) => {
     setBusy(true); setError("");
     try {
-      const learnerId = localStorage.getItem("reflow.learner") || undefined;
+      const learnerId = readLocalSetting("learner") || undefined;
       const session = await api.createSession({learner_id: learnerId, lecture_id: lectureId, mode: "live", headset: "auto", totem: "auto"});
       navigate(`/live/${session.id}`);
     } catch (e) { setError(errorText(e)); setBusy(false); }

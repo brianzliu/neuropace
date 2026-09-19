@@ -1,4 +1,4 @@
-// Shapes mirrored from the backend (reflow/core/session.py, review.py, tally.py, lossmap.py, api/routes.py).
+// Shapes mirrored from the backend (neuropace/core/session.py, review.py, tally.py, lossmap.py, api/routes.py).
 
 /** The four explanation families the preference model learns over (docs/PRODUCT.md §4). */
 export type Form = "words" | "analogy" | "visual" | "doing";

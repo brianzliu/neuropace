@@ -13,7 +13,7 @@ def test_hosted_rest_requires_origin_and_pairing(app):
         assert client.get(path).status_code == 200
         assert client.get(path, headers={"Origin": "http://testserver"}).status_code == 200
         assert client.get(path, headers={"Origin": ORIGIN}).status_code == 401
-        headers = {"Origin": ORIGIN, "X-Reflow-Token": app.state.pairing_token}
+        headers = {"Origin": ORIGIN, "X-NeuroPace-Token": app.state.pairing_token}
         response = client.get(path, headers=headers)
         assert response.status_code == 200
         assert response.headers["access-control-allow-origin"] == ORIGIN
@@ -27,7 +27,7 @@ def test_preflight_and_media(app):
         response = client.options("/api/learners", headers={
             "Origin": ORIGIN,
             "Access-Control-Request-Method": "POST",
-            "Access-Control-Request-Headers": "content-type,x-reflow-token",
+            "Access-Control-Request-Headers": "content-type,x-neuropace-token",
         })
         assert response.status_code == 200
         headers = {"Sec-Fetch-Site": "cross-site"}
@@ -36,6 +36,15 @@ def test_preflight_and_media(app):
             "/media/missing", params={"pairing_token": app.state.pairing_token}, headers=headers
         )
         assert response.status_code == 404  # Authorized, but the media does not exist.
+
+
+def test_legacy_pairing_header_remains_accepted_during_migration(app):
+    with TestClient(app) as client:
+        response = client.get(
+            "/api/bridge/check",
+            headers={"Origin": ORIGIN, "X-Reflow-Token": app.state.pairing_token},
+        )
+        assert response.status_code == 200
 
 
 def test_hosted_websocket_requires_pairing(app):

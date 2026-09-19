@@ -14,7 +14,7 @@ unsigned int buttonCount() { return presses; }
 void setup() {
   pinMode(BUTTON_PIN, INPUT_PULLUP);
   Bridge.begin();
-  Bridge.provide("reflow_button_count", buttonCount);
+  Bridge.provide("neuropace_button_count", buttonCount);
 }
 
 void loop() {

@@ -6,10 +6,10 @@ from unittest.mock import AsyncMock
 import pytest
 from fastapi.testclient import TestClient
 
-from reflow.clock import ManualClock
-from reflow.core.board import BoardCapture
-from reflow.core.dashboard import DashboardSummary, ReviewSuggestion, dashboard_data, organize_dashboard
-from reflow.totem.uno_q import UnoQRelay
+from neuropace.clock import ManualClock
+from neuropace.core.board import BoardCapture
+from neuropace.core.dashboard import DashboardSummary, ReviewSuggestion, dashboard_data, organize_dashboard
+from neuropace.totem.uno_q import UnoQRelay
 
 
 def make_session(db, learner_id):

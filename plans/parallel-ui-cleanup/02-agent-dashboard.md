@@ -30,7 +30,7 @@ Turn `Home.tsx` (currently 142 lines doing everything) into three clean compartm
 
 ## Do NOT
 
-- Don't change `reflow/core/dashboard.py`, syllabus parse limits (2 MB / 30 pages / 30k chars), organizer ID validation, or cache behavior.
+- Don't change `neuropace/core/dashboard.py`, syllabus parse limits (2 MB / 30 pages / 30k chars), organizer ID validation, or cache behavior.
 - Don't invent mastery/completion; don't add streaks, grades, or AI branding.
 - Don't touch `Setup.tsx`/`Live.tsx`/BLE code (Agents C/E).
 - Don't change theme tokens (Agent F).

@@ -1,4 +1,4 @@
-# Reflow, product definition v2 (consumer)
+# NeuroPace, product definition v2 (consumer)
 
 Written 19 Sep 2026 after the reevaluation. This supersedes the student-facing parts of `docs/PRD.md`; the spec's signal engine, statistics and study protocol stay as they are. Everything below is a decision, with the reason next to it.
 
@@ -11,8 +11,8 @@ Written 19 Sep 2026 after the reevaluation. This supersedes the student-facing p
 
 ## 2. The two jobs (from the PRD, restated in the student's words)
 
-1. **Listen.** Reflow follows the lecture with me. It watches whether I am with it. When I press the button (or it notices I drifted) it picks up the part I did not get and shows it to me in a simpler way, the way that works for me if it already knows.
-2. **Restudy.** Afterwards, I can go back to any lecture and study only the parts I did not get. Reflow tries different ways of explaining each one, keeps the one that lands, and learns which ways work for me.
+1. **Listen.** NeuroPace follows the lecture with me. It watches whether I am with it. When I press the button (or it notices I drifted) it picks up the part I did not get and shows it to me in a simpler way, the way that works for me if it already knows.
+2. **Restudy.** Afterwards, I can go back to any lecture and study only the parts I did not get. NeuroPace tries different ways of explaining each one, keeps the one that lands, and learns which ways work for me.
 
 Everything on a student screen serves one of these. Everything else is under "For the team".
 
@@ -46,10 +46,10 @@ Decisions and reasons:
 - **Everything is grounded.** Every artifact is built from the transcript span and the minute before it. Charts use only numbers the lecturer said. If the span cannot support an artifact the model marks it inapplicable rather than inventing content.
 - **Not included, on purpose:** mnemonics (weak evidence, rarely grounded), flashcards (that is what the check question already is), free text chat (the product has no prompt box), images from image models (not grounded, slow).
 
-## 5. How Reflow learns what works for you
+## 5. How NeuroPace learns what works for you
 
 - Every restudy card is scored by the **check question** afterwards: a family shown right before a correct answer earns a rescue; before a miss, an attempt. This is the only thing that changes the choice of family (the spec's principle: quiz answers decide).
-- With a headset on during restudy, Reflow also measures **how much of each card you stayed focused** (fraction of the card's seconds not flagged as a drop). It is shown on your profile as "held your attention" and it switches the explanation early when you drift on a card; it never scores a family by itself, because focus and understanding are different things.
+- With a headset on during restudy, NeuroPace also measures **how much of each card you stayed focused** (fraction of the card's seconds not flagged as a drop). It is shown on your profile as "held your attention" and it switches the explanation early when you drift on a card; it never scores a family by itself, because focus and understanding are different things.
 - The live catch-up uses your best family for the one-liner. New profiles start from the average across everyone and say so ("still learning what works for you").
 - The profile shows, per family: tried, rescued, held your attention. Below twelve scored cards it says it is still learning.
 

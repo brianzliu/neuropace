@@ -3,7 +3,7 @@ export const backendOrigin = (import.meta.env.VITE_BACKEND_URL || (localPage ? l
 export const needsPairing = backendOrigin !== location.origin && !import.meta.env.DEV;
 
 export function pairingToken(): string {
-  return sessionStorage.getItem("reflow.pairing") || "";
+  return readSessionSetting("pairing") || "";
 }
 
 export function backendUrl(path: string, authenticate = false): string {
@@ -14,6 +14,7 @@ export function backendUrl(path: string, authenticate = false): string {
 
 export function backendFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const headers = new Headers(init.headers);
-  if (needsPairing) headers.set("X-Reflow-Token", pairingToken());
+  if (needsPairing) headers.set("X-NeuroPace-Token", pairingToken());
   return fetch(backendUrl(path), { ...init, headers });
 }
+import { readSessionSetting } from "./storage";

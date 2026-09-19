@@ -44,7 +44,7 @@ def autodetect_totem_port(exclude: str | None = None) -> str | None:
 
 class KeyboardTotem:
     """Fallback when no Arduino is plugged in: taps come from the keyboard (Space or T in the browser or in the
-    terminal running `reflow serve`) or the on-screen pad button. A key tap is a real learner action, not a simulation."""
+    terminal running `neuropace serve`) or the on-screen pad button. A key tap is a real learner action, not a simulation."""
 
     kind = "keyboard"
     hint = "no Arduino: press Space or T, or use the on-screen pad"

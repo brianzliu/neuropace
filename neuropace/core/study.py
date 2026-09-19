@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from ..config import Settings
-from ..eval.reflow_eval import paired_outcome
+from ..eval.neuropace_eval import paired_outcome
 from ..store.db import DB
 from .lossmap import compute_lossmap
 

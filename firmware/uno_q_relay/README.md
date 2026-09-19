@@ -13,12 +13,12 @@ physical board.
 
 - [ ] **Compile:** `sketch/sketch.ino` builds for the Q MCU, and `python/main.py` imports cleanly
       in the App Lab Python environment.
-- [ ] **Flash:** the sketch is flashed and `reflow_button_count` increments exactly once per press
+- [ ] **Flash:** the sketch is flashed and `neuropace_button_count` increments exactly once per press
       (debounce holds, a held press does not repeat).
 - [ ] **Wiring D2/GND:** normally-open momentary switch between D2 and GND, internal pull-up, pin
       labels verified against the Q pinout; never connected to a voltage rail.
 - [ ] **Pair:** MindWave Mobile 2 paired to Q Linux BlueZ, SPP endpoint created, correct
-      `REFLOW_HEADSET_PORT` set inside App Lab.
+      `NEUROPACE_HEADSET_PORT` set inside App Lab.
 - [ ] **BLE permission:** the App Lab Python environment can advertise a GATT peripheral
       (BlueZ/DBus access confirmed).
 - [ ] **App Lab compat:** `bless`, `arduino.app_utils`, `mindwave.Pipeline` and this repository all
@@ -38,7 +38,7 @@ Momentary switch -> Q MCU -> RouterBridge press count -> same Linux BLE relay ->
 Camera and microphone -> browser in the laptop's session window.
 
 The Q runs the existing EEG feature pipeline unchanged and sends its once-per-second frames.
-The laptop still applies Reflow's session baseline and timing rules. There is no eSense-based
+The laptop still applies NeuroPace's session baseline and timing rules. There is no eSense-based
 decision, and the pipeline's real-headset performance claims have not been revalidated on the Q.
 
 ## Bring-up
@@ -51,13 +51,13 @@ decision, and the pipeline's real-headset performance claims have not been reval
    connect the switch to a voltage rail. A printed plate can actuate that switch, with a travel
    stop and return spring. Check one press increments once and a held press does not repeat.
 3. Pair the MindWave to the Q's Linux Bluetooth stack following NeuroSky's computer pairing
-   instructions. Configure an SPP serial endpoint and set `REFLOW_HEADSET_PORT` to that actual
+   instructions. Configure an SPP serial endpoint and set `NEUROPACE_HEADSET_PORT` to that actual
    path inside the App Lab environment. `/dev/rfcomm0` is an example, not an autodetected fact.
    Serial profile availability, BlueZ permissions, and App Lab device/DBus access require board
    verification. Do not pair the same headset to the laptop concurrently.
-4. Run the App Lab application. It advertises the Reflow service as `Reflow UNO Q`. Confirm
+4. Run the App Lab application. It advertises the NeuroPace service as `NeuroPace UNO Q`. Confirm
    Bluetooth peripheral support and notification reliability on the installed board image.
-5. On the laptop run `uv sync --extra bluetooth` and `uv run --extra bluetooth reflow serve`.
+5. On the laptop run `uv sync --extra bluetooth` and `uv run --extra bluetooth neuropace serve`.
    In Session studio choose **Find UNO Q over Bluetooth**, then select the discovered relay.
    This uses the backend's native Bluetooth stack, including in browsers without Web Bluetooth.
 6. Verify physical button presses, disconnect/reconnect, feature cadence, bad contact, and

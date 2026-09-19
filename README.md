@@ -1,7 +1,8 @@
 # NeuroPace
 
-Previously called Reflow. The `reflow` Python package, existing data files, and old CLI
-command remain compatible; use `uv run neuropace serve` to start the app.
+The Python package, CLI, configuration, database, and browser storage all use the
+`neuropace` name. Use `uv run neuropace serve` to start the app. Pre-rename data
+and configuration are migrated automatically.
 
 **It notices the moment a lecture loses you, catches you up in one glance, and re-teaches what you missed until it lands.**
 
@@ -53,7 +54,7 @@ hosted connection screen. Allow local network access when prompted. Restart an o
 to load the hosted-interface changes. The local URL remains available as a fallback.
 
 The frontend deploys from `frontend/` with `vercel --prod`; only frontend files are uploaded.
-`REFLOW_UI_ORIGINS` configures exact allowed origins on the backend. Add preview URLs explicitly
+`NEUROPACE_UI_ORIGINS` configures exact allowed origins on the backend. Add preview URLs explicitly
 when testing them. `VITE_BACKEND_URL` can override the default `http://127.0.0.1:8765` at build
 time. Never put API keys or pairing codes in Vite environment variables. For hosted pairing,
 use `neuropace serve` without `--reload` so the terminal prints the current pairing code.
@@ -64,9 +65,9 @@ transcription and explanation providers still receive the inputs needed for thei
 
 ## Hardware
 
-- **Headset:** pair the MindWave Mobile 2 over Bluetooth Classic. It appears as `/dev/cu.MindWaveMobile-SerialPort` (or similar; COM3 on Windows) and is auto-detected; the team's `mindwave/` pipeline reads it (see the EEG bridge section). Force a port with `REFLOW_HEADSET_PORT`, or `REFLOW_HEADSET_PORT=sim` to simulate.
+- **Headset:** pair the MindWave Mobile 2 over Bluetooth Classic. It appears as `/dev/cu.MindWaveMobile-SerialPort` (or similar; COM3 on Windows) and is auto-detected; the team's `mindwave/` pipeline reads it (see the EEG bridge section). Force a port with `NEUROPACE_HEADSET_PORT`, or `NEUROPACE_HEADSET_PORT=sim` to simulate.
 - **Totem (current target):** the UNO Q 4 GB relay in `firmware/uno_q_relay/` is the target path: the headset and a momentary switch connect to the Q, which relays both to the laptop over BLE. It is **experimental and uncompiled**; the concrete hardware blockers are listed in `firmware/uno_q_relay/README.md`. The physical button is **not built yet** — a momentary switch under a larger 3D-printed press surface is planned. Direct + simulated routes below stay labelled fallbacks.
-- **Totem:** optional. Without an Arduino the totem falls back to the keyboard: Space or T in the browser, the on-screen "Lost me" pad, or Space/T in the terminal running `reflow serve`. Key taps are real learner actions (flag source `key`), not simulations; plugging the Arduino in mid-session switches to it automatically. To use the pad, flash `firmware/totem/totem.ino` to an UNO R4 WiFi (or Minima) with `arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi firmware/totem && arduino-cli upload -p /dev/cu.usbmodemXXXX --fqbn arduino:renesas_uno:unor4wifi firmware/totem`. Jumper D2 to a foil pad. The board is auto-detected on `usbmodem*`; `REFLOW_TOTEM_PORT=keyboard` forces the keyboard fallback. If capacitive touch misbehaves, set `USE_CAPTOUCH 0` in the sketch and wire a pushbutton between D2 and GND.
+- **Totem:** optional. Without an Arduino the totem falls back to the keyboard: Space or T in the browser, the on-screen "Lost me" pad, or Space/T in the terminal running `neuropace serve`. Key taps are real learner actions (flag source `key`), not simulations; plugging the Arduino in mid-session switches to it automatically. To use the pad, flash `firmware/totem/totem.ino` to an UNO R4 WiFi (or Minima) with `arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi firmware/totem && arduino-cli upload -p /dev/cu.usbmodemXXXX --fqbn arduino:renesas_uno:unor4wifi firmware/totem`. Jumper D2 to a foil pad. The board is auto-detected on `usbmodem*`; `NEUROPACE_TOTEM_PORT=keyboard` forces the keyboard fallback. If capacitive touch misbehaves, set `USE_CAPTOUCH 0` in the sketch and wire a pushbutton between D2 and GND.
 
 - **Hour-1 gate:** with the headset on a real forehead the live view must show blink ticks on the trace. If it does not, the raw stream is not real; fix pairing before anything else.
 
@@ -86,14 +87,14 @@ NeuroPace consumes it in-process: the pipeline turns raw into one `FeatureFrame`
 
 Real sessions are recorded by the pipeline under `data/eeg/<stamp>/`. The pipeline's calibration can be driven from the live view (eyes closed, easy, hard, done) and its go/no-go from `EEG_PIPELINE.md` §7 applies unchanged. The standalone tools still work: `uv run python run_pipeline.py --fake` (use `--ws-port 8766` while NeuroPace is serving on 8765) and `uv run --group monitor python monitor.py --fake`.
 
-Two copies of the evaluation toolkit exist on purpose: the root `reflow_eval.py` is the pipeline team's pre-registered version (yoked random-timing control, `power` command); `reflow/eval/reflow_eval.py` is the REFLOW-3 version that `reflow study-analyze` uses.
+Two copies of the evaluation toolkit exist on purpose: the root `neuropace_eval.py` is the pipeline team's pre-registered version (yoked random-timing control, `power` command); `neuropace/eval/neuropace_eval.py` is the NEUROPACE-3 version that `neuropace study-analyze` uses.
 
 ## Platforms
 
 | | macOS | Windows |
 |---|---|---|
 | Toolchain | uv, pnpm, arduino-cli via Homebrew | uv, pnpm, arduino-cli installers; `copy .env.example .env` instead of `cp` |
-| Headset port | `/dev/cu.MindWaveMobile-SerialPo` after pairing in System Settings; found by name | two "Standard Serial over Bluetooth link (COMn)" ports per paired device with no name; auto-detect probes each for ThinkGear packets (headset must be on), or set `REFLOW_HEADSET_PORT=COM3` (the outgoing port) |
+| Headset port | `/dev/cu.MindWaveMobile-SerialPo` after pairing in System Settings; found by name | two "Standard Serial over Bluetooth link (COMn)" ports per paired device with no name; auto-detect probes each for ThinkGear packets (headset must be on), or set `NEUROPACE_HEADSET_PORT=COM3` (the outgoing port) |
 | Totem port | `/dev/cu.usbmodem…`, found by name | "USB Serial Device (COMn)", found by Arduino's USB vendor id 0x2341 |
 | `run_pipeline.py` keys | termios (any terminal) | msvcrt (cmd, PowerShell) |
 | `monitor.py` | matplotlib macosx backend: `uv run --group monitor python monitor.py --fake` | matplotlib TkAgg; same command |
@@ -119,7 +120,7 @@ Two copies of the evaluation toolkit exist on purpose: the root `reflow_eval.py`
 ## Layout
 
 ```
-reflow/        Python package: signal engine, totem bridge, Deepgram, OpenAI, session runtime, review, tally, loss map, API, CLI
+neuropace/        Python package: signal engine, totem bridge, Deepgram, OpenAI, session runtime, review, tally, loss map, API, CLI
 mindwave/      the team's standalone MindWave pipeline (headset -> calibrated FeatureFrame per second); run_pipeline.py, monitor.py, example_consumer.py use it directly
 frontend/      Vite + React app (live, notes, review, tally, loss map, replay, quiz)
 firmware/      uno_q_relay/ (UNO Q 4 GB BLE relay prototype, current target, uncompiled) + totem/ (UNO R4 direct-USB fallback sketch)
@@ -131,14 +132,14 @@ docs/          PRD, TDD, demo runbook
 
 ## Sponsor challenges
 
-- **Deepgram:** live streaming transcription (`reflow/transcribe/deepgram_live.py`) and prerecorded transcription for recorded lectures. Both are in the product path.
-- **OpenAI/OpenRouter:** rolling recaps, gap notes, check questions, re-teach forms and diagram scene graphs as strict JSON-schema structured outputs (`reflow/llm/`).
+- **Deepgram:** live streaming transcription (`neuropace/transcribe/deepgram_live.py`) and prerecorded transcription for recorded lectures. Both are in the product path.
+- **OpenAI/OpenRouter:** rolling recaps, gap notes, check questions, re-teach forms and diagram scene graphs as strict JSON-schema structured outputs (`neuropace/llm/`).
 - **Long Lake:** pitch framing only. No prompt box. NeuroPace notices for you.
 
 ## Honesty rules baked in
 
 - A simulated headset or scripted transcript is labelled on screen, and forced flags carry `source: "forced"`. Keyboard taps are real taps.
-- No placeholder text: without a key for the selected OpenAI or OpenRouter provider, a session cannot start; during an outage the catch-up is the verbatim transcript (`source: "transcript"`) and failed notes are reported (`package_source: "failed"`) with a retry. The extractive `offline` generator only runs in automated tests (`REFLOW_ALLOW_OFFLINE_LLM=1`).
+- No placeholder text: without a key for the selected OpenAI or OpenRouter provider, a session cannot start; during an outage the catch-up is the verbatim transcript (`source: "transcript"`) and failed notes are reported (`package_source: "failed"`) with a retry. The extractive `offline` generator only runs in automated tests (`NEUROPACE_ALLOW_OFFLINE_LLM=1`).
 - The tally says "not enough data yet" until 12 scored cards.
 - The loss map refuses to render with fewer than 2 learners.
 - Every study number is reported with its interval, including nulls.
@@ -163,4 +164,4 @@ model name and that provider's API key, then save. Both keys can remain availabl
 in the running local server, so switching back does not require pasting the key
 again. The change applies to new sessions. For setup that survives restarts, use
 `OPENAI_API_KEY` and `OPENAI_MODEL`, or `OPENROUTER_API_KEY` and
-`OPENROUTER_MODEL`, then set `REFLOW_LLM_PROVIDER` to `openai` or `openrouter`.
+`OPENROUTER_MODEL`, then set `NEUROPACE_LLM_PROVIDER` to `openai` or `openrouter`.

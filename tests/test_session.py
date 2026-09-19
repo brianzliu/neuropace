@@ -2,9 +2,9 @@ import asyncio
 
 import pytest
 
-from reflow.clock import ManualClock
-from reflow.core.session import SessionRuntime
-from reflow.transcribe.transcript import Word
+from neuropace.clock import ManualClock
+from neuropace.core.session import SessionRuntime
+from neuropace.transcribe.transcript import Word
 
 
 async def _drive(

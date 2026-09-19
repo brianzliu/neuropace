@@ -1,4 +1,4 @@
-"""reflow_eval.py - honest-numbers toolkit for Reflow (numpy only).
+"""neuropace_eval.py - honest-numbers toolkit for NeuroPace (numpy only).
 gate      : is a probe-labelled feature real?  permutation test on block labels
 detector  : does the detector agree with thought probes?  confusion + exact binomial vs base rate
 outcome   : do flagged spans hurt recall, and does gap review fix it?  paired permutation + bootstrap CI

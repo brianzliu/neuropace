@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sqlite3
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -36,6 +37,11 @@ def _env(name: str, default: str | None = None) -> str | None:
     if v is None or v.strip() == "":
         return default
     return v.strip()
+
+
+def _compat_env(name: str, legacy_name: str, default: str | None = None) -> str | None:
+    """Prefer NeuroPace variables while honoring pre-rename configuration."""
+    return _env(name, _env(legacy_name, default))
 
 
 def _env_float(name: str, default: float) -> float:
@@ -125,7 +131,7 @@ class Settings:
 
     @property
     def db_path(self) -> Path:
-        return self.data_dir / "reflow.db"
+        return self.data_dir / "neuropace.db"
 
     @property
     def sessions_dir(self) -> Path:
@@ -138,6 +144,11 @@ class Settings:
     def ensure_dirs(self) -> None:
         for p in (self.data_dir, self.sessions_dir, self.lectures_dir):
             p.mkdir(parents=True, exist_ok=True)
+        legacy_db = self.data_dir / "reflow.db"
+        if not self.db_path.exists() and legacy_db.exists():
+            # SQLite backup includes committed WAL state and leaves the old file recoverable.
+            with sqlite3.connect(legacy_db) as source, sqlite3.connect(self.db_path) as target:
+                source.backup(target)
 
     def public(self) -> dict:
         """Values safe to send to the UI."""
@@ -163,26 +174,35 @@ def load_settings(env_file: str | os.PathLike | None = None) -> Settings:
     else:
         load_dotenv(override=False)
     s = Settings()
-    s.data_dir = Path(_env("REFLOW_DATA_DIR", "data") or "data")
-    s.host = _env("REFLOW_HOST", s.host) or s.host
-    s.port = _env_int("REFLOW_PORT", s.port)
-    origins = _env("REFLOW_UI_ORIGINS")
+    s.data_dir = Path(_compat_env("NEUROPACE_DATA_DIR", "REFLOW_DATA_DIR", "data") or "data")
+    s.host = _compat_env("NEUROPACE_HOST", "REFLOW_HOST", s.host) or s.host
+    port = _compat_env("NEUROPACE_PORT", "REFLOW_PORT")
+    s.port = int(port) if port and port.isdigit() else s.port
+    origins = _compat_env("NEUROPACE_UI_ORIGINS", "REFLOW_UI_ORIGINS")
     if origins is not None:
         s.ui_origins = tuple(o.strip().rstrip("/") for o in origins.split(",") if o.strip())
     s.deepgram_api_key = _env("DEEPGRAM_API_KEY")
-    s.deepgram_model = _env("REFLOW_DEEPGRAM_MODEL", s.deepgram_model) or s.deepgram_model
+    s.deepgram_model = _compat_env("NEUROPACE_DEEPGRAM_MODEL", "REFLOW_DEEPGRAM_MODEL", s.deepgram_model) or s.deepgram_model
     s.openai_api_key = _env("OPENAI_API_KEY")
     s.openai_model = _env("OPENAI_MODEL", s.openai_model) or s.openai_model
     s.openrouter_api_key = _env("OPENROUTER_API_KEY")
     s.openrouter_model = _env("OPENROUTER_MODEL", s.openrouter_model) or s.openrouter_model
-    provider = (_env("REFLOW_LLM_PROVIDER") or ("openrouter" if s.openrouter_api_key and not s.openai_api_key else "openai")).lower()
+    provider = (_compat_env("NEUROPACE_LLM_PROVIDER", "REFLOW_LLM_PROVIDER") or ("openrouter" if s.openrouter_api_key and not s.openai_api_key else "openai")).lower()
     s.llm_provider = provider if provider in ("openai", "openrouter") else "openai"
-    s.headset_port = _env("REFLOW_HEADSET_PORT")
-    s.allow_offline_llm = (_env("REFLOW_ALLOW_OFFLINE_LLM", "0") or "0").lower() in ("1", "true", "yes")
-    s.totem_port = _env("REFLOW_TOTEM_PORT")
-    s.baseline_seconds = _env_float("REFLOW_BASELINE_SECONDS", s.baseline_seconds)
-    s.drop_enter_z = _env_float("REFLOW_DROP_ENTER_Z", s.drop_enter_z)
-    s.drop_exit_z = _env_float("REFLOW_DROP_EXIT_Z", s.drop_exit_z)
-    s.recap_period_seconds = _env_float("REFLOW_RECAP_PERIOD_SECONDS", s.recap_period_seconds)
-    s.catchup_ttl_seconds = _env_float("REFLOW_CATCHUP_TTL_SECONDS", s.catchup_ttl_seconds)
+    s.headset_port = _compat_env("NEUROPACE_HEADSET_PORT", "REFLOW_HEADSET_PORT")
+    s.allow_offline_llm = (_compat_env("NEUROPACE_ALLOW_OFFLINE_LLM", "REFLOW_ALLOW_OFFLINE_LLM", "0") or "0").lower() in ("1", "true", "yes")
+    s.totem_port = _compat_env("NEUROPACE_TOTEM_PORT", "REFLOW_TOTEM_PORT")
+    for attr, new, old in (
+        ("baseline_seconds", "NEUROPACE_BASELINE_SECONDS", "REFLOW_BASELINE_SECONDS"),
+        ("drop_enter_z", "NEUROPACE_DROP_ENTER_Z", "REFLOW_DROP_ENTER_Z"),
+        ("drop_exit_z", "NEUROPACE_DROP_EXIT_Z", "REFLOW_DROP_EXIT_Z"),
+        ("recap_period_seconds", "NEUROPACE_RECAP_PERIOD_SECONDS", "REFLOW_RECAP_PERIOD_SECONDS"),
+        ("catchup_ttl_seconds", "NEUROPACE_CATCHUP_TTL_SECONDS", "REFLOW_CATCHUP_TTL_SECONDS"),
+    ):
+        value = _compat_env(new, old)
+        if value is not None:
+            try:
+                setattr(s, attr, float(value))
+            except ValueError:
+                pass
     return s

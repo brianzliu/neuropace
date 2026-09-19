@@ -1,4 +1,4 @@
-# Reflow workspace design exploration
+# NeuroPace workspace design exploration
 
 This second pass is implemented on `design/playful-learning-themes`. It replaces the first
 Fieldnotes/Studio/Afterhours palettes with three selectable material directions. It changes
@@ -64,7 +64,7 @@ All variants keep the same task order so switching designs does not move core co
 The differences are in materials, object arrangement, typography, and geometry.
 
 ```text
-Reflow                                      Appearance / Home
+NeuroPace                                      Appearance / Home
 
 Session introduction                 Interactive physical button
 Jump to setup                        Explicit preview disclosure

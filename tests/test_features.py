@@ -2,11 +2,11 @@ import math
 
 import numpy as np
 
-from reflow.config import Settings
-from reflow.signal.blinks import BlinkDetector
-from reflow.signal.features import Baseline, DropDetector, FocusEngine, band_powers, blank_blinks
-from reflow.signal.simulate import SimulatedEEG
-from reflow.signal.thinkgear import ThinkGearParser
+from neuropace.config import Settings
+from neuropace.signal.blinks import BlinkDetector
+from neuropace.signal.features import Baseline, DropDetector, FocusEngine, band_powers, blank_blinks
+from neuropace.signal.simulate import SimulatedEEG
+from neuropace.signal.thinkgear import ThinkGearParser
 
 
 def tone(freq: float, fs: int = 512, seconds: float = 2.0, amp: float = 20.0) -> np.ndarray:

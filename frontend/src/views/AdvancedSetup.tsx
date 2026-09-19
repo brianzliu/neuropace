@@ -5,9 +5,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { api, type SessionCreate } from "../lib/api";
 import type { Doctor, LectureFull, Learner } from "../lib/types";
 import { mmss } from "../lib/format";
+import { readLocalSetting, writeLocalSetting } from "../lib/storage";
 import { ConnectionPills, StudioBackLink, StudioSteps, type ConnectionPill } from "../components/StudioChrome";
-
-const LS_KEY = "reflow.learner";
 
 /** Studio setup: the only session-setup surface. Two steps — devices, then lecture.
  *  Profile is read-only here (dashboard owns creation); "Start session" is the only
@@ -43,7 +42,7 @@ export default function Setup() {
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState<SessionCreate>(() => ({
-    learner_id: localStorage.getItem(LS_KEY) ?? "",
+    learner_id: readLocalSetting("learner") ?? "",
     lecture_id: null,
     mode: "live",
     catchup_policy: "always",
@@ -80,7 +79,7 @@ export default function Setup() {
     setErr(null);
     setBusy(true);
     try {
-      if (form.learner_id) localStorage.setItem(LS_KEY, form.learner_id);
+      if (form.learner_id) writeLocalSetting("learner", form.learner_id);
       const body: SessionCreate = { ...form, lecture_id: form.lecture_id || null, ...(relayAddress ? {headset: `uno-q:${relayAddress}`, totem: "sim" as const} : {}) };
       const s = await api.createSession(body);
       nav(`/live/${s.id}`);
@@ -155,7 +154,7 @@ export default function Setup() {
             <>
               <section className="device-setup">
                 <div className="row"><h3>Connect your UNO Q</h3><span className="badge">Experimental relay</span></div>
-                <p className="small muted">The MindWave headset pairs to the UNO Q; the physical button connects to the board. The scan finds only the custom Reflow relay service. Selecting a board routes the headset and the physical button through its Bluetooth relay; the connection is verified in the live session, not here.</p>
+                <p className="small muted">The MindWave headset pairs to the UNO Q; the physical button connects to the board. The scan finds only the custom NeuroPace relay service. Selecting a board routes the headset and the physical button through its Bluetooth relay; the connection is verified in the live session, not here.</p>
                 <div className="row"><button disabled={scanning} onClick={() => void scanRelay()}>{scanning ? "Scanning…" : "Find UNO Q over Bluetooth"}</button></div>
                 <label>Connection route<select value={relayAddress} onChange={e => setRelayAddress(e.target.value)}><option value="">Direct computer connections / simulation</option>{relayDevices.map(d => <option key={d.address} value={d.address}>{d.name} · {d.address}</option>)}</select></label>
                 {scanMessage && <p className="small muted" role="status">{scanMessage}</p>}

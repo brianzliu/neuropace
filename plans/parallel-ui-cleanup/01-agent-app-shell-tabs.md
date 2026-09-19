@@ -26,7 +26,7 @@ Give the main window a persistent tab bar and make "start session" exist in exac
 
 - Don't restyle themes, don't touch `playful.css` beyond tab classes (Agent F owns tokens).
 - Don't edit `Setup.tsx`, `Live.tsx`, `LiveCapture.tsx` (Agent C).
-- Don't change `mindwave/`, `reflow/` behavior, or any LLM/dashboard API.
+- Don't change `mindwave/`, `neuropace/` behavior, or any LLM/dashboard API.
 - Don't add an instructor view or cross-learner page.
 
 ## Steps

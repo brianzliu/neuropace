@@ -1,4 +1,4 @@
-"""Terminal keys for `reflow serve`: the keyboard totem without a browser (Space/T = lost me, L = force flag).
+"""Terminal keys for `neuropace serve`: the keyboard totem without a browser (Space/T = lost me, L = force flag).
 
 Windows uses msvcrt; macOS and Linux put the tty in cbreak mode. Nothing starts unless stdin is an interactive
 terminal, so tests, services and `--reload` workers are unaffected.
@@ -74,5 +74,5 @@ def start_key_listener(
                     on_force()
             stop.wait(interval)
 
-    threading.Thread(target=run, daemon=True, name="reflow-keys").start()
+    threading.Thread(target=run, daemon=True, name="neuropace-keys").start()
     return stop

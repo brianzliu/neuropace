@@ -458,7 +458,7 @@ async def create_session(body: SessionIn, request: Request):
             400,
             "An OpenAI or OpenRouter API key is missing: recaps, gap notes and review cards need one. "
             "Add a key on the Start session screen or to .env and restart "
-            "(REFLOW_ALLOW_OFFLINE_LLM=1 is for automated tests only).",
+            "(NEUROPACE_ALLOW_OFFLINE_LLM=1 is for automated tests only).",
         )
     if body.catchup_policy not in ("always", "randomized"):
         raise HTTPException(400, "catchup_policy must be always or randomized")

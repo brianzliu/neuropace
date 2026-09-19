@@ -259,7 +259,7 @@ class SessionRuntime:
             self.broadcast({"type": "raw", "fs": msg.get("fs", 64), "uv": msg.get("uv", [])})
 
     def _decimate_raw(self, raws: list[int]) -> None:
-        """Reflow's own raw path (simulator, serial:<port>): average every 8 samples, send 8 at a time (64 Hz)."""
+        """NeuroPace's own raw path (simulator, serial:<port>): average every 8 samples, send 8 at a time (64 Hz)."""
         acc = self._raw_acc
         for v in raws:
             acc.append(v * UV_PER_RAW)

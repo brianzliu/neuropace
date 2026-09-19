@@ -21,7 +21,7 @@ def cmd_serve(args: argparse.Namespace) -> int:
     print(f"NeuroPace on http://{host}:{port}  (data: {s.data_dir.resolve()})")
     if args.reload:
         uvicorn.run(
-            "reflow.api.app:create_app", factory=True, host=host, port=port, reload=True, log_level="info"
+            "neuropace.api.app:create_app", factory=True, host=host, port=port, reload=True, log_level="info"
         )
     else:
         from .api.app import create_app
@@ -196,7 +196,7 @@ def cmd_study_analyze(args: argparse.Namespace) -> int:
 
 def cmd_sim(args: argparse.Namespace) -> int:
     if args.which == "selftest":
-        from .eval.reflow_eval import selftest
+        from .eval.neuropace_eval import selftest
 
         return selftest()
     if args.which == "bandit":

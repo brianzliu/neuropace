@@ -2,12 +2,12 @@
 **HackMIT 2026 · Education · NeuroSky MindWave Mobile 2 + Arduino UNO R4 · Sat 19 Sep 2026**
 
 This file consolidates every planning document written for this project into one place. It
-replaces `REFLOW HackMIT2026 Education Plan.md` and `REFLOW-2.md` as the thing to read; both are
+replaces `NEUROPACE HackMIT2026 Education Plan.md` and `NEUROPACE-2.md` as the thing to read; both are
 kept in git history, not deleted, since they're the dated record of how the idea got here.
 
 ## 0. How this plan evolved, and what to read
 
-**Current product name: Neurospace.** Reflow is the historical name used in earlier parts
+**Current product name: Neurospace.** NeuroPace is the historical name used in earlier parts
 and internal package/command identifiers. The app and hosted deployment use Neurospace.
 
 The idea went through three passes, each written as a fresh, honest evaluation of the one before
@@ -61,7 +61,7 @@ adaptive review) with Part III's additions layered on top (content-based risk fl
 trigger, private output routing, configurable accommodation profile, "available to everyone"
 framing). Part I remains the reference for anything Part II/III don't redefine: the EEG signal
 chain, the existing `mindwave/` codebase, Arduino board specifics, and the general honesty/demo
-discipline (undo on every reflow, label simulated states, never fake a sensor).
+discipline (undo on every neuropace, label simulated states, never fake a sensor).
 
 **Tags**, carried across all three parts: **[V#]** = a source that was opened (numbering restarts
 in each part — see that part's own Sources subsection). **[RUN]** = a simulation or script that
@@ -110,7 +110,7 @@ flagging as the two witnesses, label EEG experimental, say so out loud (Part I �
 
 # Part I — original build plan
 
-### Responsive design for cognition. The lesson reflows the moment you lose the thread.
+### Responsive design for cognition. The lesson neuropaces the moment you lose the thread.
 **NeuroSky MindWave Mobile 2 + webcam + Arduino UNO R4**
 
 A **real-time teaching assistant**. It watches you learn and changes the material *while you are
@@ -124,16 +124,16 @@ reading it*. It is not a post-session quiz, and it is not a chatbot.
 
 ## I.1. The pitch (superseded by Part II/III — kept for the underlying reasoning)
 
-**One line.** Responsive design for your brain: the lesson reflows the moment you lose the thread.
+**One line.** Responsive design for your brain: the lesson neuropaces the moment you lose the thread.
 
-**Thirty seconds.** Responsive web design reflows a page to fit the screen. Reflow reflows a
+**Thirty seconds.** Responsive web design neuropaces a page to fit the screen. NeuroPace neuropaces a
 *lesson* to fit your mind, live. A ten-second EEG headset, your webcam and your own behavior act
 as three witnesses. When two agree you are overloaded, the paragraph you are stuck on dissolves
 into an animated diagram built from the same content. When two agree you have checked out, the
 text asks you to predict the next step or turns into a simulation. It learns which fix works for
-you and hands you that playbook. Point the camera at a textbook and it reflows that too.
+you and hands you that playbook. Point the camera at a textbook and it neuropaces that too.
 
-**Not an AI tutor.** An AI tutor generates explanations and waits for you to ask. Reflow has no
+**Not an AI tutor.** An AI tutor generates explanations and waits for you to ask. NeuroPace has no
 prompt box. It is a rendering layer that sits under any content and changes its *form* from a
 closed loop with your brain, face and behavior.
 
@@ -162,7 +162,7 @@ Their own §6.2 limitations are our roadmap. Put these on the slide:
   burden of reading"
 - "there is no fixed rule set that defines how different values should influence the response"
 
-| | NeuroChat (MIT, 2025) | **Reflow (Part I design)** |
+| | NeuroChat (MIT, 2025) | **NeuroPace (Part I design)** |
 |---|---|---|
 | When it acts | At your next message. Nothing changes while you read | **Mid-paragraph**, on the unit you are stuck on right now |
 | State | One axis, engagement (admitted to confound overload with interest) | **Two axes: overload × engagement**, different fixes for each |
@@ -172,11 +172,11 @@ Their own §6.2 limitations are our roadmap. Put these on the slide:
 | Learning signal | Quiz after 20 min; no gain | **Time-to-recover and checkpoint correctness on every intervention** |
 | Content | Chat answers the bot wrote | **Any content:** paste, PDF, a textbook page held to the camera |
 | Calibration | Two-point, 4 min | Three anchors, 60 s (same idea, faster; **do not claim novelty here**) |
-| Data | Client-side, no ownership story | **Learner-only; no teacher dashboard; undo on every reflow** |
+| Data | Client-side, no ownership story | **Learner-only; no teacher dashboard; undo on every neuropace** |
 
 Say it in the first twenty seconds: "NeuroChat proved an LLM tutor can respond to EEG engagement.
 It also found that engagement alone did not improve learning, could not tell overload from
-interest, and never changed anything while you were reading. Reflow starts where their limitations
+interest, and never changed anything while you were reading. NeuroPace starts where their limitations
 section ends."
 
 ## I.3. "The EEG is bad and only detects binary focus" — half true, and it matters which half
@@ -301,7 +301,7 @@ returns to FLOW within 45 s **and** the checkpoint is correct. After a session: 
 diagram fixed it in 9 s (3/3). Disengaged → prediction prompt (2/2). Breaks didn't help you." The
 learner owns it and can hand it to a teacher on their own terms.
 
-**Undo on every reflow.** A "back to text" chip, always visible. This is both a usability answer
+**Undo on every neuropace.** A "back to text" chip, always visible. This is both a usability answer
 and the surveillance answer. This rule carries through unchanged into Part II and III.
 
 ## I.7. The dissolve → diagram pipeline (the wow, made reliable)
@@ -320,12 +320,12 @@ Mermaid plus CSS animation is the 30-minute fallback renderer.
 
 **Camera as input (cheap, high impact; dropped from Part II's scope).** A "scan" button grabs a
 webcam frame, sends it to a vision model, returns units of text. The textbook page becomes a
-reflowable lesson. Cache one pre-shot page in case the table lighting is bad.
+neuropaceable lesson. Cache one pre-shot page in case the table lighting is bad.
 
 ## I.8. The Arduino UNO R4
 
 The board arrived by accident instead of the UNO Q. It still earns a place, but a small one: **it
-owns the inputs and indicators that should not live in the UI being reflowed.**
+owns the inputs and indicators that should not live in the UI being neuropaceed.**
 - **"I'm lost" button.** A physical press is a manual intervention request *and* the ground-truth
   label that trains the bandit and validates the detector. This is load-bearing.
 - **Fit meter.** Seat the headset by watching LEDs fill, instead of squinting at a number on
@@ -360,10 +360,10 @@ outgoing SPP port is not always COM3.
 
 ## I.9. The measurement, and the trap in it
 
-**The trap, and it is a big one.** Szafir & Mutlu ran the closest published study to Reflow: a
+**The trap, and it is a big one.** Szafir & Mutlu ran the closest published study to NeuroPace: a
 NeuroSky at FP1, engagement index, an agent that cued attention in real time. Adaptive cues beat
 the no-cue baseline (p = .022) but **did not beat random-timed cues (p = .118)** [V3]. So a demo
-that compares "Reflow on" against "plain text" proves only that interventions help. It proves
+that compares "NeuroPace on" against "plain text" proves only that interventions help. It proves
 nothing about the sensor, which is the entire claim.
 
 **Therefore every measurement needs a yoked random-timing control**: the same number of the same
@@ -372,9 +372,9 @@ config flag and it is the difference between a defensible result and a press rel
 
 | Number | Question | Tool |
 |---|---|---|
-| **Detector vs probes** | Does the state flag agree with self-report better than always guessing the majority? Per wearer | `reflow_eval.py detector` |
-| **Recovery** | After a sensor-timed reflow, does state return to FLOW faster than after a yoked random-timed one? | `reflow_eval.py outcome` |
-| **Comprehension** (stretch) | Checkpoint correctness, sensor-timed vs yoked | `reflow_eval.py outcome` |
+| **Detector vs probes** | Does the state flag agree with self-report better than always guessing the majority? Per wearer | `neuropace_eval.py detector` |
+| **Recovery** | After a sensor-timed neuropace, does state return to FLOW faster than after a yoked random-timed one? | `neuropace_eval.py outcome` |
+| **Comprehension** (stretch) | Checkpoint correctness, sensor-timed vs yoked | `neuropace_eval.py outcome` |
 
 Recovery is the cheap one and it is within-subject, so it needs no quiz bank and no separate
 session. Collect it from anyone who wears the headset for ten minutes.
@@ -393,14 +393,14 @@ A naive "use it if |d| ≥ 0.5" is unsafe at these label counts. Reproduced inde
 | 12 v 12 | 24% |
 | 20 v 20 | 12% |
 
-Reflow's rule: |d| ≥ 0.5 **and** permutation p ≤ .10, sign learned per wearer. At 12 v 8 windows it
-passed noise 10.7% of the time and passed a true d ≈ 1.14 effect [RUN]. `reflow_eval.py gate`.
+NeuroPace's rule: |d| ≥ 0.5 **and** permutation p ≤ .10, sign learned per wearer. At 12 v 8 windows it
+passed noise 10.7% of the time and passed a true d ≈ 1.14 effect [RUN]. `neuropace_eval.py gate`.
 
 **Judge answer to "how accurate?"** "Published detectors for this get about 0.65 AUC. Ours on this
 wearer: here is the confusion matrix against 20 thought probes. That is exactly why two witnesses
 have to agree before anything moves on your screen."
 
-## I.10. `reflow_eval.py` — verified [RUN]
+## I.10. `neuropace_eval.py` — verified [RUN]
 
 Committed at the repo root and still the evaluation toolkit for Part II and III, unchanged.
 `selftest` exits 0 and every number reproduces:
@@ -428,7 +428,7 @@ honesty claim credible on stage.
 ## I.11. Demo (90 s) — superseded by Part II §7's ~3 min script; kept for the original beats
 
 1. (0–10) Headset on in ten seconds, fit meter fills on the totem, quality chip green. "This is
-   Reflow. Responsive design for your brain. Three witnesses: brain, face, hands."
+   NeuroPace. Responsive design for your brain. Three witnesses: brain, face, hands."
 2. (10–40) Calibration: eyes closed, the alpha bar jumps, *that is your own alpha*. Then 20 s easy,
    20 s hard. Chip: *calibrated to you*.
 3. (40–60) Dense Bayes paragraph. Brow furrows, scroll stalls, L rises. **The paragraph dissolves
@@ -456,8 +456,8 @@ Roles: **S** signal and brain · **C** content engine and diagram · **U** reade
 |---|---|---|---|---|
 | 0–1 | Pair headset, `run_pipeline.py` on a real forehead. **Gate: real blinks counted.** Confirm COM port | LLM → scene-graph JSON on one paragraph | Repo; reader renders from `--fake` feed (works today) | **Identify WiFi vs Minima. Ask organizers the I.13 questions.** Face Landmarker printing brow/gaze/pose |
 | 1–4 | The brain: hysteresis, dwell, three-witness fusion on top of `FeatureFrame` | dagre layout + anime.js timeline; the dissolve | Lesson reader with units; state chip; **undo** | Totem sketch: fit meter, button, **pushbutton backup wired**; camera feature EMAs |
-| 4–8 | Probe runner; `reflow_eval.py gate` on real labels; tune thresholds on 5 strangers | Chunk, worked-example, simulation, voice transformations; cache 3 topics | Bandit + playbook; checkpoints | Webcam scan → vision model → units; **yoked random-timing control flag** |
-| 8–12 | **Integration: live state drives reflows end to end.** Freeze features at 12 | | | |
+| 4–8 | Probe runner; `neuropace_eval.py gate` on real labels; tune thresholds on 5 strangers | Chunk, worked-example, simulation, voice transformations; cache 3 topics | Bandit + playbook; checkpoints | Webcam scan → vision model → units; **yoked random-timing control flag** |
+| 8–12 | **Integration: live state drives neuropaces end to end.** Freeze features at 12 | | | |
 | 12–16 | Recovery numbers from I.9 on 8–12 hackers | Live generation for arbitrary text | Session card, onboarding, polish | Shoot the video; novelty slide; submission text |
 | 16–20 | Bug bash on recorded sessions; verify every fallback | | | Table setup: lighting, camera angle, monitor |
 | 20–24 | No new features. Rehearse 10× with each teammate as judge. Fresh AAA. Sleep in shifts | | | |
@@ -483,7 +483,7 @@ disclose it either way. Keep visible commit history and disclose AI assistance.
 | LLM latency or bad JSON | Cached topics; the dissolve masks 3–6 s; retry once; Mermaid fallback |
 | Camera lighting at the table | Ring light; face thresholds recalibrate per person during the 60 s (only relevant if camera is revived, see Appendix A) |
 | "Isn't this NeuroChat?" | I.2, said first, with their limitations quoted |
-| "Classroom brain surveillance" | Learner-only, local, no teacher view, undo on every reflow. Say it unprompted |
+| "Classroom brain surveillance" | Learner-only, local, no teacher view, undo on every neuropace. Say it unprompted |
 | We prove only that interventions help | The yoked random-timing control in I.9. Non-negotiable |
 
 **Open, resolve at hour 0:** (1) pre-existing and AI-written code policy → organizers; (2) which R4
@@ -503,7 +503,7 @@ Reviewing all 24 in `tracks.md`:
 | **The Token Company** | **back on, add** | This answer flipped. With no hour-long transcription, the LLM *is* the main cost, and the architecture is already the saving: the state machine runs locally, the model fires only on a trigger, only the stuck unit is sent rather than the document, and demo topics are cached. That is a clean, creative cost story worth a paragraph |
 | **ElevenLabs** | add if the voice rung ships | "Explain it back" aloud, with the agent probing and scoring, is retrieval practice [V11] and genuine agentic depth, not text-to-speech. Their brief explicitly deprioritises plain TTS, so only enter if this rung is real |
 | **Ramp** ("save time and money") | add, zero-work | "Build anything that saves people time and money." Fewer re-reads per hour of study. Same video |
-| **Dropbox** | stretch | Their brief literally lists "transform class materials into a personalized tutor". A PDF drop that becomes a reflowable lesson is a modest addition to the scan feature already planned. Only if hours 12–16 are calm |
+| **Dropbox** | stretch | Their brief literally lists "transform class materials into a personalized tutor". A PDF drop that becomes a neuropaceable lesson is a modest addition to the scan feature already planned. Only if hours 12–16 are calm |
 
 **Out:** Arduino (the HackMIT challenge is for the **UNO Q** [V8]; an R4 arrived, so not eligible,
 and the board stays because the product needs it). Deepgram (the lecture-transcription use left
@@ -558,9 +558,9 @@ learning style" at MIT invites the word *neuromyth*.
 explanation formats 34–45% of the time (chance 25%); quiz answers reach 94% in 150 cards, and
 adding EEG to them makes it worse [RUN].
 
-**The version that survives both:** Reflow does not assume you have a style. In review, each gap is
+**The version that survives both:** NeuroPace does not assume you have a style. In review, each gap is
 taught in one form; if your focus drops or you miss the check question, the next card re-teaches it
-in a different form. Reflow keeps a **per-learner tally of which form rescued which misses, scored
+in a different form. NeuroPace keeps a **per-learner tally of which form rescued which misses, scored
 by quiz answers only.** If you truly have a preference (75% vs 55%), the tally finds it with 77%
 probability after 60 cards and 94% after 150; if you have none, it costs nothing (success rate
 0.601 vs 0.60) [RUN]. At ~10 gaps a lecture that is a few weeks of real use. Pitch line: *"We don't
@@ -600,7 +600,7 @@ at every stage.
 
 **Prior art, said first:** NeuroChat restyles every reply and found no learning gain [V5]; ARTFul
 picks topics to re-show from pre-authored content [V10]; Wang et al. detect confusing clips
-offline [V14]; AXIS picks explanations from ratings, no sensing [V17]. Reflow: passive lapse
+offline [V14]; AXIS picks explanations from ratings, no sensing [V17]. NeuroPace: passive lapse
 capture in live lectures → generated gap notes → re-teaching verified by recall.
 
 ### II.2.1. Button-triggered explanations from voice and whiteboard (prototype)
@@ -707,7 +707,7 @@ notes, adaptive review, final quiz.
 
 | Number | Claim it tests | Tool / power |
 |---|---|---|
-| Recall on flagged vs unflagged spans, before review | The flags mean something | `reflow_eval.py outcome`; n=10 gives ~72% power for a 25-point gap, n=6 only 22% [RUN] |
+| Recall on flagged vs unflagged spans, before review | The flags mean something | `neuropace_eval.py outcome`; n=10 gives ~72% power for a 25-point gap, n=6 only 22% [RUN] |
 | Does the pooled loss map rank segment 3 first? | The crowd signal finds bad teaching; ground truth known | `lossmap_sim.py` for expectations |
 | Rescues per form in review | Descriptive only at this n; say so | tally panel |
 
@@ -760,7 +760,7 @@ or a later dashboard pass (Tier 2).
 
 ## II.9. Verified vs open
 
-**Ran today:** `bandit_sim.py`, `lossmap_sim.py`, `reflow_eval.py selftest`, per-learner tally null
+**Ran today:** `bandit_sim.py`, `lossmap_sim.py`, `neuropace_eval.py selftest`, per-learner tally null
 check.
 **Open:** whiteboard capture readability, audio quality, multimodal grounding, latency/cost,
 retention controls, and synchronization (II.2.1, all unverified); HackMIT code rule; judging format; real-forehead performance; Deepgram/OpenAI challenge
@@ -885,7 +885,7 @@ decision, not just a hardware one. The same research that explains why visible A
 also points at the fix: when a tool is something any student could plausibly be using — the way
 headphones now double as an assistive-listening device without anyone assuming the wearer has a
 diagnosis — the stigma drops, because nobody nearby can tell who's using it for what [V24]. Pitching
-Reflow as "the device for kids with learning disabilities" recreates exactly the visibility problem
+NeuroPace as "the device for kids with learning disabilities" recreates exactly the visibility problem
 you're trying to solve. Pitching it as a study tool any student in the room could opt into, with
 accommodation profiles underneath for students who need them, gets you the same accessibility
 benefit without singling anyone out. This is a five-minute framing change for the pitch, not a build
@@ -962,7 +962,7 @@ especially with minors, requires a separately scoped consent and access-control 
 
 ## Appendix A: ideas explored and set aside (not disproven — kept in case they're worth reviving)
 
-- **Real-time, mid-sentence reflow while reading** (Part I's core mechanic). Set aside in Part II
+- **Real-time, mid-sentence neuropace while reading** (Part I's core mechanic). Set aside in Part II
   because a single dry electrode can't reliably tell *why* someone is stuck closely enough to pick
   an intervention live; moving the format-adaptation into a review phase, gated by a check
   question, is more defensible with the sensor actually available. Revive if the project moves

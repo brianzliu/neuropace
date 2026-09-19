@@ -38,14 +38,14 @@ Naming rule going forward: **"New session"** = launcher (dashboard only). **"Sta
 | B — Dashboard compartments | `02-agent-dashboard.md` | `frontend/src/views/Home.tsx`, `frontend/src/components/dashboard/*` (new), `frontend/src/lib/dashboardTypes.ts` (read-only + additive) |
 | C — Studio window (setup + live capture) | `03-agent-studio-live.md` | `frontend/src/views/Setup.tsx`, `frontend/src/views/Live.tsx`, `frontend/src/components/LiveCapture.tsx`, `frontend/src/components/LiveStage.tsx` (careful, shared with Replay) |
 | D — Post-session Library | `04-agent-library.md` | `frontend/src/views/Library.tsx` (new), `Notes.tsx`, `Review.tsx`, `Replay.tsx`, `Quiz.tsx` (headers only, logic untouched) |
-| E — Insights + Devices | `05-agent-insights-devices.md` | `Tally.tsx`, `LossMap.tsx`, `views/Insights.tsx` (new), `Setup.tsx` device section (coordinate with C), `reflow/totem/uno_q.py` + `firmware/uno_q_relay/*` (docs/comments only, no behavior change without hardware) |
+| E — Insights + Devices | `05-agent-insights-devices.md` | `Tally.tsx`, `LossMap.tsx`, `views/Insights.tsx` (new), `Setup.tsx` device section (coordinate with C), `neuropace/totem/uno_q.py` + `firmware/uno_q_relay/*` (docs/comments only, no behavior change without hardware) |
 | F — Theme polish + responsive | `06-agent-theme-polish.md` | `frontend/src/playful.css`, `Appearance.tsx`, `DeskObject.tsx`, theme tokens only |
 
 If two agents need the same file, the table owner edits; the other proposes via chat, not a competing edit.
 
 ## Shared guardrails (all agents)
 
-- **Do not touch** `mindwave/` signal-processing/calibration math. Do not touch `reflow_eval.py` statistics (yoked random-timing control stays).
+- **Do not touch** `mindwave/` signal-processing/calibration math. Do not touch `neuropace_eval.py` statistics (yoked random-timing control stays).
 - **Preserve labels:** simulated / fake / scripted / offline / experimental-relay wording stays visible. Never present fallback as real.
 - **No instructor dashboard** of individual learner data. LossMap stays aggregate + anonymous (n shown, needs ≥2).
 - **No fabricated progress:** LLM may summarize/order concepts; it never writes review outcomes or curriculum completion. Completion stays self-reported checkboxes.
@@ -68,14 +68,14 @@ The user asked that every agent **commit and push regularly**. Follow this exact
 ## Verification matrix (use the relevant subset; A/B/F run frontend, C/D/E run both)
 
 ```
-uv run ruff check reflow tests scripts
+uv run ruff check neuropace tests scripts
 uv run pytest -q                                   # full suite, ~73 tests / ~25 s
 cd frontend && npm run build                       # production build must pass
 narrow-layout check: 390px wide, tabs scroll, no horizontal page scroll
 simulated session → notes/review → dashboard refresh (labelled SIMULATED)
 ```
 
-Processes are already running — **do not start duplicates.** Vite ≈ PID 87695 on `:5173`; backend `uv run --extra bluetooth reflow serve` on `:8765`. Check with `lsof -i :5173 -i :8765` before starting anything.
+Processes are already running — **do not start duplicates.** Vite ≈ PID 87695 on `:5173`; backend `uv run --extra bluetooth neuropace serve` on `:8765`. Check with `lsof -i :5173 -i :8765` before starting anything.
 
 ## What "done" looks like
 

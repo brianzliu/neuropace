@@ -1,13 +1,13 @@
-"""reflow_eval.py - honest-numbers toolkit for Reflow (numpy only).
+"""neuropace_eval.py - honest-numbers toolkit for NeuroPace (numpy only).
 
   gate      : is a probe-labelled feature real?  permutation test on block labels
   detector  : does the state detector agree with thought probes?  confusion + exact binomial
-  outcome   : does a SENSOR-TIMED reflow beat a YOKED RANDOM-TIMED one?  paired perm + bootstrap CI
+  outcome   : does a SENSOR-TIMED neuropace beat a YOKED RANDOM-TIMED one?  paired perm + bootstrap CI
   selftest  : runs all three on simulated data with known ground truth
 
 THE TRAP THIS FILE EXISTS TO AVOID (plan section 9): Szafir & Mutlu 2012 ran the closest published
-study to Reflow - NeuroSky at FP1, engagement index, real-time attention cues. Adaptive cues beat
-the NO-CUE baseline (p=.022) but did NOT beat RANDOM-TIMED cues (p=.118). So comparing "Reflow on"
+study to NeuroPace - NeuroSky at FP1, engagement index, real-time attention cues. Adaptive cues beat
+the NO-CUE baseline (p=.022) but did NOT beat RANDOM-TIMED cues (p=.118). So comparing "NeuroPace on"
 against "plain text" proves only that interventions help; it proves nothing about the sensor, which
 is the entire claim. Every `outcome` call must therefore be sensor-timed vs a yoked random-timed
 control: same interventions, same count, times drawn from another participant's trigger

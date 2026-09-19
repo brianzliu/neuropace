@@ -4,10 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from reflow.api.app import create_app, ensure_demo_lecture
-from reflow.config import Settings
-from reflow.llm.client import LLMClient
-from reflow.store.db import DB
+from neuropace.api.app import create_app, ensure_demo_lecture
+from neuropace.config import Settings
+from neuropace.llm.client import LLMClient
+from neuropace.store.db import DB
 
 
 @pytest.fixture

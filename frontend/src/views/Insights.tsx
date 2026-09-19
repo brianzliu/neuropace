@@ -4,8 +4,7 @@ import { api } from "../lib/api";
 import type { Learner, LectureFull, LossMap, TallySummary } from "../lib/types";
 import { LossMapCard } from "./LossMap";
 import { TallyCard } from "./Tally";
-
-const LS_KEY = "reflow.learner";
+import { readLocalSetting, writeLocalSetting } from "../lib/storage";
 
 /** Insights shell: the learner's own review preferences (Tally) plus the
  *  anonymized, aggregate lecture overview (LossMap). No per-learner traces
@@ -19,7 +18,7 @@ export default function Insights({ learnerId: learnerProp, lectureId: lecturePro
   const pinnedLecture = lectureProp ?? params.lectureId ?? search.get("lecture") ?? "";
 
   const [learners, setLearners] = useState<Learner[]>([]);
-  const [selectedLearner, setSelectedLearner] = useState(() => pinnedLearner || localStorage.getItem(LS_KEY) || "");
+  const [selectedLearner, setSelectedLearner] = useState(() => pinnedLearner || readLocalSetting("learner") || "");
   const [tally, setTally] = useState<TallySummary | null>(null);
   const [tallyErr, setTallyErr] = useState<string | null>(null);
 
@@ -84,7 +83,7 @@ export default function Insights({ learnerId: learnerProp, lectureId: lecturePro
   const pickLearner = (id: string) => {
     setSelectedLearner(id);
     if (!pinnedLearner) {
-      try { localStorage.setItem(LS_KEY, id); } catch { /* Selection still works without storage. */ }
+      writeLocalSetting("learner", id);
     }
   };
 

@@ -30,7 +30,7 @@ class LocalBridgeGuard:
         # Media elements may omit Origin; their URL must still carry the pairing token.
         media_request = scope["type"] == "http" and scope["path"].startswith("/media/")
         allowed = origin in self.origins or (origin is None and media_request)
-        token = headers.get("x-reflow-token", "")
+        token = headers.get("x-neuropace-token", headers.get("x-reflow-token", ""))
         if scope["type"] == "websocket" or media_request:
             token = QueryParams(scope.get("query_string", b"")).get("pairing_token", token)
         if not allowed or not secrets.compare_digest(token.encode(), self.token.encode()):

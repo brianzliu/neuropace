@@ -1,5 +1,5 @@
-from reflow.config import Settings
-from reflow.core.lossmap import compute_lossmap
+from neuropace.config import Settings
+from neuropace.core.lossmap import compute_lossmap
 
 
 def _session(sid: str, length: float, drop_at: tuple[float, float] | None, taps=(), eeg=(), paused=()):

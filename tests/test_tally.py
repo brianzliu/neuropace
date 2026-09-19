@@ -1,8 +1,8 @@
 import numpy as np
 
-from reflow.config import FORMS, Settings
-from reflow.core import tally as T
-from reflow.store.db import DB
+from neuropace.config import FORMS, Settings
+from neuropace.core import tally as T
+from neuropace.store.db import DB
 
 
 def test_population_prior_and_posteriors():

@@ -1,7 +1,7 @@
 """UNO Q App Lab prototype: physical button + unchanged MindWave pipeline -> BLE.
 
 Requires this repository on the Q, bless, the board's arduino.app_utils, and a paired
-headset serial port in REFLOW_HEADSET_PORT. Hardware validation is still required.
+headset serial port in NEUROPACE_HEADSET_PORT. Hardware validation is still required.
 """
 import asyncio
 import json
@@ -11,13 +11,13 @@ import threading
 from arduino.app_utils import App, Bridge
 from bless import BlessServer, GATTAttributePermissions, GATTCharacteristicProperties
 from mindwave import MindWaveSource, Pipeline
-from reflow.totem.uno_q import COMMANDS, EVENTS, SERVICE, RelayFrame
+from neuropace.totem.uno_q import COMMANDS, EVENTS, SERVICE, RelayFrame
 
 
 async def main():
     loop = asyncio.get_running_loop()
     queue = asyncio.Queue(maxsize=16)
-    pipeline = Pipeline(MindWaveSource(os.environ["REFLOW_HEADSET_PORT"]))
+    pipeline = Pipeline(MindWaveSource(os.environ["NEUROPACE_HEADSET_PORT"]))
     sequence = 0
     stopped = threading.Event()
 
@@ -38,7 +38,7 @@ async def main():
         if stopped.wait(.05):
             return
         try:
-            count = int(Bridge.call("reflow_button_count"))
+            count = int(Bridge.call("neuropace_button_count"))
             if last_count is not None and count > last_count:
                 for _ in range(min(count - last_count, 8)):
                     loop.call_soon_threadsafe(enqueue, {"type": "tap"})
@@ -50,7 +50,7 @@ async def main():
             button_state["ready"] = False
 
     button_state = {"ready": False}
-    server = BlessServer(name="Reflow UNO Q", loop=loop)
+    server = BlessServer(name="NeuroPace UNO Q", loop=loop)
     await server.add_new_service(SERVICE)
     await server.add_new_characteristic(SERVICE, EVENTS,
         GATTCharacteristicProperties.notify | GATTCharacteristicProperties.read,

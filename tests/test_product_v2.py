@@ -8,11 +8,11 @@ import sqlite3
 import pytest
 from fastapi.testclient import TestClient
 
-from reflow.clock import ManualClock
-from reflow.config import FORMS
-from reflow.core.session import SessionRuntime
-from reflow.llm.schemas import pick_artifact
-from reflow.store.db import DB
+from neuropace.clock import ManualClock
+from neuropace.config import FORMS
+from neuropace.core.session import SessionRuntime
+from neuropace.llm.schemas import pick_artifact
+from neuropace.store.db import DB
 
 
 def test_families_and_artifact_choice_by_content():
@@ -159,7 +159,7 @@ def test_review_records_focus_and_profile_reset(app):
 
 
 def test_orphaned_running_sessions_are_closed_at_startup(settings, db, llm):
-    from reflow.core.gaps import recover_orphaned_sessions
+    from neuropace.core.gaps import recover_orphaned_sessions
 
     me = db.default_learner()
     sess = db.create_session(learner_id=me["id"], lecture_id="lec_demo0001", mode="live", seed=1)

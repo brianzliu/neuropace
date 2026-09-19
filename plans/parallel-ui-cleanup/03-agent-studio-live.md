@@ -11,7 +11,7 @@ Make the popup Studio (`/session/new` → `/live/:id`) a clean two-step workspac
 
 - `frontend/src/views/Setup.tsx` (275 lines): hero + `DeskObject` tutorial, UNO Q BLE scan (`/api/devices/uno-q`), connection-route selector, profile + lecture + mode pickers, settings disclosure (catch-up policy, baseline, headset `auto/sim/fake/custom`, totem `auto/sim`), doctor strip (15 s refresh), `Start session` submit (~line 232) → `nav(/live/:id)` staying inside the popup.
 - `frontend/src/views/Live.tsx` (273 lines): socket + `LiveStage`, `LiveCapture` (only when `hello.mode === "live"`), board-explanation `<details>`, controls (`I'm confused · simulated button` T, force flag L, form cycle F, sim states 1/2/3, mic start/stop, end lecture E). Mic cleanup via `micGeneration` + unmount effect already exists — preserve it.
-- `frontend/src/components/LiveCapture.tsx` (58 lines): explicit enable/stop, `getUserMedia` env camera, JPEG POST every 2 s, 90 s/45-frame server buffer (`reflow/core/board.py`), `DELETE` buffer clear on stop/unmount, `frames received` counter. No continuous video file.
+- `frontend/src/components/LiveCapture.tsx` (58 lines): explicit enable/stop, `getUserMedia` env camera, JPEG POST every 2 s, 90 s/45-frame server buffer (`neuropace/core/board.py`), `DELETE` buffer clear on stop/unmount, `frames received` counter. No continuous video file.
 - Backend: `POST/DELETE /api/sessions/{id}/board`, async multimodal on allowed button catch-up (recent transcript + ≤4 preceding frames, honors randomized withholding, offline-labelled failures, image payloads not logged).
 
 ## Do
@@ -35,7 +35,7 @@ Make the popup Studio (`/session/new` → `/live/:id`) a clean two-step workspac
 2. Restructure Setup sections; add the 4-pill status row in Setup + Live; keep all existing state keys.
 3. Lifecycle audit: open/close camera, start/stop mic, end session, unmount — confirm tracks stop + buffer cleared (Network tab: DELETE board).
 4. Simulated drill: scripted lecture → T (sim tap) → catch-up <1 s → end → notes exist.
-5. `uv run ruff check reflow tests scripts`, `uv run pytest -q`, `cd frontend && npm run build`.
+5. `uv run ruff check neuropace tests scripts`, `uv run pytest -q`, `cd frontend && npm run build`.
 
 ## Acceptance
 

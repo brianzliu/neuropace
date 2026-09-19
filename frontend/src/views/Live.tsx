@@ -13,6 +13,7 @@ import { Badge } from "../components/Badges";
 import LiveStage from "../components/LiveStage";
 import SessionPlayer from "../components/SessionPlayer";
 import { mmss } from "../lib/format";
+import { readLocalSetting, writeLocalSetting } from "../lib/storage";
 
 const BOARD_EXPLANATION_TIMEOUT_MS = 12000;
 
@@ -54,7 +55,7 @@ export default function Live() {
   const [calPhase, setCalPhase] = useState<CalPhase | null>(null);
   const [details, setDetails] = useState<boolean>(() => {
     try {
-      return new URLSearchParams(window.location.search).get("details") === "1" || localStorage.getItem("reflow.details") === "1";
+      return new URLSearchParams(window.location.search).get("details") === "1" || readLocalSetting("details") === "1";
     } catch {
       return false;
     }
@@ -62,7 +63,7 @@ export default function Live() {
   const toggleDetails = useCallback(() => {
     setDetails((v) => {
       try {
-        localStorage.setItem("reflow.details", v ? "0" : "1");
+        writeLocalSetting("details", v ? "0" : "1");
       } catch {
         // ignore
       }

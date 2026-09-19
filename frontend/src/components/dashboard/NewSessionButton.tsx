@@ -1,5 +1,5 @@
 export function openStudio() {
-  const studio = window.open("/session/new", "reflow-studio", "popup,width=1320,height=900");
+  const studio = window.open("/session/new", "neuropace-studio", "popup,width=1320,height=900");
   if (studio) studio.focus();
   else window.location.assign("/session/new");
 }

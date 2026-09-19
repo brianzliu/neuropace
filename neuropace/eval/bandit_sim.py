@@ -1,4 +1,4 @@
-"""How fast can Reflow tell which explanation works, given a noisy focus signal?
+"""How fast can NeuroPace tell which explanation works, given a noisy focus signal?
 Each 'card' = one explanation variant of one concept. True outcome: learner got it (1) or not (0).
 Signals: quiz = true outcome (1 question per card). eeg = noisy flag of 'lost focus', which itself only
 partly tracks the outcome. sens/spec 0.62 ~ AUC 0.65 detector.  Thompson sampling, Beta(1,1) priors."""

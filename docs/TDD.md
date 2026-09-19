@@ -1,4 +1,4 @@
-# Neurospace: Technical Design Document
+# NeuroPace: Technical Design Document
 
 **Companion to:** `docs/PRD.md` (requirement IDs FR-*, NFR-*, P* are referenced below).
 **Status:** v1.0, frozen for the build. Anything not written here is an implementation detail; anything written here is a contract that tests enforce.
@@ -14,15 +14,15 @@
 | Firmware | Current target: Arduino UNO Q 4 GB BLE relay (`firmware/uno_q_relay/`, App Lab MCU sketch + Bless/RouterBridge Linux prototype). Fallback: Arduino UNO R4 WiFi (core `arduino:renesas_uno` 1.6.0), `Arduino_CapacitiveTouch` 1.4, `Arduino_LED_Matrix`, USB CDC serial 115200 | The UNO Q path is experimental and uncompiled; blockers in `firmware/uno_q_relay/README.md`. The R4 fallback is verified to compile with `arduino-cli`; a Minima build flag drops the matrix |
 | Tests | pytest (backend), `tsc --noEmit` + `vite build` (frontend), `arduino-cli compile` (firmware), `scripts/smoke_e2e.py` (full session over HTTP + WS with everything simulated) | NFR-7: < 60 s, no network, no hardware |
 | Style | ruff (E, F, I, B, UP), TypeScript `strict`. No em dashes anywhere, including comments | House rule |
-| Config | `.env` + env vars prefixed `REFLOW_`, plus Deepgram, OpenAI, or OpenRouter key/model variables | `reflow doctor` prints the effective values |
+| Config | `.env` + env vars prefixed `NEUROPACE_`, plus Deepgram, OpenAI, or OpenRouter key/model variables | `neuropace doctor` prints the effective values |
 | IDs | `lrn_`, `lec_`, `sess_`, `flag_`, `gap_`, `card_` + 8 hex chars | Greppable in logs |
 | Time | `lecture_time`: float seconds on the lecture's own timeline. Live: monotonic since session start. Recorded: the media player's current time, reported by the client | Every learner of the same lecture shares one timeline, which is what the loss map pools |
 
 Repository layout:
 
 ```
-reflow/                      Python package
-  cli.py                     reflow serve | doctor | replay | ingest-lecture | study-analyze | sim | kaggle-check
+neuropace/                      Python package
+  cli.py                     neuropace serve | doctor | replay | ingest-lecture | study-analyze | sim | kaggle-check
   config.py                  Settings from env
   ids.py, clock.py
   signal/thinkgear.py        ThinkGear packet parser (sync, checksum, RAW, POOR_SIGNAL, eSense, ASIC_EEG_POWER)
@@ -49,13 +49,13 @@ reflow/                      Python package
   api/app.py                 FastAPI app factory, static serving
   api/routes.py              REST
   api/ws.py                  WebSocket endpoint
-  eval/reflow_eval.py        gate / detector / outcome (from the spec's toolkit)
+  eval/neuropace_eval.py        gate / detector / outcome (from the spec's toolkit)
   eval/bandit_sim.py, eval/lossmap_sim.py, eval/kaggle_check.py
 frontend/                    Vite app (see §9)
 firmware/uno_q_relay/        UNO Q 4 GB BLE relay prototype (current target, uncompiled; blockers in its README)
 firmware/totem/totem.ino     UNO R4 direct-USB sketch (fallback)
 study/                       lecture script, quiz.json, protocol, analysis notes
-data/                        runtime: reflow.db, sessions/*.jsonl, lectures/<id>/
+data/                        runtime: neuropace.db, sessions/*.jsonl, lectures/<id>/
 scripts/smoke_e2e.py         end-to-end check with everything simulated
 ```
 
@@ -64,10 +64,10 @@ scripts/smoke_e2e.py         end-to-end check with everything simulated
 **Hosted interface extension, 19 Sep 2026:** Vercel serves only `frontend/`. Browser API,
 WebSocket, board upload, and media requests connect directly to `http://127.0.0.1:8765`.
 The local interface retains same-origin requests; `VITE_BACKEND_URL` overrides the hosted
-backend address at build time. `REFLOW_UI_ORIGINS` accepts a comma-separated list of exact
+backend address at build time. `NEUROPACE_UI_ORIGINS` accepts a comma-separated list of exact
 trusted website origins, defaulting to `https://neurospace-hackmit.vercel.app`.
-Cross-origin requests require a per-process pairing code printed by `uv run neurospace serve`.
-The browser retains it in session storage, sends it in `X-Reflow-Token` for HTTP requests,
+Cross-origin requests require a per-process pairing code printed by `uv run neuropace serve`.
+The browser retains it in session storage, sends it in `X-NeuroPace-Token` for HTTP requests,
 and in the query string for WebSockets and media elements. CLI access logs are disabled to
 avoid logging those query strings. Restarting the backend requires pairing again.
 The hosted connection screen checks access before mounting the session UI. Browser local
@@ -101,19 +101,19 @@ Session end → `GapBuilder` merges flags into gaps → one LLM call per gap (pa
 | Selected OpenAI/OpenRouter key missing | session creation refused (400) unless `allow_offline_llm` (tests only) | doctor row "required" |
 | OpenAI call fails mid-lecture | recap skipped, catch-up shows the verbatim transcript of the span | `source: "transcript"` capsule |
 | OpenAI fails at session end | gap package retried 3 times, then stored as `package_source: "failed"` with the error; `POST /sessions/{id}/regenerate` retries; review refuses (409) until notes exist | notes page shows the error and a retry button |
-| Frontend build | `reflow serve` prints the `pnpm build` command and still serves the API | n/a |
+| Frontend build | `neuropace serve` prints the `pnpm build` command and still serves the API | n/a |
 
 ## 3. Signal engine (FR-L5, FR-L6, FR-L7)
 
 ### 3.0 Front end: the team's `mindwave` pipeline
 
-For a real headset (and for the `fake` and `replay` options) the raw-to-index stage is the team's standalone `mindwave/` package (see `EEG_PIPELINE.md`): reconnecting ThinkGear reader, 4 s window hopping 1 s, blink detection in a 0.5 to 8 Hz band with masking and interpolation, Welch PSD, `engagement = log10 β − log10(α+θ)`, contact and artifact gates (`valid`), blink counts, optional three-anchor calibration, session recording and bit-exact replay. `reflow.signal.headset.MindwaveHeadset` runs `mindwave.Pipeline` on its thread and hands each `FeatureFrame` to the asyncio loop; `SessionRuntime._on_frame` calls `FocusEngine.feed_frame(engagement, quality, valid, blink_count, extra)`.
+For a real headset (and for the `fake` and `replay` options) the raw-to-index stage is the team's standalone `mindwave/` package (see `EEG_PIPELINE.md`): reconnecting ThinkGear reader, 4 s window hopping 1 s, blink detection in a 0.5 to 8 Hz band with masking and interpolation, Welch PSD, `engagement = log10 β − log10(α+θ)`, contact and artifact gates (`valid`), blink counts, optional three-anchor calibration, session recording and bit-exact replay. `neuropace.signal.headset.MindwaveHeadset` runs `mindwave.Pipeline` on its thread and hands each `FeatureFrame` to the asyncio loop; `SessionRuntime._on_frame` calls `FocusEngine.feed_frame(engagement, quality, valid, blink_count, extra)`.
 
-In that external mode the engine skips §3.2's own FFT and applies only the spec's decision layer to the frame's index: EMA, own-baseline z, 15 s window, drop detector, refractory, lead-in. `x` is the log10 engagement (z-scores are scale-free, so log10 vs ln changes nothing downstream); `e = 10^x`. A frame that is not `valid` counts as an artifact second; `quality > 50` or no frame for 3 s counts as bad signal. Reflow's own simulator (§3.4) still exercises the raw path below, so both parsers stay tested (`tests/test_mindwave_bridge.py` cross-checks them byte for byte).
+In that external mode the engine skips §3.2's own FFT and applies only the spec's decision layer to the frame's index: EMA, own-baseline z, 15 s window, drop detector, refractory, lead-in. `x` is the log10 engagement (z-scores are scale-free, so log10 vs ln changes nothing downstream); `e = 10^x`. A frame that is not `valid` counts as an artifact second; `quality > 50` or no frame for 3 s counts as bad signal. NeuroPace's own simulator (§3.4) still exercises the raw path below, so both parsers stay tested (`tests/test_mindwave_bridge.py` cross-checks them byte for byte).
 
 The pipeline's calibration (`eyes_closed`, `easy`, `hard`, `done`, `reset`) is driven from the live view or `POST /api/sessions/{id}/calibrate`; its z-scores ride along on focus samples as `mw.*` fields for display but never replace the spec's first-3-minutes baseline as the flag source.
 
-### 3.1 ThinkGear parser (Reflow's minimal reader, used by the simulator and `serial:<port>`)
+### 3.1 ThinkGear parser (NeuroPace's minimal reader, used by the simulator and `serial:<port>`)
 
 Stream framing: `0xAA 0xAA <len ≤ 169> <payload len bytes> <checksum>` where checksum = `(~sum(payload)) & 0xFF`. Payload rows: single-byte codes `< 0x80` carry one value byte; codes `≥ 0x80` carry a length byte then data.
 
@@ -125,7 +125,7 @@ Stream framing: `0xAA 0xAA <len ≤ 169> <payload len bytes> <checksum>` where c
 | `0x80` | RAW | int16 big-endian, 512 Hz |
 | `0x83` | ASIC_EEG_POWER | 8 × uint24 big-endian: delta, theta, low-α, high-α, low-β, high-β, low-γ, mid-γ (recorded, 1 Hz) |
 
-Port: `REFLOW_HEADSET_PORT`, else the first port whose name contains `MindWave`; baud 57600. `sim` forces the simulator.
+Port: `NEUROPACE_HEADSET_PORT`, else the first port whose name contains `MindWave`; baud 57600. `sim` forces the simulator.
 
 ### 3.2 Features (once per second)
 
@@ -133,9 +133,9 @@ Port: `REFLOW_HEADSET_PORT`, else the first port whose name contains `MindWave`;
 - Artifact rejection: segment peak-to-peak `p2p > max(400, 3.5 × rolling_median_p2p)` (median over the last 30 clean segments) → `artifact = true`, sample excluded from E, baseline, z.
 - Quality gate: `poor_signal > 50` → `quality = "bad"`, sample excluded, flags suppressed.
 - E = β / (α + θ); `x = ln(E)`; EMA at 1 Hz with τ = 8 s: `x_ema += a·(x − x_ema)`, `a = 1 − e^(−1/8)`.
-- Baseline (first `REFLOW_BASELINE_SECONDS`, default 180, of listening): μ, σ of `x_ema` over valid samples; σ floor 0.05. Ready when ≥ 60% of the baseline seconds were valid, or when the baseline period ends with ≥ 30 valid samples. A stored learner baseline (`learners.baseline_mu/sigma`) may be used when the session is created with `use_stored_baseline = true`; the UI labels "stored baseline".
+- Baseline (first `NEUROPACE_BASELINE_SECONDS`, default 180, of listening): μ, σ of `x_ema` over valid samples; σ floor 0.05. Ready when ≥ 60% of the baseline seconds were valid, or when the baseline period ends with ≥ 30 valid samples. A stored learner baseline (`learners.baseline_mu/sigma`) may be used when the session is created with `use_stored_baseline = true`; the UI labels "stored baseline".
 - `z = (x_ema − μ) / σ`. `w15` = mean z over the last 15 s of valid samples (needs ≥ 8).
-- Drop detector (hysteresis + refractory): enter `drop` when `w15 < −1.25`; exit when `w15 > −0.6` or 30 s after entry. Calibrated on the simulator (see §3.4); tunable with `REFLOW_DROP_ENTER_Z` / `REFLOW_DROP_EXIT_Z`. Refractory: no new entry within 20 s of the previous exit. Suppressed while baseline not ready or quality bad.
+- Drop detector (hysteresis + refractory): enter `drop` when `w15 < −1.25`; exit when `w15 > −0.6` or 30 s after entry. Calibrated on the simulator (see §3.4); tunable with `NEUROPACE_DROP_ENTER_Z` / `NEUROPACE_DROP_EXIT_Z`. Refractory: no new entry within 20 s of the previous exit. Suppressed while baseline not ready or quality bad.
 - EEG flag: `t_trigger = t_enter`, `t_start = t_enter − 8` (lead-in), `t_end = t_exit`. Broadcast `flag_open` at entry and `flag_close` at exit.
 - Blinks (`signal/blinks.py`): 250 ms blocks; blink when block `p2p > max(300, 3 × rolling_median_block_p2p)`; refractory 300 ms. Emitted as `blink: true` on the next focus sample and counted.
 
@@ -171,9 +171,9 @@ Serial line protocol, 115200 baud, `\n` terminated ASCII.
 | laptop → totem | `PULSE` | Sweep row 7 for 2 s (the "catch-up ready" pulse) |
 | laptop → totem | `CLEAR` | Clear matrix |
 
-Port: `REFLOW_TOTEM_PORT`, else an Arduino found by USB vendor id or name that is not the headset. Auto-reconnect every 2 s. Firmware falls back to a pushbutton on D2 (INPUT_PULLUP) when `USE_CAPTOUCH` is 0.
+Port: `NEUROPACE_TOTEM_PORT`, else an Arduino found by USB vendor id or name that is not the headset. Auto-reconnect every 2 s. Firmware falls back to a pushbutton on D2 (INPUT_PULLUP) when `USE_CAPTOUCH` is 0.
 
-**Keyboard fallback (no Arduino).** `KeyboardTotem` (kind `keyboard`) replaces the pad: Space or T in the browser, the on-screen pad button, or Space/T in the terminal running `reflow serve` (`reflow/keys.py`, msvcrt on Windows, termios elsewhere) all produce a tap with `source: "key"`, `simulated: false`. A key tap is a learner action, so it is not labelled simulated; only `L` (forced EEG-style flag) is. Session option `totem`: `auto` (Arduino if present, else keyboard), `keyboard`, or a port. On `auto`, a running session probes for an Arduino every 5 s and switches to it when one appears (hot-plug).
+**Keyboard fallback (no Arduino).** `KeyboardTotem` (kind `keyboard`) replaces the pad: Space or T in the browser, the on-screen pad button, or Space/T in the terminal running `neuropace serve` (`neuropace/keys.py`, msvcrt on Windows, termios elsewhere) all produce a tap with `source: "key"`, `simulated: false`. A key tap is a learner action, so it is not labelled simulated; only `L` (forced EEG-style flag) is. Session option `totem`: `auto` (Arduino if present, else keyboard), `keyboard`, or a port. On `auto`, a running session probes for an Arduino every 5 s and switches to it when one appears (hot-plug).
 
 ## 5. Transcription (FR-L2, FR-L3)
 
@@ -183,7 +183,7 @@ Port: `REFLOW_TOTEM_PORT`, else an Arduino found by USB vendor id or name that i
 - Backend → `wss://api.deepgram.com/v1/listen?model=nova-3&encoding=linear16&sample_rate=<sr>&channels=1&punctuate=true&smart_format=true&interim_results=true&keyterm=<k>…` with header `Authorization: Token <key>`. `{"type":"KeepAlive"}` every 5 s without audio; `{"type":"CloseStream"}` at end.
 - Word time → lecture time: `lecture_time = stream_t0 + word.start`, where `stream_t0` is the lecture time at which the first audio frame was forwarded.
 - Only `is_final` words are appended to the transcript store; interim words are broadcast with `final: false` for display and replaced on the next result.
-- Model is configurable (`REFLOW_DEEPGRAM_MODEL`, default `nova-3`).
+- Model is configurable (`NEUROPACE_DEEPGRAM_MODEL`, default `nova-3`).
 
 ### 5.2 Recorded (Deepgram prerecorded)
 
@@ -371,14 +371,14 @@ Replay view: loads `/api/sessions/{id}/events` and plays it at 4× using the sam
 ## 11. CLI
 
 ```
-reflow serve [--host --port --reload]         start API + static frontend
-reflow doctor                                  environment check (FR-O1)
-reflow ingest-lecture --title T --file media   Deepgram prerecorded -> lecture row (needs key)
-reflow ingest-script --title T --script s.json [--segments --quiz --keyterms]
-reflow replay SESSION_ID [--speed 4]           print events to stdout at speed (headless check)
-reflow study-analyze --lecture LEC_ID          the four numbers (§8.5)
-reflow sim bandit|lossmap|selftest             the spec's simulations
-reflow kaggle-check PATH/EEG_data.csv          hour-0 feature check on Wang et al. data
+neuropace serve [--host --port --reload]         start API + static frontend
+neuropace doctor                                  environment check (FR-O1)
+neuropace ingest-lecture --title T --file media   Deepgram prerecorded -> lecture row (needs key)
+neuropace ingest-script --title T --script s.json [--segments --quiz --keyterms]
+neuropace replay SESSION_ID [--speed 4]           print events to stdout at speed (headless check)
+neuropace study-analyze --lecture LEC_ID          the four numbers (§8.5)
+neuropace sim bandit|lossmap|selftest             the spec's simulations
+neuropace kaggle-check PATH/EEG_data.csv          hour-0 feature check on Wang et al. data
 ```
 
 ## 12. Testing
@@ -395,12 +395,12 @@ reflow kaggle-check PATH/EEG_data.csv          hour-0 feature check on Wang et a
 | `tests/test_review.py` | State machine paths: hit-first, miss→reteach→hit, drop not scored, exhaustion, three-straight stop |
 | `tests/test_lossmap.py` | Pooled peak on a planted drop, n < 2 gate, tap weighting, paused exclusion |
 | `tests/test_api.py` | REST + WS end-to-end with simulated sources: session → tap → catch-up < 1 s → end → notes → review → tally |
-| `tests/test_eval.py` | `reflow_eval` selftest passes, study analysis on synthetic sessions |
+| `tests/test_eval.py` | `neuropace_eval` selftest passes, study analysis on synthetic sessions |
 | `scripts/smoke_e2e.py` | Same as `test_api` against a running server, prints timings |
 | frontend | `tsc --noEmit`, `vite build` |
 | firmware | `arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi` and `:minima` (UNO R4 fallback sketch only; the UNO Q relay has no compile check yet, §12) |
 
-## 13. Parameters (single source of truth: `reflow/config.py`)
+## 13. Parameters (single source of truth: `neuropace/config.py`)
 
 | Name | Default | Used by |
 |---|---|---|
@@ -410,7 +410,7 @@ reflow kaggle-check PATH/EEG_data.csv          hour-0 feature check on Wang et a
 | `tap_end_extend_max` | 5 | spans |
 | `eeg_flag_max_seconds` | 30 | detector |
 | `eeg_refractory_seconds` | 20 | detector |
-| `drop_enter_z` / `drop_exit_z` | −1.25 / −0.6 | detector (env `REFLOW_DROP_ENTER_Z`, `REFLOW_DROP_EXIT_Z`) |
+| `drop_enter_z` / `drop_exit_z` | −1.25 / −0.6 | detector (env `NEUROPACE_DROP_ENTER_Z`, `NEUROPACE_DROP_EXIT_Z`) |
 | `window_seconds` | 15 | detector |
 | `ema_tau_seconds` | 8 | features |
 | `recap_period_seconds` | 20 | recaps |
@@ -438,7 +438,7 @@ This addendum overrides the original home-screen and current hardware-target des
 - `/session/new` owns setup; `/live/{id}` owns capture. The dashboard opens a named browser
   window and refreshes when focused again. The browser may choose a tab instead of a window.
 - `/api/devices/status` polls local port discovery without provider calls. `/api/devices/uno-q`
-  scans the Reflow BLE service through optional `bleak`. A `uno-q:<address>` headset setting
+  scans the NeuroPace BLE service through optional `bleak`. A `uno-q:<address>` headset setting
   replaces both runtime input adapters with one `UnoQRelay`; it reconnects and reassembles
   bounded newline-delimited packets, rejects duplicate sequences/nonfinite features, and marks
   EEG stale after 3 s. The Q uses the unchanged `mindwave.Pipeline`, not eSense decisions.

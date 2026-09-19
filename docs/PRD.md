@@ -1,14 +1,14 @@
-# Neurospace: Product Requirements Document
+# NeuroPace: Product Requirements Document
 
 **Event:** HackMIT 2026, Education track. Sat 19 Sep 2026.
-**Source spec:** `~/Downloads/REFLOW-3.md` (the only spec this document derives from; earlier iterations are superseded).
+**Source spec:** `~/Downloads/NEUROPACE-3.md` (the only spec this document derives from; earlier iterations are superseded).
 **Status:** v1.0 for the signal engine, statistics and study. The student-facing product (screens, explanation families, artifacts, preferences) was redefined on 19 Sep in `docs/PRODUCT.md`, which supersedes §5 to §8 below where they differ.
 
 ---
 
 ## 1. One-line product
 
-Reflow notices the moment a lecture loses you, catches you up in one glance, and re-teaches what you missed until it lands.
+NeuroPace notices the moment a lecture loses you, catches you up in one glance, and re-teaches what you missed until it lands.
 
 ## 2. Problem
 
@@ -124,15 +124,15 @@ Stages A to D of the spec's build order. Each stage is a complete demo on its ow
 | FR-S1 | A lecture manifest holds segment boundaries and the 15 pre-written quiz items with the lecture-time span each item covers |
 | FR-S2 | Per session, the catch-up policy can be `always` or `randomized`; under `randomized`, each flagged lapse is independently shown or withheld by a logged coin flip |
 | FR-S3 | A final quiz view records the learner's 15 answers before and after review (the study uses the before-review answers for the flagged-vs-unflagged number) |
-| FR-S4 | `reflow study-analyze` produces the four numbers of spec §6 with intervals, including nulls: flagged vs unflagged recall (before review), loss-map rank of the planted bad segment, catch-up benefit and cost, rescues per form |
+| FR-S4 | `neuropace study-analyze` produces the four numbers of spec §6 with intervals, including nulls: flagged vs unflagged recall (before review), loss-map rank of the planted bad segment, catch-up benefit and cost, rescues per form |
 
 ### 6.7 Operations
 
 | ID | Requirement |
 |---|---|
-| FR-O1 | `reflow doctor` reports: keys present, Deepgram reachable, selected OpenAI/OpenRouter model available, headset port, totem port, frontend build present |
+| FR-O1 | `neuropace doctor` reports: keys present, Deepgram reachable, selected OpenAI/OpenRouter model available, headset port, totem port, frontend build present |
 | FR-O2 | Everything runs with no hardware: simulated headset, keyboard totem, scripted transcript, all labelled. A key for the selected OpenAI/OpenRouter provider is required to start a session; the extractive offline generator exists for automated tests only |
-| FR-O3 | One command starts the whole product: `uv run reflow serve` |
+| FR-O3 | One command starts the whole product: `uv run neuropace serve` |
 | FR-O4 | LLM outputs are cached on disk by content hash, so replays and re-runs are free and instant |
 
 ## 7. Non-functional requirements
@@ -171,7 +171,7 @@ Four numbers, each with an interval:
 
 ## 10. Sponsor-challenge compliance (verified against the HackMIT 2026 challenges PDF)
 
-| Challenge | Requirement (from the PDF) | How Reflow meets it |
+| Challenge | Requirement (from the PDF) | How NeuroPace meets it |
 |---|---|---|
 | Deepgram | "your project must call a Deepgram API" | Streaming transcription in live mode; prerecorded transcription for recorded lectures. Both calls are in the product path, not a side feature |
 | OpenAI | Build with the OpenAI API; show how Codex helped; share one concrete Codex story in the demo | Structured outputs (JSON schema) for recaps, notes, questions, re-teach forms, diagrams. Codex story: to be recorded during the event (see `docs/DEMO-RUNBOOK.md`). Only teams submitting to this challenge get credits |
@@ -184,7 +184,7 @@ Four numbers, each with an interval:
 | A | Start a live session with a scripted transcript and no hardware. Press `T` at 40 s. A one-line card appears in < 1 s with the recap covering 32-40 s. End the session. A gap note and a 4-option question exist for that span |
 | B | Simulated headset toggled to "drifting" produces an EEG flag within 30 s: totem pulses, chip appears, trace shows the drop band. In recorded mode the video pauses and shows the card |
 | C | Review a session with 2 gaps: miss the first question → card re-teaches in the next form → sketch form dissolves into a stepped diagram → hit. Tally shows the outcome and "not enough data yet" |
-| D | Two sessions on the demo lecture produce a loss map with a 40 s peak and a segment ranking. `reflow study-analyze` prints the four numbers with intervals on synthetic data |
+| D | Two sessions on the demo lecture produce a loss map with a 40 s peak and a segment ranking. `neuropace study-analyze` prints the four numbers with intervals on synthetic data |
 
 ## 12. Risks and mitigations
 
@@ -204,7 +204,7 @@ Four numbers, each with an interval:
 2. Judging format and time per team.
 3. Real-forehead performance of the focus index on the team's headset (the hour-1 gate).
 4. Deepgram and OpenAI booth requirements beyond the PDF text.
-5. Which OpenAI model id is available on the event credits (`reflow doctor` lists them).
+5. Which OpenAI model id is available on the event credits (`neuropace doctor` lists them).
 
 ## 12. Workspace and UNO Q extension, 19 Sep 2026
 

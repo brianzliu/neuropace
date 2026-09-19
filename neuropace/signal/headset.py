@@ -141,7 +141,7 @@ class SerialHeadset:
 
 
 class MindwaveHeadset:
-    """The team's `mindwave` pipeline as a Reflow headset source (TDD §3, README "EEG bridge").
+    """The team's `mindwave` pipeline as a NeuroPace headset source (TDD §3, README "EEG bridge").
 
     kind: "real" (MindWaveSource on a serial port), "fake" (the pipeline's FakeSource) or "replay" (ReplaySource).
     Delivers one FeatureFrame per second to `on_frame` on the asyncio loop; the SessionRuntime feeds the engine.
@@ -171,7 +171,7 @@ class MindwaveHeadset:
         self._loop: asyncio.AbstractEventLoop | None = None
         self.frames = 0
 
-    # reflow sim states -> the pipeline's fake states
+    # neuropace sim states -> the pipeline's fake states
     _STATE_MAP = {"focused": "easy", "drifting": "drowsy", "poor": "off"}
 
     @property
@@ -205,7 +205,7 @@ class MindwaveHeadset:
             self._loop.call_soon_threadsafe(self.on_frame, frame)
 
     def set_state(self, state: str) -> None:
-        """Fake source only. Accepts reflow names (focused/drifting/poor) or the pipeline's own states."""
+        """Fake source only. Accepts neuropace names (focused/drifting/poor) or the pipeline's own states."""
         mapped = self._STATE_MAP.get(state, state)
         self.state = state
         if self.kind == "fake" and self.source is not None:
@@ -248,8 +248,8 @@ def make_headset(
 ):
     """Routing (README "EEG bridge"):
     None/"auto" -> a paired MindWave through the mindwave pipeline if a port is found, else the simulator;
-    "sim" -> Reflow's simulator; "fake" -> the pipeline's FakeSource; "replay:<dir>" -> the pipeline's ReplaySource;
-    "serial:<port>" -> Reflow's minimal raw reader; anything else -> a device path for the mindwave pipeline.
+    "sim" -> NeuroPace's simulator; "fake" -> the pipeline's FakeSource; "replay:<dir>" -> the pipeline's ReplaySource;
+    "serial:<port>" -> NeuroPace's minimal raw reader; anything else -> a device path for the mindwave pipeline.
     """
     setting = (port_setting or "auto").strip()
     if setting == "sim":

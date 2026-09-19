@@ -8,14 +8,14 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
-from reflow.api.app import create_app, ensure_demo_lecture
-from reflow.clock import ManualClock
-from reflow.config import FORMS, Settings
-from reflow.core.gaps import regenerate_packages
-from reflow.core.session import SessionRuntime
-from reflow.llm.client import LLMClient, LLMUnavailable
-from reflow.store.db import DB
-from reflow.transcribe.transcript import Word
+from neuropace.api.app import create_app, ensure_demo_lecture
+from neuropace.clock import ManualClock
+from neuropace.config import FORMS, Settings
+from neuropace.core.gaps import regenerate_packages
+from neuropace.core.session import SessionRuntime
+from neuropace.llm.client import LLMClient, LLMUnavailable
+from neuropace.store.db import DB
+from neuropace.transcribe.transcript import Word
 
 GOOD_RECAP = json.dumps({"words": "p", "analogy": "a", "visual": "v", "doing": "d"})
 

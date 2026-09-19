@@ -26,7 +26,7 @@ if __name__ == "__main__":
         print(label)
         for N in (1, 6, 10, 12, 20, 40):
             print(f"  N={N:3d}  q=0.6:{sim(N, dprime=dp)}  q=0.9:{sim(N, q=0.9, dprime=dp)}")
-    print("5 segments (chance 0.20, 0.40) - the table in REFLOW.md")
+    print("5 segments (chance 0.20, 0.40) - the table in NEUROPACE.md")
     for dp in (0.545, 1.0):
         for N in (6, 12, 20):
             print(

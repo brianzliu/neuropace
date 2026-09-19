@@ -4,7 +4,7 @@
 
 ## Materials
 
-- One recorded lecture, about 8 minutes, 5 segments, **segment 3 deliberately bad** (jargon, no example). The repo ships a scripted stand-in with exactly this shape (`data/lectures/demo/script.json`, "How GPS finds you", segment 3 planted) for rehearsal. Record your own for the study: `uv run reflow ingest-lecture --title "…" --file lecture.m4a --meta study/meta.json` where `meta.json` holds `segments` (with `planted_bad: true` on segment 3), `quiz` (15 items, 3 per segment, each with `t_start`/`t_end` on the lecture timeline) and `keyterms`.
+- One recorded lecture, about 8 minutes, 5 segments, **segment 3 deliberately bad** (jargon, no example). The repo ships a scripted stand-in with exactly this shape (`data/lectures/demo/script.json`, "How GPS finds you", segment 3 planted) for rehearsal. Record your own for the study: `uv run neuropace ingest-lecture --title "…" --file lecture.m4a --meta study/meta.json` where `meta.json` holds `segments` (with `planted_bad: true` on segment 3), `quiz` (15 items, 3 per segment, each with `t_start`/`t_end` on the lecture timeline) and `keyterms`.
 - 15 quiz items written **before** anyone is tested, from the transcript.
 - One headset, one totem, one laptop. Fresh AAA. Spare AAA.
 
@@ -22,7 +22,7 @@
 
 ## The four numbers
 
-Run `uv run reflow study-analyze --lecture LEC_ID` (or open `/api/lectures/LEC_ID/study`).
+Run `uv run neuropace study-analyze --lecture LEC_ID` (or open `/api/lectures/LEC_ID/study`).
 
 | Number | Claim | How it is computed |
 |---|---|---|
@@ -35,7 +35,7 @@ Run `uv run reflow study-analyze --lecture LEC_ID` (or open `/api/lectures/LEC_I
 
 - Say n, the mean difference, the 95% CI and the permutation p. "n=11, flagged spans 22 points worse, 95% CI 6 to 37" earns more trust than any adjective.
 - A null is reportable. The product stands without it (pad + quiz carry it).
-- Never quote the simulated numbers as study results. The simulations (`uv run reflow sim …`) set expectations only.
+- Never quote the simulated numbers as study results. The simulations (`uv run neuropace sim …`) set expectations only.
 - Kill rule (hour 5): no usable EEG on real foreheads means the study runs on pad flags only and EEG is shown as an experimental overlay.
 
 ## Timeline

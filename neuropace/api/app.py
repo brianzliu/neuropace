@@ -82,7 +82,7 @@ def create_app(
         CORSMiddleware,
         allow_origins=list(s.ui_origins),
         allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allow_headers=["Content-Type", "X-Reflow-Token", "Range"],
+        allow_headers=["Content-Type", "X-NeuroPace-Token", "X-Reflow-Token", "Range"],
         expose_headers=["Content-Range", "Accept-Ranges"],
     )
     app.state.settings = s

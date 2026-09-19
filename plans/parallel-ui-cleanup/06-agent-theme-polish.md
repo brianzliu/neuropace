@@ -9,7 +9,7 @@ Make the cleanup look intentional: Pocket Studio (white/yellow, light rounded le
 
 ## Current state (verified)
 
-- Three themes in `Appearance.tsx` (`pocket`/`paper`/`orbit`), persisted `reflow.theme`, miniature previews. Pocket override: white `#fcfcf8`, butter yellow `#f4d76a`, charcoal `#3e3d32`, lilac paper; Chalkboard SE + Comic Sans/Trebuchet fallbacks, regular weight. No bold-blue styling, no AI branding.
+- Three themes in `Appearance.tsx` (`pocket`/`paper`/`orbit`), persisted `neuropace.theme`, miniature previews. Pocket override: white `#fcfcf8`, butter yellow `#f4d76a`, charcoal `#3e3d32`, lilac paper; Chalkboard SE + Comic Sans/Trebuchet fallbacks, regular weight. No bold-blue styling, no AI branding.
 - `playful.css` holds tokens + tactile 3D (CSS perspective/gradients/inset shadows, press displacement). `DeskObject.tsx` = CSS 3D button tutorial, labelled preview, no recorded data (lives in Session studio per latest steering).
 - New surfaces from Agents A–E (TopTabs, dashboard sections, Library, Insights, Studio stepper) will arrive unstyled or roughly styled — you theme them.
 - Unverified: narrow/mobile rendering, all three themes post-cleanup, theme persistence across new routes.
@@ -25,7 +25,7 @@ Make the cleanup look intentional: Pocket Studio (white/yellow, light rounded le
 ## Do NOT
 
 - Don't move JSX between files or change labels/copy (Agents A–E own that).
-- Don't touch `mindwave/`, `reflow/`, firmware, or API logic.
+- Don't touch `mindwave/`, `neuropace/`, firmware, or API logic.
 - Don't add mascots, streaks, grades, scores, flashing, autoplay, or AI branding.
 - Don't claim mobile verification beyond what you actually render-test (Safari + a 390px viewport at minimum; say which).
 

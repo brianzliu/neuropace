@@ -4,11 +4,11 @@ import json
 import pytest
 from pydantic import ValidationError
 
-from reflow.config import FORMS, Settings
-from reflow.llm import fallback
-from reflow.llm.client import LLMClient
-from reflow.llm.schemas import CheckQuestion, GapPackage, RecapForms, SceneGraph, strict_schema
-from reflow.store.db import DB
+from neuropace.config import FORMS, Settings
+from neuropace.llm import fallback
+from neuropace.llm.client import LLMClient
+from neuropace.llm.schemas import CheckQuestion, GapPackage, RecapForms, SceneGraph, strict_schema
+from neuropace.store.db import DB
 
 SPAN = "The pseudorange observable is corrupted by several additive error terms. The ionospheric delay is dispersive and proportional to total electron content divided by frequency squared."
 CTX = "Three distances narrow you to two points, and one of them is out in space. This method is called trilateration."
