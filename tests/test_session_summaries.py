@@ -92,6 +92,31 @@ async def test_llm_oneliners_apply_and_ignore_foreign_or_blank(db):
 
 
 @pytest.mark.asyncio
+async def test_llm_session_id_prefix_stripped(db):
+    """Models echo the supplied session_id into the prose; it must never reach the UI."""
+    learner = db.create_learner("Synthetic id strip")
+    session = make_session(db, learner["id"])
+    db.replace_gaps(session["id"], [gap("a")])
+    mock = SimpleNamespace(
+        _structured=AsyncMock(
+            side_effect=[
+                (None, "offline"),
+                (
+                    SessionOneLinerList(
+                        summaries=[
+                            SessionOneLiner(session_id=session["id"], summary="sess_deadbeef: Timing drifts explained."),
+                        ]
+                    ),
+                    "llm",
+                ),
+            ]
+        )
+    )
+    data = await organize_dashboard(mock, dashboard_data(db, learner["id"]))
+    assert summaries(data)[session["id"]] == ("Timing drifts explained.", "llm")
+
+
+@pytest.mark.asyncio
 async def test_unexpected_llm_shape_leaves_fallbacks_alone(db):
     """Shared mocks may answer every _structured call with another task's
     model; the summarizer must ignore it instead of crashing."""
