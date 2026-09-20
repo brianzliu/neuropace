@@ -259,6 +259,11 @@ export default function Restudy() {
         <span className="streak" title="three in a row finishes the lesson">
           {progress.streak}/{progress.stop_streak} in a row
         </span>
+        {mode === "manual" ? (
+          <Link className="btn btn-sm" to={library ? libraryHref(sessionId, "review") : `/library/${sessionId}/review`} title="Switch to an agent-guided conversation with a shared board">
+            AI-assisted
+          </Link>
+        ) : null}
         {tutor.supported ? (
           <button
             className={"btn btn-sm tutor-toggle" + (tutor.enabled ? " is-on" : "")}

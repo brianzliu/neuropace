@@ -1,5 +1,6 @@
 /* NeuroPace design system v2: consumer, Duolingo-derived (docs/PRODUCT.md §7).
    One thing per screen, chunky tactile controls, bold type, progress everywhere, warm feedback. */
+@import url('https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap');
 
 :root {
   color-scheme: light dark;
@@ -643,29 +644,42 @@ a.linklike { font-size: var(--fs-subhead); }
 @media (max-width: 600px) { .whiteboard-toolbar { align-items: flex-start; flex-direction: column; padding: 14px; } .whiteboard-content { padding: 12px; overflow-x: auto; } .concept-whiteboard .diagram { min-width: 520px; } }
 
 /* ---------------------------------------------------------------- office hours (docs/PRODUCT.md §5a) */
-.office-hours { display: flex; flex-direction: column; gap: 16px; height: calc(100vh - 120px); min-height: 480px; }
-.oh-header { align-items: flex-start; }
-.oh-scrubber { align-items: center; gap: 12px; }
+.office-hours { display: flex; flex-direction: column; gap: 10px; height: calc(100vh - 90px); min-height: 480px; }
+.oh-header { align-items: center; padding: 2px 2px 0; }
+.oh-scrubber { align-items: center; gap: 12px; padding: 0 2px; }
 .oh-scrubber input[type="range"] { flex: 1; }
 .oh-scrubber-past input[type="range"] { accent-color: var(--orange); }
-.oh-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr); gap: 16px; flex: 1; min-height: 0; }
+.oh-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 14px; flex: 1; min-height: 0; }
 @media (max-width: 900px) { .oh-layout { grid-template-columns: 1fr; height: auto; } .office-hours { height: auto; } }
 
-.oh-board { display: flex; flex-direction: column; border: 2px solid var(--line); border-radius: var(--r-lg); background: var(--surface-2); overflow: hidden; min-height: 360px; }
-.oh-board-toolbar { padding: 8px 10px; border-bottom: 2px solid var(--line); background: var(--surface); gap: 8px; }
-.oh-board-viewport { flex: 1; overflow: auto; position: relative; }
-.oh-board-canvas { position: relative; transform-origin: 0 0; }
-.oh-board-arrows { position: absolute; inset: 0; pointer-events: none; color: var(--label-3); }
-.oh-board-arrows line { stroke: currentColor; stroke-width: 3; }
-.oh-board-arrows text { fill: currentColor; font-size: 22px; font-weight: 700; text-anchor: middle; }
-.oh-board-empty { position: absolute; top: 24px; left: 24px; }
-.oh-board-element { position: absolute; background: var(--surface); border: 2px solid var(--line); border-radius: var(--r); padding: 10px; overflow: auto; cursor: pointer; transition: border-color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
-.oh-board-element:hover, .oh-board-element:focus-visible { border-color: var(--brand); transform: translateY(-2px); }
-.oh-artifact-card { font-size: 14px; }
-.oh-shape { display: flex; align-items: center; justify-content: center; height: 100%; font-weight: 700; text-align: center; padding: 8px; }
-.oh-shape-rect { border: 2px solid var(--label-2); border-radius: 8px; }
-.oh-shape-ellipse { border: 2px solid var(--label-2); border-radius: 999px; }
-.oh-label { font-weight: 700; padding: 6px; }
+/* the whiteboard itself: a bezel around a blank marker surface, not a UI panel */
+.oh-board {
+  display: flex; flex-direction: column; overflow: hidden; min-height: 420px;
+  background: #f4f1e8; border-radius: 18px; padding: 14px 14px 22px;
+  box-shadow: 0 1px 0 #fff inset, 0 18px 40px -20px rgba(30, 25, 10, 0.35);
+  border: 1px solid #d9d3bd;
+}
+.oh-board-toolbar { padding: 0 4px 10px; gap: 8px; color: #7a7458; }
+.oh-board-viewport { flex: 1; overflow: auto; position: relative; border-radius: 8px; background: #fffdf6; box-shadow: inset 0 0 0 10px #fffdf6, inset 0 0 30px rgba(0,0,0,0.05); }
+.oh-board-canvas {
+  position: relative; transform-origin: 0 0; color: #2b2a24; font-family: "Kalam", var(--font);
+  background-image: radial-gradient(circle, #e9e4d2 1.5px, transparent 1.5px);
+  background-size: 42px 42px;
+}
+.oh-board-arrows { position: absolute; inset: 0; pointer-events: none; color: #3a3936; }
+.oh-board-arrows path { fill: none; }
+.oh-board-arrows text { fill: currentColor; font-family: "Kalam", var(--font); font-size: 30px; font-weight: 700; text-anchor: middle; }
+.oh-board-element { position: absolute; cursor: pointer; }
+.oh-board-element-frame { position: absolute; inset: 0; color: #4b4a44; pointer-events: none; }
+.oh-board-element-frame path { fill: none; }
+.oh-board-element-content { position: relative; height: 100%; padding: 14px; overflow: auto; color: #2b2a24; }
+.oh-board-element:hover .oh-board-element-frame, .oh-board-element:focus-visible .oh-board-element-frame { color: var(--brand); }
+.oh-artifact-card { font-size: 15px; }
+.oh-shape-wrap { position: relative; height: 100%; }
+.oh-shape-svg { position: absolute; inset: 0; width: 100%; height: 100%; color: #2b2a24; }
+.oh-shape-svg path { fill: none; }
+.oh-shape-label { position: relative; height: 100%; display: flex; align-items: center; justify-content: center; font-weight: 700; text-align: center; padding: 10px; }
+.oh-label { font-weight: 700; padding: 6px; font-size: 20px; transform: rotate(-1deg); }
 .oh-manim-video { width: 100%; border-radius: 8px; background: #000; }
 .oh-manim-fallback { padding: 10px; text-align: center; }
 

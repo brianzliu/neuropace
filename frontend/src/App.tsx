@@ -12,6 +12,7 @@ import Done from "./views/Done";
 import Lecture from "./views/Lecture";
 import Lectures from "./views/Lectures";
 import Restudy from "./views/Restudy";
+import ReviewEntry from "./views/ReviewEntry";
 import You from "./views/You";
 import Team from "./views/Team";
 import Replay from "./views/Replay";
@@ -53,7 +54,7 @@ export default function App() {
         <Route path="/library" element={<Library />} />
         <Route path="/library/:sessionId" element={<Library />}>
           <Route path="notes" element={<Lecture />} />
-          <Route path="review" element={<Restudy />} />
+          <Route path="review" element={<ReviewEntry />} />
           <Route path="replay" element={<Replay />} />
           <Route path="quiz" element={<Quiz />} />
         </Route>

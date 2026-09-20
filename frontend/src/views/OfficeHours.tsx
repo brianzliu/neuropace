@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api, errorText } from "../lib/api";
 import type { OHSnapshot } from "../lib/types";
 import Board from "../components/Board";
@@ -12,6 +12,8 @@ import OHScrubber from "../components/OHScrubber";
 export default function OfficeHours() {
   const { sessionId = "" } = useParams();
   const navigate = useNavigate();
+  const [search] = useSearchParams();
+  const original = search.get("original");
   const [snap, setSnap] = useState<OHSnapshot | null>(null);
   const [scrubOrd, setScrubOrd] = useState<number | null>(null); // null = live (now)
   const [voiceOn, setVoiceOn] = useState(true);
@@ -27,7 +29,21 @@ export default function OfficeHours() {
   };
 
   useEffect(() => {
-    void load();
+    (async () => {
+      try {
+        const s = await api.officeHoursSnapshot(sessionId);
+        // A fresh session opened from Review (original set): kick off the same job Private tutoring used
+        // to do — walk through what was missed — instead of a blank board waiting on the student to type.
+        if (s.messages.length === 0 && original) {
+          await api.officeHoursSend(sessionId, "What did I miss in this lecture? Walk me through it.");
+          setSnap(await api.officeHoursSnapshot(sessionId));
+        } else {
+          setSnap(s);
+        }
+      } catch (e) {
+        setErr(errorText(e));
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
@@ -53,16 +69,17 @@ export default function OfficeHours() {
   return (
     <div className="office-hours">
       <header className="oh-header row between">
-        <div>
-          <div className="eyebrow">Office Hours</div>
-          <h1 className="t-title1">Ask about the lecture</h1>
-        </div>
+        <button type="button" className="btn btn-sm" onClick={() => navigate(-1)}>
+          ← Done
+        </button>
         <div className="row">
+          {original ? (
+            <Link className="btn btn-sm" to={`/restudy/${original}?mode=manual`} title="Switch to a quiz-first self-test, no agent conversation">
+              Review on my own
+            </Link>
+          ) : null}
           <button type="button" className="btn btn-sm" onClick={() => setVoiceOn((v) => !v)}>
             {voiceOn ? "Voice on" : "Voice off"}
-          </button>
-          <button type="button" className="btn btn-sm" onClick={() => navigate(-1)}>
-            Done
           </button>
         </div>
       </header>

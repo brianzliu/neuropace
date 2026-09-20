@@ -126,16 +126,17 @@ class LLMClient:
         model_cls: type[T],
         max_tokens: int,
         use_cache: bool = True,
+        timeout: float | None = None,
+        max_attempts: int | None = None,
     ) -> tuple[T | None, str]:
         obj: T | None = None
         source = "offline"
-        attempts = 3 if self.enabled else 1
+        timeout = timeout if timeout is not None else self.s.package_timeout_seconds
+        attempts = max_attempts if max_attempts is not None else (3 if self.enabled else 1)
         for attempt in range(attempts):
             if attempt:
                 await asyncio.sleep(2.0 * attempt)
-            obj, source = await self._structured(
-                task, instructions, payload, model_cls, self.s.package_timeout_seconds, max_tokens, use_cache
-            )
+            obj, source = await self._structured(task, instructions, payload, model_cls, timeout, max_tokens, use_cache)
             if obj is not None:
                 break
         return obj, source
@@ -154,7 +155,14 @@ class LLMClient:
         }
         instructions = office_hours_instructions(manim_available())
         return await self._with_retries(
-            "office_hours_turn", instructions, payload, OfficeHoursTurn, 2200, use_cache=False
+            "office_hours_turn",
+            instructions,
+            payload,
+            OfficeHoursTurn,
+            2200,
+            use_cache=False,
+            timeout=20.0,
+            max_attempts=2 if self.enabled else 1,
         )
 
     async def board_explanation(self, transcript: str, frames: list[dict]) -> tuple[str, str]:
