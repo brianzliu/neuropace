@@ -18,6 +18,7 @@ interface Props {
   cycleToken: number;
   freezeCatchup?: boolean;
   /** Bottom control bar (sticky). */
+  capture?: ReactNode;
   controls?: ReactNode;
   /** Header row above the document. */
   head?: ReactNode;
@@ -28,7 +29,7 @@ interface Props {
 
 /** The stage shared by the live view and the replay view: transcript, brain waves, focus card, optional details, control bar, HUD and chip. */
 export default function LiveStage(props: Props) {
-  const { state, onCatchupExpire, onCatchupDismiss, onOpenChip, onIgnoreChip, cycleToken, freezeCatchup, controls, head, inspectorExtra, details } = props;
+  const { state, onCatchupExpire, onCatchupDismiss, onOpenChip, onIgnoreChip, cycleToken, freezeCatchup, capture, controls, head, inspectorExtra, details } = props;
   const flags = state.flagOrder.map((id) => state.flags[id]).filter(Boolean);
   const last = state.focus.length ? state.focus[state.focus.length - 1] : null;
   const cfg = state.hello?.config;
@@ -39,12 +40,12 @@ export default function LiveStage(props: Props) {
       <div className={"stage" + (details ? "" : " calm")}>
         <div className="stage-doc">
           {head}
+          {capture}
           <TranscriptPane words={state.words} interim={state.interim} flags={flags} now={state.t} />
         </div>
         <div className="inspector">
           <BrainWaves samples={state.raw} rawAt={state.rawAt} bands={state.bands} headset={state.headset} />
-          <FocusCard last={last} headset={state.headset} flags={flags.length} rawAt={state.rawAt} />
-          {errors.length ? (
+          <FocusCard last={last} headset={state.headset} flags={flags.length} rawAt={state.rawAt} />          {errors.length ? (
             <div className="callout danger" style={{ margin: 0 }}>
               {errors[errors.length - 1].text}
             </div>

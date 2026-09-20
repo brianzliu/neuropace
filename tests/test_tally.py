@@ -1,8 +1,8 @@
 import numpy as np
 
-from reflow.config import FORMS, Settings
-from reflow.core import tally as T
-from reflow.store.db import DB
+from neuropace.config import FORMS, Settings
+from neuropace.core import tally as T
+from neuropace.store.db import DB
 
 
 def test_population_prior_and_posteriors():
@@ -78,7 +78,6 @@ def test_tally_finds_true_preference_like_bandit_sim():
 def test_combined_ranking_puts_understanding_first_and_attention_second():
     """docs/PRODUCT.md §5: score = 0.6 x rescues posterior + 0.4 x mean focus; attention only once measured."""
     import numpy as np
-
     from reflow.config import Settings
     from reflow.core import tally as t
 

@@ -1,4 +1,4 @@
-from reflow.core.recaps import Recap, RecapRing
+from neuropace.core.recaps import Recap, RecapRing
 
 
 def _ring():

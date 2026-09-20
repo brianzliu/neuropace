@@ -19,10 +19,11 @@ data/uploads/
 # node
 node_modules/
 frontend/dist/
+.vercel/
 # arduino
 firmware/**/build/
 # os
 .DS_Store
-# mindwave pipeline session recordings (their default dir) and Reflow EEG logs
+# mindwave pipeline session recordings (their default dir) and NeuroPace EEG logs
 sessions/
 data/eeg/

@@ -1,133 +1,93 @@
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { api, errorText } from "../lib/api";
-import type { Devices, Doctor, LectureFull, SessionPublic } from "../lib/types";
+import { useEffect, useRef, useState } from "react";
+import { api } from "../lib/api";
+import type { Curriculum, Dashboard } from "../lib/dashboardTypes";
+import NewSessionButton from "../components/dashboard/NewSessionButton";
+import ReviewQueue from "../components/dashboard/ReviewQueue";
+import SessionsSidebar from "../components/dashboard/SessionsSidebar";
+import CurriculumSection from "../components/dashboard/CurriculumSection";
+import SessionActivity from "../components/dashboard/SessionActivity";
+import { readLocalSetting, writeLocalSetting } from "../lib/storage";
 
-/** Listen (docs/PRODUCT.md §6): one button. A practice lecture is a fallback, not a peer choice.
- * "Next up" shows at most one lecture with moments left to restudy; the history lives on Lectures. */
+/** Learner-owned dashboard. Preserve an existing profile; new devices use the default learner. */
 export default function Home() {
-  const nav = useNavigate();
-  const [doctor, setDoctor] = useState<Doctor | null>(null);
-  const [practice, setPractice] = useState<LectureFull | null>(null);
-  const [lectures, setLectures] = useState<LectureFull[]>([]);
-  const [nextUp, setNextUp] = useState<SessionPublic | null>(null);
-  const [running, setRunning] = useState<SessionPublic | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [devices, setDevices] = useState<Devices | null>(null);
+  const [learnerId, setLearnerId] = useState(() => readLocalSetting("learner") ?? "");
+  const [data, setData] = useState<Dashboard | null>(null);
+  const [organizing, setOrganizing] = useState(false);
+  const [error, setError] = useState("");
+  const generation = useRef(0);
 
-  // the headset is often switched on after this screen opens: ask every few seconds, cheaply
   useEffect(() => {
-    let alive = true;
-    const load = () => api.devices().then((d) => alive && setDevices(d)).catch(() => undefined);
-    void load();
-    const id = window.setInterval(load, 4000);
-    return () => {
-      alive = false;
-      window.clearInterval(id);
+    let active = true;
+    api.learners().then(async ({ learners }) => {
+      const saved = readLocalSetting("learner");
+      const learner = learners.find(item => item.id === saved) ?? await api.learner("me");
+      if (active) setLearnerId(learner.id);
+    }).catch(e => { if (active) setError(String(e)); });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    const version = ++generation.current;
+    setData(null); setError("");
+    setOrganizing(false);
+    if (!learnerId) return;
+    writeLocalSetting("learner", learnerId);
+    let active = true;
+    let loading = false;
+    const load = async (organize = false) => {
+      if (loading) return;
+      loading = true;
+      try {
+        const fresh = await api.dashboard(learnerId, organize);
+        if (active && version === generation.current) setData(fresh);
+      } catch (e) { if (active) setError(String(e)); }
+      finally { loading = false; }
     };
-  }, []);
+    void load().then(async () => {
+      if (!active) return;
+      setOrganizing(true);
+      await load(true);
+      if (active) setOrganizing(false);
+    });
+    const refresh = () => { if (document.visibilityState === "visible") void load(true); };
+    window.addEventListener("focus", refresh);
+    return () => { active = false; window.removeEventListener("focus", refresh); };
+  }, [learnerId]);
 
-  useEffect(() => {
-    (async () => {
-      const [lec, s, d] = await Promise.allSettled([api.lectures(), api.sessions(), api.doctor()]);
-      if (lec.status === "fulfilled") {
-        setLectures(lec.value.lectures);
-        setPractice(lec.value.lectures.find((l) => l.kind === "scripted") ?? lec.value.lectures[0] ?? null);
-      }
-      if (s.status === "fulfilled") {
-        const all = s.value.sessions.filter((x) => x.mode !== "review");
-        setRunning(all.find((x) => x.status === "running") ?? null);
-        setNextUp(all.find((x) => x.status === "ended" && x.gaps > 0) ?? null);
-      }
-      if (d.status === "fulfilled") setDoctor(d.value);
-    })();
-  }, []);
-
-  const liveOk = !!doctor && doctor.keys.deepgram && doctor.deepgram.ok;
-  const notesOk = !!doctor && doctor.keys.openai && doctor.openai.ok;
-
-  const start = async (lectureId: string | null) => {
-    setErr(null);
-    setBusy(true);
+  const saveCurriculum = async (curriculum: Curriculum) => {
+    const owner = learnerId;
+    const version = generation.current;
+    setError("");
     try {
-      const s = await api.createSession({ lecture_id: lectureId, mode: "live", headset: "auto", totem: "auto" });
-      nav(`/live/${s.id}`);
-    } catch (e) {
-      setErr(friendly(errorText(e)));
-    } finally {
-      setBusy(false);
-    }
+      const saved = await api.saveCurriculum(owner, curriculum);
+      if (version === generation.current) setData(d => d ? {...d, curriculum: saved} : d);
+    } catch (e) { setError(String(e)); throw e; }
   };
 
-  const dev = devices ?? doctor;
-  const statusLine = !dev
-    ? ""
-    : [
-        dev.headset.kind === "real" ? "Headset connected." : "Turn your headset on before you start; without one, focus is simulated for practice.",
-        dev.totem.kind === "real" ? "Pad connected." : "Press Space whenever you want a catch-up.",
-      ].join(" ");
-
-  return (
-    <div className="page narrow">
-      <header className="hero center-hero">
-        <h1 className="t-large">Ready when you are.</h1>
-        <p className="sub">Put the headset on and start the lecture. If you drift, Reflow catches you up in one line and, afterwards, teaches you only what you missed.</p>
-      </header>
-
-      {err ? <div className="callout danger">{err}</div> : null}
-      {doctor && !notesOk ? <div className="callout warning">Reflow can't write notes right now. Ask the team to check the setup before you start.</div> : null}
-
-      <div className="start">
-        {running ? (
-          <Link className="btn btn-primary btn-lg btn-block" to={`/live/${running.id}`}>
-            Back to the lecture
-          </Link>
-        ) : liveOk ? (
-          <button className="btn btn-primary btn-lg btn-block" disabled={busy} onClick={() => void start(null)}>
-            {busy ? "Starting…" : "Start listening"}
-          </button>
-        ) : practice ? (
-          <button className="btn btn-primary btn-lg btn-block" disabled={busy} onClick={() => void start(practice.id)}>
-            {busy ? "Starting…" : "Try a practice lecture"}
-          </button>
-        ) : (
-          <button className="btn btn-primary btn-lg btn-block" disabled>
-            Nothing to listen to yet
-          </button>
-        )}
-        <div className={"start-note" + (dev && dev.headset.kind === "real" ? " ok" : "")}>{statusLine}</div>
-        {liveOk && practice && !running ? (
-          <div className="start-alt">
-            No lecture right now?{" "}
-            <button className="linklike" disabled={busy} onClick={() => void start(practice.id)}>
-              Try a practice lecture
-            </button>
-          </div>
-        ) : null}
-        {!liveOk && doctor ? <div className="start-alt">Live lectures aren't available on this laptop right now.</div> : null}
-      </div>
-
-      {nextUp ? (
-        <section className="next-up">
-          <div className="eyebrow">Next up</div>
-          <Link className="list-row" to={`/lecture/${nextUp.id}`}>
-            <span className="lr-main">
-              <span className="lr-title">{lectures.find((l) => l.id === nextUp.lecture_id)?.title ?? "Live lecture"}</span>
-              <span className="lr-meta">
-                {nextUp.gaps} moment{nextUp.gaps === 1 ? "" : "s"} to restudy · {new Date(nextUp.started_at * 1000).toLocaleDateString(undefined, { weekday: "long" })}
-              </span>
-            </span>
-            <span className="btn btn-blue btn-sm">Restudy</span>
-          </Link>
-        </section>
-      ) : null}
+  return <div className="dashboard">
+    <div className="dashboard-toolbar">
+      <div><h1>Ready for your next idea?</h1></div>
+      <NewSessionButton />
     </div>
-  );
-}
-
-function friendly(detail: string): string {
-  if (/OPENAI_API_KEY/i.test(detail)) return "Reflow can't write notes right now. Ask the team to check the setup.";
-  if (/DEEPGRAM/i.test(detail)) return "Live lectures aren't available right now. Try a practice lecture, or ask the team.";
-  return detail;
+    {error && <div className="panel error" role="alert">{error}</div>}
+    <div className="dashboard-grid">
+      <div className="dashboard-main">
+        <ReviewQueue
+          concepts={data?.concepts}
+          closed={data?.closed ?? 0}
+          hasLearner={Boolean(learnerId)}
+          summary={data?.summary}
+          organizationSource={data?.organization_source}
+          organizing={organizing}
+        />
+        <SessionActivity sessions={data?.sessions} />
+        <CurriculumSection
+          curriculum={data?.curriculum}
+          learnerId={learnerId}
+          onSave={saveCurriculum}
+        />
+      </div>
+      <SessionsSidebar sessions={data?.sessions} concepts={data?.concepts} closed={data?.closed ?? 0} />
+    </div>
+  </div>;
 }

@@ -9,9 +9,9 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      "/api": { target: backend, changeOrigin: true },
-      "/media": { target: backend, changeOrigin: true },
-      "/ws": { target: backend.replace("http", "ws"), ws: true, changeOrigin: true },
+      "/api": { target: backend, changeOrigin: false },
+      "/media": { target: backend, changeOrigin: false },
+      "/ws": { target: backend.replace("http", "ws"), ws: true, changeOrigin: false },
     },
   },
   build: {

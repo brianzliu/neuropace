@@ -11,15 +11,13 @@ export default function BrainWaves({
   samples,
   rawAt,
   bands,
-  headset,
-  label,
+  headset,  label,
   compact,
 }: {
   samples: number[];
   rawAt: number;
   bands: { theta: number; alpha: number; beta: number } | null;
-  headset: HeadsetStatus | null;
-  label?: string;
+  headset: HeadsetStatus | null;  label?: string;
   compact?: boolean;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -86,13 +84,12 @@ export default function BrainWaves({
   }, [samples, live]);
 
   return (
-    <div className={"waves " + tone + (compact ? " compact" : "")}>
+    <div className={"waves is-" + tone + (compact ? " compact" : "")}>
       <div className="waves-head">
         <span className="waves-title">{label ?? "Your brain waves"}</span>
         <span className="waves-sub">
           <span className="waves-dot" /> {sub}
-        </span>
-      </div>
+        </span>      </div>
       <canvas ref={ref} className="waves-canvas" />
       {bands && live ? (
         <div className="bands">

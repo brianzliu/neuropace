@@ -1,3 +1,4 @@
+import { libraryHref, useLibrary } from "./Library";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api, errorText } from "../lib/api";
@@ -17,6 +18,7 @@ export default function Restudy() {
   const { sessionId = "" } = useParams();
   const [params] = useSearchParams();
   const mode: "tutor" | "manual" = params.get("mode") === "manual" ? "manual" : "tutor";
+  const library = useLibrary();
   const [card, setCard] = useState<Card | null>(null);
   const [progress, setProgress] = useState<Progress | null>(null);
   const [tally, setTally] = useState<TallySummary | null>(null);
@@ -33,7 +35,8 @@ export default function Restudy() {
   const [hits, setHits] = useState(0);
   const pendingNext = useRef<Card | null>(null);
   const busy = useRef(false);
-  const focus = useFocusSession(true);
+  const [learnerId, setLearnerId] = useState<string>();
+  const focus = useFocusSession(!!learnerId, learnerId);
   const focusRef = useRef(focus);
   focusRef.current = focus;
   const [ttsOk, setTtsOk] = useState(false);
@@ -83,6 +86,8 @@ export default function Restudy() {
     (async () => {
       try {
         const sess = await api.session(sessionId);
+        if (cancelled) return;
+        setLearnerId(sess.learner_id);
         if (sess.lecture_id) {
           api.lecture(sess.lecture_id).then((l) => !cancelled && setLectureTitle(l.title)).catch(() => undefined);
         }
@@ -233,7 +238,7 @@ export default function Restudy() {
         <div className="complete">
           <div className="t-title1">Not quite ready</div>
           <p className="sub">{blocked}</p>
-          <Link className="btn btn-blue" to={`/lecture/${sessionId}`}>
+          <Link className="btn btn-blue" to={library ? libraryHref(sessionId, "notes") : `/lecture/${sessionId}`}>
             Back to the lecture
           </Link>
         </div>
@@ -245,7 +250,7 @@ export default function Restudy() {
   return (
     <div className="page">
       <div className="lesson-top">
-        <Link className="lesson-close" to={`/lecture/${sessionId}`} title="Back to the lecture">
+        <Link className="lesson-close" to={library ? libraryHref(sessionId, "notes") : `/lecture/${sessionId}`} title="Back to the lecture">
           ✕
         </Link>
         <div className="progress" title={`${progress.gaps_closed} of ${progress.gaps_total} moments done`}>
@@ -273,7 +278,7 @@ export default function Restudy() {
 
       <div className="lesson single">
         <div className="stack">
-          {lectureTitle ? <div className="eyebrow">{lectureTitle}</div> : null}
+          {lectureTitle ? <p className="t-subhead">{lectureTitle}</p> : null}
           <div className="lesson-card">
             {phase === "done" || !card ? (
               <div className="complete">
@@ -295,13 +300,12 @@ export default function Restudy() {
                 </div>
                 <WhatWorked tally={tally} />
                 <FamilyList tally={tally} />
-                <Link className="btn btn-primary btn-lg" to="/lectures">
+                <Link className="btn btn-primary btn-lg" to={library ? "/library" : "/lectures"}>
                   Done
                 </Link>
               </div>
             ) : card.kind === "question" && card.question ? (
               <>
-                <div className="eyebrow">Moment {card.gap_ord + 1} · quick check</div>
                 <div className="question">
                   <Dissolve text={card.question.question} active={phase === "dissolving"} />
                 </div>
@@ -390,8 +394,7 @@ export default function Restudy() {
 
         {headsetOn ? (
           <div className="lesson-waves">
-            <BrainWaves samples={focus.raw} rawAt={focus.rawAt} bands={focus.bands} headset={focus.headset} compact label="Your focus while you read" />
-          </div>
+            <BrainWaves samples={focus.raw} rawAt={focus.rawAt} bands={focus.bands} headset={focus.headset} compact label="Your focus while you read" />          </div>
         ) : null}
       </div>
     </div>
@@ -422,8 +425,7 @@ function WhatWorked({ tally }: { tally: TallySummary }) {
   const best = tally.preferred ?? (tally.rank && tally.rank[0]) ?? [...FORMS].sort((a, b) => tally.forms[b].rescues - tally.forms[a].rescues)[0];
   const st = tally.forms[best];
   if (!st || st.attempts === 0) return <p className="sub">Reflow is still learning which explanations land for you.</p>;
-  const held = st.focus?.mean_focus != null ? ` and held your attention ${Math.round(st.focus.mean_focus * 100)}% of the time` : "";
-  return (
+  const held = st.focus?.mean_focus != null ? ` and held your attention ${Math.round(st.focus.mean_focus * 100)}% of the time` : "";  return (
     <p className="sub">
       {FORM_LABEL[best]} rescued you {st.rescues} time{st.rescues === 1 ? "" : "s"}
       {held}. {tally.preferred ? "That is your preferred way, so you will see it first." : "Reflow keeps trying the others until it is sure."}

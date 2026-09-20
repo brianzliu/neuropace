@@ -11,7 +11,7 @@ import json
 import re
 from pathlib import Path
 
-from reflow.transcribe.scripted import script_from_text
+from neuropace.transcribe.scripted import script_from_text
 
 TITLE = "How GPS finds you"
 WPM = 150.0

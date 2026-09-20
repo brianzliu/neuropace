@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { api, type SessionCreate } from "../lib/api";
 import type { Doctor, LectureFull, SessionPublic } from "../lib/types";
 import { Badge, StatusDot } from "../components/Badges";
+import DeepgramSettings from "../components/DeepgramSettings";
+import ModelSettings from "../components/ModelSettings";
 import { useNavigate } from "react-router-dom";
 
 /** For the team (docs/PRODUCT.md §3): setup readiness, a technical session start, replay, loss map, study quiz. */
@@ -50,7 +52,13 @@ export default function Team() {
             ) : (
               <div className="status-list">
                 <Line ok={d.keys.deepgram && d.deepgram.ok} label="Deepgram (transcription)" value={d.keys.deepgram ? (d.deepgram.ok ? "reachable" : d.deepgram.reason ?? "unreachable") : "no key: set DEEPGRAM_API_KEY in .env"} />
-                <Line ok={d.keys.openai && d.openai.ok} label="OpenAI (recaps, notes, artifacts)" value={d.keys.openai && d.openai.ok ? d.openai.model : d.keys.openai ? `${d.openai.model} unavailable` : "no key: set OPENAI_API_KEY in .env (required)"} />
+                <Line
+                  ok={d.llm_provider === "openrouter" ? d.keys.openrouter && d.openrouter.ok : d.keys.openai && d.openai.ok}
+                  label={`${d.llm_provider === "openrouter" ? "OpenRouter" : "OpenAI"} (recaps, notes, artifacts)`}
+                  value={d.llm_provider === "openrouter"
+                    ? (d.keys.openrouter ? (d.openrouter.ok ? d.openrouter.model : `${d.openrouter.model} unavailable`) : "no OpenRouter key")
+                    : (d.keys.openai ? (d.openai.ok ? d.openai.model : `${d.openai.model} unavailable`) : "no OpenAI key")}
+                />
                 <Line ok={d.headset.kind === "real"} warn label="Headset" value={d.headset.kind === "real" ? `MindWave on ${d.headset.port}` : "none found: sessions simulate one"} />
                 <Line ok={d.totem.kind === "real"} accent label="Totem" value={d.totem.kind === "real" ? `Arduino on ${d.totem.port}` : "none found: keyboard fallback (Space/T, terminal keys)"} />
                 <Line ok={d.frontend_built} label="Frontend build" value={d.frontend_built ? "built" : "run pnpm build"} />
@@ -68,6 +76,15 @@ export default function Team() {
                 </div>
               </details>
             ) : null}
+          </div>
+
+          <div className="card">
+            <div className="card-header">
+              <span className="card-title">Keys and model</span>
+            </div>
+            <div className="label-2 t-footnote">Students never see this. Keys live in this backend process only.</div>
+            <DeepgramSettings />
+            <ModelSettings />
           </div>
 
           <div className="card">

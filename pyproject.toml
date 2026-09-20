@@ -1,7 +1,7 @@
 [project]
-name = "reflow"
+name = "neuropace"
 version = "0.1.0"
-description = "Reflow: notices the moment a lecture loses you, catches you up in one glance, and re-teaches what you missed until it lands. HackMIT 2026."
+description = "NeuroPace: notices the moment a lecture loses you, catches you up in one glance, and re-teaches what you missed until it lands. HackMIT 2026."
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
@@ -17,10 +17,18 @@ dependencies = [
   "python-dotenv>=1.0",
   "python-multipart>=0.0.9",
   "scipy>=1.12",
+  "pypdf>=5",
 ]
 
 [project.scripts]
-reflow = "reflow.cli:main"
+neuropace = "neuropace.cli:main"
+neurospace = "neuropace.cli:main"
+reflow = "neuropace.cli:main" # legacy command alias
+
+[project.optional-dependencies]
+bluetooth = [
+    "bleak>=1.0",
+]
 
 [dependency-groups]
 monitor = ["matplotlib>=3.8"]
@@ -35,7 +43,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["reflow", "mindwave"]
+packages = ["neuropace", "reflow", "mindwave"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -46,7 +54,7 @@ filterwarnings = ["ignore::DeprecationWarning"]
 line-length = 110
 target-version = "py312"
 # the mindwave pipeline and its tools keep their own style (see AGENTS.md)
-exclude = ["mindwave", "monitor.py", "run_pipeline.py", "example_consumer.py", "reflow_eval.py"]
+exclude = ["mindwave", "monitor.py", "run_pipeline.py", "example_consumer.py", "neuropace_eval.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
@@ -54,8 +62,8 @@ ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]
 # the spec's own toolkit, kept verbatim so its numbers stay reproducible
-"reflow/eval/reflow_eval.py" = ["E701", "E702", "E741", "UP031", "B007"]
-"reflow/eval/bandit_sim.py" = ["E701", "E702", "E741", "UP031", "B007"]
-"reflow/eval/lossmap_sim.py" = ["E701", "E702", "E741", "UP031", "B007"]
+"neuropace/eval/neuropace_eval.py" = ["E701", "E702", "E741", "UP031", "B007"]
+"neuropace/eval/bandit_sim.py" = ["E701", "E702", "E741", "UP031", "B007"]
+"neuropace/eval/lossmap_sim.py" = ["E701", "E702", "E741", "UP031", "B007"]
 # FastAPI dependency defaults
-"reflow/api/routes.py" = ["B008"]
+"neuropace/api/routes.py" = ["B008"]

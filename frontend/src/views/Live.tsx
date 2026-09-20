@@ -1,3 +1,7 @@
+import LiveCapture, { type CaptureStatus } from "../components/LiveCapture";
+import type { BoardExplanation } from "../lib/types";
+import { backendFetch } from "../lib/backend";
+import { ConnectionPills, type ConnectionPill } from "../components/StudioChrome";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBlocker, useNavigate, useParams } from "react-router-dom";
 import { api } from "../lib/api";
@@ -9,6 +13,9 @@ import { Badge } from "../components/Badges";
 import LiveStage from "../components/LiveStage";
 import SessionPlayer from "../components/SessionPlayer";
 import { mmss } from "../lib/format";
+import { readLocalSetting, writeLocalSetting } from "../lib/storage";
+
+const BOARD_EXPLANATION_TIMEOUT_MS = 12000;
 
 type SimState = "focused" | "drifting" | "poor";
 type CalPhase = "eyes_closed" | "easy" | "hard" | "done" | "reset";
@@ -23,7 +30,7 @@ const CAL: { k: CalPhase; label: string }[] = [
 function inField(ev: KeyboardEvent): boolean {
   const el = ev.target as HTMLElement | null;
   const tag = el?.tagName;
-  return tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || !!el?.isContentEditable;
+  return tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || tag === "BUTTON" || tag === "A" || !!el?.isContentEditable;
 }
 
 function micMessage(e: unknown): string {
@@ -42,14 +49,22 @@ export default function Live() {
   const [status, setStatus] = useState<SocketStatus>("connecting");
   const [wsError, setWsError] = useState<string | null>(null);
   const [cycleToken, setCycleToken] = useState(0);
+  const [board, setBoard] = useState<BoardExplanation | null>(null);
+  const [boardAwaiting, setBoardAwaiting] = useState<{ flagId: string; since: number } | null>(null);
+  const [boardUnavailable, setBoardUnavailable] = useState(false);
+  const [capture, setCapture] = useState<CaptureStatus>({ capturing: false, frames: 0 });
   const [ending, setEnding] = useState(false);
   const [mic, setMic] = useState<MicStream | null>(null);
   const [micError, setMicError] = useState<string | null>(null);
+  const micRef = useRef<MicStream | null>(null);
+  const micGeneration = useRef(0);
+  const [micStarting, setMicStarting] = useState(false);
+  useEffect(() => () => { micGeneration.current++; void micRef.current?.stop(); micRef.current = null; }, []);
   const [simState, setSimState] = useState<SimState>("focused");
   const [calPhase, setCalPhase] = useState<CalPhase | null>(null);
   const [details, setDetails] = useState<boolean>(() => {
     try {
-      return new URLSearchParams(window.location.search).get("details") === "1" || localStorage.getItem("reflow.details") === "1";
+      return new URLSearchParams(window.location.search).get("details") === "1" || readLocalSetting("details") === "1";
     } catch {
       return false;
     }
@@ -57,7 +72,7 @@ export default function Live() {
   const toggleDetails = useCallback(() => {
     setDetails((v) => {
       try {
-        localStorage.setItem("reflow.details", v ? "0" : "1");
+        writeLocalSetting("details", v ? "0" : "1");
       } catch {
         // ignore
       }
@@ -67,8 +82,6 @@ export default function Live() {
   const sockRef = useRef<SessionSocket | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
-  const micRef = useRef<MicStream | null>(null);
-  micRef.current = mic;
   const leaving = useRef(false); // set once the lecture is ended here, so the guard lets the navigation through
   const micTried = useRef(false);
 
@@ -76,6 +89,27 @@ export default function Live() {
     const sock = new SessionSocket(
       sessionId,
       (m) => {
+        if (m.type === "board_explanation") {
+          // Board explanations are async, labelled and never replace the transcript
+          // catch-up. They can only arrive when randomized withholding allowed it.
+          setBoard(m);
+          setBoardUnavailable(false);
+          setBoardAwaiting((a) => (m.status !== "pending" && a && a.flagId === m.flag_id ? null : a));
+          return;
+        }
+        if (m.type === "catchup_withheld") {
+          setBoardAwaiting((a) => (a && a.flagId === m.flag_id ? null : a));
+          setState((s) => reduce(s, m));
+          return;
+        }
+        if (m.type === "catchup") {
+          if (m.reason === "tap") {
+            setBoardUnavailable(false);
+            setBoardAwaiting({ flagId: m.flag_id, since: Date.now() });
+          }
+          setState((s) => reduce(s, m));
+          return;
+        }
         if (m.type === "error") {
           setWsError(m.text + (m.status ? ` (status: ${m.status})` : ""));
           return;
@@ -91,6 +125,18 @@ export default function Live() {
       sockRef.current = null;
     };
   }, [sessionId]);
+
+  // If the server never starts a board explanation (camera off / no buffered
+  // frames), say so instead of leaving a loading panel forever.
+  useEffect(() => {
+    if (!boardAwaiting) return;
+    const timer = window.setTimeout(() => {
+      setBoardAwaiting(null);
+      setBoard((b) => (b && b.status === "pending" ? null : b));
+      setBoardUnavailable(true);
+    }, BOARD_EXPLANATION_TIMEOUT_MS);
+    return () => window.clearTimeout(timer);
+  }, [boardAwaiting]);
 
   const send = useCallback((obj: Record<string, unknown>) => sockRef.current?.send(obj) ?? false, []);
 
@@ -125,7 +171,13 @@ export default function Live() {
     if (ending) return false;
     setEnding(true);
     try {
+      micGeneration.current++;
       if (micRef.current) await micRef.current.stop();
+      micRef.current = null;
+      setMic(null);
+      // Clear the ephemeral board buffer at end, alongside LiveCapture's own stop/unmount cleanup.
+      void backendFetch(`/api/sessions/${sessionId}/board`, { method: "DELETE", keepalive: true }).catch(() => {});
+
       await api.endSession(sessionId);
       leaving.current = true;
       return true;
@@ -166,18 +218,30 @@ export default function Live() {
   }, [state.ended, ending, nav, sessionId]);
 
   const startMic = useCallback(async () => {
+    if (micRef.current) return;
+    setMicStarting(true);
+    const run = ++micGeneration.current;
     setMicError(null);
     try {
       const sock = sockRef.current;
       if (!sock) return;
       const m = await startMicStream(sock);
+      if (run !== micGeneration.current) {
+        await m.stop();
+        return;
+      }
+      micRef.current = m;
       setMic(m);
     } catch (e) {
       setMicError(micMessage(e));
+    } finally {
+      setMicStarting(false);
     }
   }, []);
   const stopMic = async () => {
-    if (mic) await mic.stop();
+    micGeneration.current++;
+    if (micRef.current) await micRef.current.stop();
+    micRef.current = null;
     setMic(null);
   };
   // a live lecture listens by itself: the microphone starts as soon as the session is open
@@ -238,12 +302,46 @@ export default function Live() {
   const totemKeyboard = state.totem ? state.totem.kind !== "real" : true;
   const practice = (state.headset && state.headset.kind !== "real") || hello?.transcript_kind === "scripted";
 
+  const hs = state.headset;
+  const tot = state.totem;
+  const pills: ConnectionPill[] = [
+    !hs
+      ? { key: "eeg", label: "EEG", state: "pending", detail: "waiting for the session snapshot" }
+      : hs.kind !== "real" || hello?.sim.headset
+        ? { key: "eeg", label: "EEG", state: "simulated", detail: `${hs.kind} EEG (labelled in session)` }
+        : hs.connected
+          ? { key: "eeg", label: "EEG", state: "connected", detail: `real headset${hs.port ? ` · ${hs.port}` : ""}` }
+          : { key: "eeg", label: "EEG", state: "pending", detail: "headset detected, not connected yet" },
+    !tot
+      ? { key: "button", label: "Button", state: "pending", detail: "waiting for the session snapshot" }
+      : tot.kind !== "real" || hello?.sim.totem
+        ? { key: "button", label: "Button", state: "off", detail: "on-screen or keyboard button; no physical pad connected" }
+        : tot.connected
+          ? { key: "button", label: "Button", state: "connected", detail: `button device${tot.port ? ` · ${tot.port}` : ""}` }
+          : { key: "button", label: "Button", state: "pending", detail: "button detected, not connected yet" },
+    !hello
+      ? { key: "transcription", label: "Transcription", state: "pending", detail: "waiting for the session snapshot" }
+      : hello.transcript_kind === "deepgram"
+        ? mic
+          ? { key: "transcription", label: "Transcription", state: "connected", detail: `microphone streaming at ${mic.sampleRate} Hz` }
+          : { key: "transcription", label: "Transcription", state: "pending", detail: "press Start microphone to transcribe" }
+        : { key: "transcription", label: "Transcription", state: "simulated", detail: hello.transcript_kind === "recorded" ? "pre-recorded transcript (labelled)" : "scripted transcript (labelled)" },
+    capture.capturing
+      ? { key: "board", label: "Board camera", state: "connected", detail: `camera live · ${capture.frames} frames buffered` }
+      : { key: "board", label: "Board camera", state: "off", detail: "enable board capture in the whiteboard panel" },
+  ];
+  const boardPanel = board && board.status === "ready"
+    ? "ready"
+    : boardAwaiting || board?.status === "pending"
+      ? "loading"
+      : boardUnavailable
+        ? "unavailable"
+        : null;
   const controls = useMemo(
     () => (
       <>
         <button className="btn btn-primary btn-lg pad-btn" onClick={doTap} title={totemKeyboard ? "No pad connected: Space does the same" : "Same as the pad"}>
-          Catch me up <span className="kbd">space</span>
-        </button>
+          Catch me up <span className="kbd">space</span>        </button>
         {hello?.transcript_kind === "deepgram" ? (
           <div className="grp">
             {mic ? (
@@ -251,8 +349,8 @@ export default function Live() {
                 <span className="dot ok" /> Microphone on
               </button>
             ) : (
-              <button className="btn btn-blue" onClick={() => void startMic()}>
-                Turn the microphone on
+              <button className="btn btn-blue" disabled={micStarting || status !== "open"} onClick={() => void startMic()}>
+                {micStarting ? "Starting the microphone…" : "Turn the microphone on"}
               </button>
             )}
             {micError ? <span className="t-footnote error-text">{micError}</span> : null}
@@ -293,17 +391,16 @@ export default function Live() {
         </button>
       </>
     ),
-    [doTap, doForce, doSim, doCal, state.catchup, showSim, showCal, simState, calPhase, hello?.transcript_kind, mic, ending, micError, doEnd, totemKeyboard, details, startMic],
+    [doTap, doForce, doSim, doCal, state.catchup, showSim, showCal, simState, calPhase, hello?.transcript_kind, mic, micStarting, status, ending, micError, doEnd, totemKeyboard, details, startMic],
   );
 
-  const listening = status === "open" && !state.ended;
+  const listening = status === "open" && !state.ended && (hello?.transcript_kind !== "deepgram" || !!mic);
   const head = (
     <div className="stage-head">
       <div className="row">
         <span className="t-title2">{hello?.lecture?.title ?? (hello?.transcript_kind === "deepgram" ? "Live lecture" : "Lecture")}</span>
-        <span className={"pill " + (listening ? "live" : "")}>
-          <span className="dot" /> {state.ended ? "ended" : listening ? "recording" : status}
-        </span>
+        <span className={"pill " + (listening ? "is-live" : "")}>
+          <span className="dot" /> {state.ended ? "ended" : listening ? "recording" : status}        </span>
         <span className="t-subhead label-2 mono">{mmss(state.t)}</span>
         {practice ? (
           <Badge tone="warning" title={[state.headset && state.headset.kind !== "real" ? "simulated headset" : "", hello?.transcript_kind === "scripted" ? "practice transcript" : ""].filter(Boolean).join(", ")}>
@@ -354,6 +451,25 @@ export default function Live() {
     <>
       <LiveStage
         state={state}
+        capture={hello?.mode === "live" ? <>
+          <LiveCapture sessionId={sessionId} active={status === "open" && !ending && !state.ended} onStatus={setCapture} />
+          {boardPanel ? (
+            <details className="panel">
+              <summary>
+                {boardPanel === "ready" ? (boardAwaiting ? "Open board explanation — preparing the latest moment…" : "Open board explanation") : boardPanel === "loading" ? "Preparing board explanation…" : "Board explanation unavailable — transcript only"}
+              </summary>
+              {boardPanel === "loading" ? <p>Transcript recap; board explanation loading</p> : null}
+              {boardPanel === "unavailable" ? <p>Transcript only; board unavailable</p> : null}
+              {boardPanel === "ready" && board ? (
+                <>
+                  <p>{board.text}</p>
+                  <span className="small muted">{board.source === "offline" ? "Offline · board not interpreted" : "Generated from transcript and board"}</span>
+                  <div className="small muted">{board.frames.map(f => mmss(f.t)).join(", ")}</div>
+                </>
+              ) : null}
+            </details>
+          ) : null}
+        </> : undefined}
         onCatchupExpire={onExpire}
         onCatchupDismiss={onDismiss}
         onOpenChip={onOpenChip}
@@ -361,7 +477,7 @@ export default function Live() {
         cycleToken={cycleToken}
         freezeCatchup={freeze}
         controls={controls}
-        head={head}
+        head={<>{head}<ConnectionPills pills={pills} /></>}
         details={details}
       />
       {blocker.state === "blocked" ? (
@@ -382,6 +498,5 @@ export default function Live() {
           </div>
         </div>
       ) : null}
-    </>
-  );
+    </>  );
 }

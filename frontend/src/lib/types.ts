@@ -1,4 +1,4 @@
-// Shapes mirrored from the backend (reflow/core/session.py, review.py, tally.py, lossmap.py, api/routes.py).
+// Shapes mirrored from the backend (neuropace/core/session.py, review.py, tally.py, lossmap.py, api/routes.py).
 
 /** The four explanation families the preference model learns over (docs/PRODUCT.md §4). */
 export type Form = "words" | "analogy" | "visual" | "doing";
@@ -286,7 +286,10 @@ export interface SessionEndedMsg {
   blinks: number;
 }
 
+export interface BoardExplanation { type: "board_explanation"; status: "pending" | "ready"; flag_id: string; text: string; source: "pending" | "llm" | "offline"; frames: {id: string; t: number}[]; t?: number }
+
 export type ServerMsg =
+  | BoardExplanation
   | HelloMsg
   | ({ type: "words"; words: Word[]; final: boolean; t: number })
   | FocusMsg
@@ -581,10 +584,12 @@ export interface LossMap {
 }
 
 export interface Doctor {
-  keys: { deepgram: boolean; openai: boolean };
+  keys: { deepgram: boolean; openai: boolean; openrouter: boolean };
   deepgram: { ok: boolean; reason?: string; status?: number };
   tts?: { ok: boolean; model: string };
   openai: { ok: boolean; model: string; reason?: string; alternatives?: string[]; required?: boolean };
+  openrouter: { ok: boolean; model: string; reason?: string; required?: boolean };
+  llm_provider: "openai" | "openrouter";
   headset: { port: string | null; kind: string; setting: string | null; bridge?: string | null };
   totem: { port: string | null; kind: string; setting: string | null; hint?: string | null };
   serial_ports: { device: string; description: string; hwid?: string; vid?: number | null }[];

@@ -1,3 +1,4 @@
+import { libraryHref, useLibrary } from "./Library";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, errorText } from "../lib/api";
@@ -10,6 +11,7 @@ import type { Flag } from "../lib/types";
 /** One lecture: the way into restudy first, then the moments as a list (docs/PRODUCT.md §6). */
 export default function Lecture() {
   const { sessionId = "" } = useParams();
+  const library = useLibrary();
   const nav = useNavigate();
   const [data, setData] = useState<NotesResponse | null>(null);
   const [title, setTitle] = useState("Lecture");
@@ -65,7 +67,7 @@ export default function Lecture() {
         <div className="eyebrow">{new Date(data.session.started_at * 1000).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</div>
         <h1 className="t-large">{title}</h1>
         <p className="sub">
-          {running ? "This lecture is still going." : total === 0 ? "You stayed with it the whole way. Nothing to restudy." : closed === total ? `All ${total} moments landed. Restudy again any time.` : `${total - closed} of ${total} moment${total === 1 ? "" : "s"} still to restudy.`}
+          {running ? "This lecture is still going." : total === 0 ? "No moments saved for review." : closed === total ? `All ${total} moments landed. Restudy again any time.` : `${total - closed} of ${total} moment${total === 1 ? "" : "s"} still to restudy.`}
         </p>
       </header>
 
@@ -80,10 +82,9 @@ export default function Lecture() {
         </div>
       ) : total > 0 ? (
         <div className="start">
-          <button className="btn btn-primary btn-lg btn-block" onClick={() => nav(`/restudy/${sessionId}?mode=tutor`)} disabled={failed.length > 0}>
-            {closed === total ? "Private tutoring, again" : "Private tutoring"}
-          </button>
-          <button className="btn btn-blue btn-block" onClick={() => nav(`/restudy/${sessionId}?mode=manual`)} disabled={failed.length > 0}>
+          <button className="btn btn-primary btn-lg btn-block" onClick={() => nav((library ? libraryHref(sessionId, "review") : `/restudy/${sessionId}`) + "?mode=tutor")} disabled={failed.length > 0}>
+            {closed === total ? "Private tutoring, again" : "Private tutoring"}          </button>
+          <button className="btn btn-blue btn-block" onClick={() => nav((library ? libraryHref(sessionId, "review") : `/restudy/${sessionId}`) + "?mode=manual")} disabled={failed.length > 0}>
             Review on my own
           </button>
           <div className="start-note">{failed.length ? "Some notes aren't written yet." : "Tutoring explains each moment your way (and can read it aloud), then asks. On your own, the question comes first and an explanation only if you miss."}</div>

@@ -1,11 +1,14 @@
-# REFLOW — plan
+# NEUROSPACE — plan
 **HackMIT 2026 · Education · NeuroSky MindWave Mobile 2 + Arduino UNO R4 · Sat 19 Sep 2026**
 
 This file consolidates every planning document written for this project into one place. It
-replaces `REFLOW HackMIT2026 Education Plan.md` and `REFLOW-2.md` as the thing to read; both are
+replaces `NEUROPACE HackMIT2026 Education Plan.md` and `NEUROPACE-2.md` as the thing to read; both are
 kept in git history, not deleted, since they're the dated record of how the idea got here.
 
 ## 0. How this plan evolved, and what to read
+
+**Current product name: Neurospace.** NeuroPace is the historical name used in earlier parts
+and internal package/command identifiers. The app and hosted deployment use Neurospace.
 
 The idea went through three passes, each written as a fresh, honest evaluation of the one before
 it rather than a patch. Read them in order if you want the reasoning; read the Quick reference
@@ -31,12 +34,34 @@ below if you just want where things stand right now.
   a third trigger that doesn't depend on the student's state at all, plus privacy and framing
   changes that follow directly from the self-advocacy and stigma literature.
 
+**19 Sep revision, requested product direction:** Part II now includes a dedicated Arduino
+physical "I'm stuck" button, EEG timing, and a teacher/whiteboard-facing webcam with microphone.
+Timestamped board images and the teacher's audio transcript supply context for a multimodal LLM
+explanation when the learner presses the button. This restores the camera as **lesson content
+capture**, not learner face/gaze analysis. See II.2.1 and II.4. A bounded camera-buffer and multimodal-request prototype now exists, but live capture and
+model grounding still require end-to-end verification. It is not a verified classroom system. The workspace extension is recorded in `docs/PRD.md` and `docs/TDD.md`; earlier frozen
+requirements remain the baseline wherever the addendum does not override them.
+
+**Hardware correction and workspace revision, 19 Sep:** The user has an **Arduino UNO Q 4 GB**
+and **NeuroSky MindWave Mobile 2 Brainwave Starter Kit**. The physical button is not built yet;
+a large 3D-printed press surface will actuate a momentary switch. The earlier UNO R4 descriptions
+remain historical. The current target connects the headset to the Q's Linux Bluetooth stack,
+reads the switch on its MCU, and relays both to the laptop over BLE. A prototype is in
+`firmware/uno_q_relay/`; board compilation, pairing, throughput, and physical wiring remain
+unverified. Direct laptop EEG remains an explicit fallback, not the target architecture.
+
+The app now separates a learner-owned review dashboard from `/session/new` and the live session
+window. The dashboard prioritizes saved concepts, optionally summarizes/reorders them with the
+configured LLM, lists recent sessions on the side, and accepts pasted or uploaded PDF/TXT/Markdown
+syllabi. Learners review extracted topics before saving; curriculum completion is self-reported,
+separate from concepts cleared by check questions. No teacher view is added.
+
 **Current authoritative direction:** Part II's architecture (lecture capture → gap notes →
 adaptive review) with Part III's additions layered on top (content-based risk flagging as a third
 trigger, private output routing, configurable accommodation profile, "available to everyone"
 framing). Part I remains the reference for anything Part II/III don't redefine: the EEG signal
 chain, the existing `mindwave/` codebase, Arduino board specifics, and the general honesty/demo
-discipline (undo on every reflow, label simulated states, never fake a sensor).
+discipline (undo on every neuropace, label simulated states, never fake a sensor).
 
 **Tags**, carried across all three parts: **[V#]** = a source that was opened (numbering restarts
 in each part — see that part's own Sources subsection). **[RUN]** = a simulation or script that
@@ -49,8 +74,10 @@ confirm before relying on it. **[!]** = a claim that was checked and turned out 
 ## Quick reference
 
 **Pitch, right now:** A study tool any student in the room could opt into. In a lecture, a
-headset, a discreet pad tap, and the transcript itself flag the moments you lost the thread —
-including the ones you didn't notice. Afterward you get notes for exactly those gaps, and a review
+headset, a dedicated Arduino button, and the transcript itself flag the moments you lost the thread —
+including the ones you didn't notice. Press the button for a private explanation grounded in
+what the teacher just said and drew: a webcam captures the whiteboard and its microphone captures
+the teacher's voice for transcription. Afterward you get notes for exactly those gaps, and a review
 pass that re-teaches each one in a different form — worked example, analogy, diagram — until a
 check question says it landed. It learns which form rescues you, keeps that as your playbook, and
 never shows anyone else that you struggled.
@@ -58,11 +85,14 @@ never shows anyone else that you struggled.
 **What's different from Part I's original pitch:** no claim about detecting a "learning style";
 the sensor's job is timing (*when* you were lost), not diagnosis (*why*, or what to teach you
 instead) — a check question does the diagnosis. No live mid-sentence dissolve; the dissolve
-mechanic survives, moved into the review phase. No camera as a third witness — EEG + pad tap +
+mechanic survives, moved into the review phase. The camera captures lesson content, not learner
+state. Trigger sources remain EEG + physical button +
 (Part III addition) transcript-based risk flagging.
 
 **Immediate build priorities (Part II §8 + Part III §6 merged):**
-1. Pad tap → transcript span → gap note → check question (Part II Stage A).
+1. Dedicated Arduino button → timestamped transcript + whiteboard context → private catch-up,
+   gap note, and check question (Part II Stage A and II.2.1). Start with the working transcript-only
+   path, then add synchronized board frames and multimodal generation with explicit fallbacks.
 2. Focus index (EEG) as a second flag source (Part II Stage B).
 3. **Content-based risk flagging** on the transcript — vocabulary density, sentence complexity,
    rate vs. baseline — as a third, state-independent flag source (Part III, promoted to Tier 1: cheap,
@@ -80,7 +110,7 @@ flagging as the two witnesses, label EEG experimental, say so out loud (Part I �
 
 # Part I — original build plan
 
-### Responsive design for cognition. The lesson reflows the moment you lose the thread.
+### Responsive design for cognition. The lesson neuropaces the moment you lose the thread.
 **NeuroSky MindWave Mobile 2 + webcam + Arduino UNO R4**
 
 A **real-time teaching assistant**. It watches you learn and changes the material *while you are
@@ -94,16 +124,16 @@ reading it*. It is not a post-session quiz, and it is not a chatbot.
 
 ## I.1. The pitch (superseded by Part II/III — kept for the underlying reasoning)
 
-**One line.** Responsive design for your brain: the lesson reflows the moment you lose the thread.
+**One line.** Responsive design for your brain: the lesson neuropaces the moment you lose the thread.
 
-**Thirty seconds.** Responsive web design reflows a page to fit the screen. Reflow reflows a
+**Thirty seconds.** Responsive web design neuropaces a page to fit the screen. NeuroPace neuropaces a
 *lesson* to fit your mind, live. A ten-second EEG headset, your webcam and your own behavior act
 as three witnesses. When two agree you are overloaded, the paragraph you are stuck on dissolves
 into an animated diagram built from the same content. When two agree you have checked out, the
 text asks you to predict the next step or turns into a simulation. It learns which fix works for
-you and hands you that playbook. Point the camera at a textbook and it reflows that too.
+you and hands you that playbook. Point the camera at a textbook and it neuropaces that too.
 
-**Not an AI tutor.** An AI tutor generates explanations and waits for you to ask. Reflow has no
+**Not an AI tutor.** An AI tutor generates explanations and waits for you to ask. NeuroPace has no
 prompt box. It is a rendering layer that sits under any content and changes its *form* from a
 closed loop with your brain, face and behavior.
 
@@ -132,7 +162,7 @@ Their own §6.2 limitations are our roadmap. Put these on the slide:
   burden of reading"
 - "there is no fixed rule set that defines how different values should influence the response"
 
-| | NeuroChat (MIT, 2025) | **Reflow (Part I design)** |
+| | NeuroChat (MIT, 2025) | **NeuroPace (Part I design)** |
 |---|---|---|
 | When it acts | At your next message. Nothing changes while you read | **Mid-paragraph**, on the unit you are stuck on right now |
 | State | One axis, engagement (admitted to confound overload with interest) | **Two axes: overload × engagement**, different fixes for each |
@@ -142,11 +172,11 @@ Their own §6.2 limitations are our roadmap. Put these on the slide:
 | Learning signal | Quiz after 20 min; no gain | **Time-to-recover and checkpoint correctness on every intervention** |
 | Content | Chat answers the bot wrote | **Any content:** paste, PDF, a textbook page held to the camera |
 | Calibration | Two-point, 4 min | Three anchors, 60 s (same idea, faster; **do not claim novelty here**) |
-| Data | Client-side, no ownership story | **Learner-only; no teacher dashboard; undo on every reflow** |
+| Data | Client-side, no ownership story | **Learner-only; no teacher dashboard; undo on every neuropace** |
 
 Say it in the first twenty seconds: "NeuroChat proved an LLM tutor can respond to EEG engagement.
 It also found that engagement alone did not improve learning, could not tell overload from
-interest, and never changed anything while you were reading. Reflow starts where their limitations
+interest, and never changed anything while you were reading. NeuroPace starts where their limitations
 section ends."
 
 ## I.3. "The EEG is bad and only detects binary focus" — half true, and it matters which half
@@ -271,7 +301,7 @@ returns to FLOW within 45 s **and** the checkpoint is correct. After a session: 
 diagram fixed it in 9 s (3/3). Disengaged → prediction prompt (2/2). Breaks didn't help you." The
 learner owns it and can hand it to a teacher on their own terms.
 
-**Undo on every reflow.** A "back to text" chip, always visible. This is both a usability answer
+**Undo on every neuropace.** A "back to text" chip, always visible. This is both a usability answer
 and the surveillance answer. This rule carries through unchanged into Part II and III.
 
 ## I.7. The dissolve → diagram pipeline (the wow, made reliable)
@@ -290,12 +320,12 @@ Mermaid plus CSS animation is the 30-minute fallback renderer.
 
 **Camera as input (cheap, high impact; dropped from Part II's scope).** A "scan" button grabs a
 webcam frame, sends it to a vision model, returns units of text. The textbook page becomes a
-reflowable lesson. Cache one pre-shot page in case the table lighting is bad.
+neuropaceable lesson. Cache one pre-shot page in case the table lighting is bad.
 
 ## I.8. The Arduino UNO R4
 
 The board arrived by accident instead of the UNO Q. It still earns a place, but a small one: **it
-owns the inputs and indicators that should not live in the UI being reflowed.**
+owns the inputs and indicators that should not live in the UI being neuropaceed.**
 - **"I'm lost" button.** A physical press is a manual intervention request *and* the ground-truth
   label that trains the bandit and validates the detector. This is load-bearing.
 - **Fit meter.** Seat the headset by watching LEDs fill, instead of squinting at a number on
@@ -330,10 +360,10 @@ outgoing SPP port is not always COM3.
 
 ## I.9. The measurement, and the trap in it
 
-**The trap, and it is a big one.** Szafir & Mutlu ran the closest published study to Reflow: a
+**The trap, and it is a big one.** Szafir & Mutlu ran the closest published study to NeuroPace: a
 NeuroSky at FP1, engagement index, an agent that cued attention in real time. Adaptive cues beat
 the no-cue baseline (p = .022) but **did not beat random-timed cues (p = .118)** [V3]. So a demo
-that compares "Reflow on" against "plain text" proves only that interventions help. It proves
+that compares "NeuroPace on" against "plain text" proves only that interventions help. It proves
 nothing about the sensor, which is the entire claim.
 
 **Therefore every measurement needs a yoked random-timing control**: the same number of the same
@@ -342,9 +372,9 @@ config flag and it is the difference between a defensible result and a press rel
 
 | Number | Question | Tool |
 |---|---|---|
-| **Detector vs probes** | Does the state flag agree with self-report better than always guessing the majority? Per wearer | `reflow_eval.py detector` |
-| **Recovery** | After a sensor-timed reflow, does state return to FLOW faster than after a yoked random-timed one? | `reflow_eval.py outcome` |
-| **Comprehension** (stretch) | Checkpoint correctness, sensor-timed vs yoked | `reflow_eval.py outcome` |
+| **Detector vs probes** | Does the state flag agree with self-report better than always guessing the majority? Per wearer | `neuropace_eval.py detector` |
+| **Recovery** | After a sensor-timed neuropace, does state return to FLOW faster than after a yoked random-timed one? | `neuropace_eval.py outcome` |
+| **Comprehension** (stretch) | Checkpoint correctness, sensor-timed vs yoked | `neuropace_eval.py outcome` |
 
 Recovery is the cheap one and it is within-subject, so it needs no quiz bank and no separate
 session. Collect it from anyone who wears the headset for ten minutes.
@@ -363,14 +393,14 @@ A naive "use it if |d| ≥ 0.5" is unsafe at these label counts. Reproduced inde
 | 12 v 12 | 24% |
 | 20 v 20 | 12% |
 
-Reflow's rule: |d| ≥ 0.5 **and** permutation p ≤ .10, sign learned per wearer. At 12 v 8 windows it
-passed noise 10.7% of the time and passed a true d ≈ 1.14 effect [RUN]. `reflow_eval.py gate`.
+NeuroPace's rule: |d| ≥ 0.5 **and** permutation p ≤ .10, sign learned per wearer. At 12 v 8 windows it
+passed noise 10.7% of the time and passed a true d ≈ 1.14 effect [RUN]. `neuropace_eval.py gate`.
 
 **Judge answer to "how accurate?"** "Published detectors for this get about 0.65 AUC. Ours on this
 wearer: here is the confusion matrix against 20 thought probes. That is exactly why two witnesses
 have to agree before anything moves on your screen."
 
-## I.10. `reflow_eval.py` — verified [RUN]
+## I.10. `neuropace_eval.py` — verified [RUN]
 
 Committed at the repo root and still the evaluation toolkit for Part II and III, unchanged.
 `selftest` exits 0 and every number reproduces:
@@ -398,7 +428,7 @@ honesty claim credible on stage.
 ## I.11. Demo (90 s) — superseded by Part II §7's ~3 min script; kept for the original beats
 
 1. (0–10) Headset on in ten seconds, fit meter fills on the totem, quality chip green. "This is
-   Reflow. Responsive design for your brain. Three witnesses: brain, face, hands."
+   NeuroPace. Responsive design for your brain. Three witnesses: brain, face, hands."
 2. (10–40) Calibration: eyes closed, the alpha bar jumps, *that is your own alpha*. Then 20 s easy,
    20 s hard. Chip: *calibrated to you*.
 3. (40–60) Dense Bayes paragraph. Brow furrows, scroll stalls, L rises. **The paragraph dissolves
@@ -414,6 +444,11 @@ simulated states, never fake a sensor) carries through unchanged into Part II an
 
 ## I.12. Build schedule (hours from start) — superseded by Part II §8's stage table; kept as the detailed hour-by-hour reference
 
+The original hour ranges predate A+ and are retained as the earlier baseline, not a promise
+that the camera extension fits for free. A+ is part of the requested product direction; first
+validate capture quality and end-to-end latency, then revise the schedule. Transcript-only mode
+remains a labelled fallback, not completion of the whiteboard feature.
+
 Roles: **S** signal and brain · **C** content engine and diagram · **U** reader UI, state, bandit ·
 **H** camera, Arduino, study, pitch.
 
@@ -421,8 +456,8 @@ Roles: **S** signal and brain · **C** content engine and diagram · **U** reade
 |---|---|---|---|---|
 | 0–1 | Pair headset, `run_pipeline.py` on a real forehead. **Gate: real blinks counted.** Confirm COM port | LLM → scene-graph JSON on one paragraph | Repo; reader renders from `--fake` feed (works today) | **Identify WiFi vs Minima. Ask organizers the I.13 questions.** Face Landmarker printing brow/gaze/pose |
 | 1–4 | The brain: hysteresis, dwell, three-witness fusion on top of `FeatureFrame` | dagre layout + anime.js timeline; the dissolve | Lesson reader with units; state chip; **undo** | Totem sketch: fit meter, button, **pushbutton backup wired**; camera feature EMAs |
-| 4–8 | Probe runner; `reflow_eval.py gate` on real labels; tune thresholds on 5 strangers | Chunk, worked-example, simulation, voice transformations; cache 3 topics | Bandit + playbook; checkpoints | Webcam scan → vision model → units; **yoked random-timing control flag** |
-| 8–12 | **Integration: live state drives reflows end to end.** Freeze features at 12 | | | |
+| 4–8 | Probe runner; `neuropace_eval.py gate` on real labels; tune thresholds on 5 strangers | Chunk, worked-example, simulation, voice transformations; cache 3 topics | Bandit + playbook; checkpoints | Webcam scan → vision model → units; **yoked random-timing control flag** |
+| 8–12 | **Integration: live state drives neuropaces end to end.** Freeze features at 12 | | | |
 | 12–16 | Recovery numbers from I.9 on 8–12 hackers | Live generation for arbitrary text | Session card, onboarding, polish | Shoot the video; novelty slide; submission text |
 | 16–20 | Bug bash on recorded sessions; verify every fallback | | | Table setup: lighting, camera angle, monitor |
 | 20–24 | No new features. Rehearse 10× with each teammate as judge. Fresh AAA. Sleep in shifts | | | |
@@ -448,7 +483,7 @@ disclose it either way. Keep visible commit history and disclose AI assistance.
 | LLM latency or bad JSON | Cached topics; the dissolve masks 3–6 s; retry once; Mermaid fallback |
 | Camera lighting at the table | Ring light; face thresholds recalibrate per person during the 60 s (only relevant if camera is revived, see Appendix A) |
 | "Isn't this NeuroChat?" | I.2, said first, with their limitations quoted |
-| "Classroom brain surveillance" | Learner-only, local, no teacher view, undo on every reflow. Say it unprompted |
+| "Classroom brain surveillance" | Learner-only, local, no teacher view, undo on every neuropace. Say it unprompted |
 | We prove only that interventions help | The yoked random-timing control in I.9. Non-negotiable |
 
 **Open, resolve at hour 0:** (1) pre-existing and AI-written code policy → organizers; (2) which R4
@@ -468,7 +503,7 @@ Reviewing all 24 in `tracks.md`:
 | **The Token Company** | **back on, add** | This answer flipped. With no hour-long transcription, the LLM *is* the main cost, and the architecture is already the saving: the state machine runs locally, the model fires only on a trigger, only the stuck unit is sent rather than the document, and demo topics are cached. That is a clean, creative cost story worth a paragraph |
 | **ElevenLabs** | add if the voice rung ships | "Explain it back" aloud, with the agent probing and scoring, is retrieval practice [V11] and genuine agentic depth, not text-to-speech. Their brief explicitly deprioritises plain TTS, so only enter if this rung is real |
 | **Ramp** ("save time and money") | add, zero-work | "Build anything that saves people time and money." Fewer re-reads per hour of study. Same video |
-| **Dropbox** | stretch | Their brief literally lists "transform class materials into a personalized tutor". A PDF drop that becomes a reflowable lesson is a modest addition to the scan feature already planned. Only if hours 12–16 are calm |
+| **Dropbox** | stretch | Their brief literally lists "transform class materials into a personalized tutor". A PDF drop that becomes a neuropaceable lesson is a modest addition to the scan feature already planned. Only if hours 12–16 are calm |
 
 **Out:** Arduino (the HackMIT challenge is for the **UNO Q** [V8]; an R4 arrived, so not eligible,
 and the board stays because the product needs it). Deepgram (the lecture-transcription use left
@@ -523,9 +558,9 @@ learning style" at MIT invites the word *neuromyth*.
 explanation formats 34–45% of the time (chance 25%); quiz answers reach 94% in 150 cards, and
 adding EEG to them makes it worse [RUN].
 
-**The version that survives both:** Reflow does not assume you have a style. In review, each gap is
+**The version that survives both:** NeuroPace does not assume you have a style. In review, each gap is
 taught in one form; if your focus drops or you miss the check question, the next card re-teaches it
-in a different form. Reflow keeps a **per-learner tally of which form rescued which misses, scored
+in a different form. NeuroPace keeps a **per-learner tally of which form rescued which misses, scored
 by quiz answers only.** If you truly have a preference (75% vs 55%), the tally finds it with 77%
 probability after 60 cards and 94% after 150; if you have none, it costs nothing (success rate
 0.601 vs 0.60) [RUN]. At ~10 gaps a lecture that is a few weeks of real use. Pitch line: *"We don't
@@ -547,12 +582,14 @@ at every stage.
 ## II.2. The product
 
 1. **In the lecture.** Headset on, totem on the desk, laptop ignored. Deepgram transcribes with
-   word timestamps. Focus drops (relative to your own first 3 minutes) and heart-pad taps mark
-   spans, with an 8 s lead-in. The totem lights a dot; nothing else happens. **Changed by Part III:
-   route this output to a private surface instead of a visible totem light — see Part III §2.**
+   word timestamps; a teacher/board-facing webcam supplies timestamped whiteboard frames.
+   Focus drops (relative to your own first 3 minutes) and dedicated Arduino button presses mark
+   spans, with an 8 s lead-in. A button press requests a private explanation using the matching
+   transcript and board images (II.2.1). EEG flags offer an optional catch-up; they do not claim
+   to diagnose confusion. Keep output private as required by Part III §2.
 2. **Gap notes.** When the lecture ends you get notes for your flagged spans only: what was said,
-   the key term, how it connects to the part you did hear. Grounded in the transcript, not
-   invented.
+   the key term, how it connects to the part you did hear. Grounded in the transcript and available timestamped board images, with source references.
+   Missing or unreadable board content is disclosed, not invented.
 3. **Adaptive review.** One card per gap, check question first. Miss it, or lose focus on the card
    → the same idea re-taught in another form: worked example → analogy → animated diagram. The
    text-to-diagram "dissolve" (Part I §7) lives here. Stop after three straight hits.
@@ -563,8 +600,62 @@ at every stage.
 
 **Prior art, said first:** NeuroChat restyles every reply and found no learning gain [V5]; ARTFul
 picks topics to re-show from pre-authored content [V10]; Wang et al. detect confusing clips
-offline [V14]; AXIS picks explanations from ratings, no sensing [V17]. Reflow: passive lapse
+offline [V14]; AXIS picks explanations from ratings, no sensing [V17]. NeuroPace: passive lapse
 capture in live lectures → generated gap notes → re-teaching verified by recall.
+
+### II.2.1. Button-triggered explanations from voice and whiteboard (prototype)
+
+**Input and ownership.** The current target is Arduino UNO Q 4 GB. Its MCU reads the button,
+and its Linux side runs the unchanged MindWave pipeline from a Bluetooth-paired headset and
+relays feature frames and button events over BLE. The laptop captures webcam frames and
+microphone audio. The prototype and bring-up gates are documented in `firmware/uno_q_relay/README.md`.
+Direct laptop EEG and the older USB totem remain explicit fallback routes. The camera faces the teaching area, not the learner. A webcam's
+built-in microphone can capture the teacher's voice; use a separate microphone if speech is not
+clear enough. Audio transcription and image capture are separate streams synchronized to one
+session clock. The Arduino does not process audio, images, or LLM requests.
+
+**On a press:**
+
+1. Debounce the physical switch and send one event per press with an event ID. Acknowledge the
+   press immediately in the learner's private UI and save its session timestamp. Preserve the
+   existing `tap` event semantics so manual flags still feed notes, replay, and evaluation.
+2. Select the relevant transcript span and board frames from a rolling buffer. Retain the
+   existing 8-second flag lead-in; use a wider preceding context window for explanation, initially
+   60 seconds, so "this arrow" or "the second term" can refer to an earlier drawing. If an EEG
+   span already exists, associate the request with that span rather than creating duplicate gaps.
+3. Send the transcript plus a small set of timestamped board images to a multimodal LLM. Include
+   the latest readable frame at or before the press and earlier changed frames, so an erased
+   equation can still be referenced. Never use future lecture content for a live explanation.
+4. Return a short explanation of the selected passage, connecting spoken references to visible
+   equations, labels, and arrows. Attach transcript timestamps and image IDs. Distinguish what
+   the teacher said or drew from an added worked example; do not infer illegible symbols as fact.
+5. Show a quiet, static catch-up on the learner's screen. Make the fuller explanation and board
+   excerpt available on demand and in gap notes. A later check question decides whether the
+   explanation helped; neither EEG nor the button establishes correctness or a learning style.
+
+**Latency and failures.** A press saves the moment immediately, without waiting for generation.
+Use an available cached transcript recap while the multimodal explanation is pending, labelled
+"Transcript recap; board explanation loading". Do not replace text mid-reading: offer the completed
+explanation for the learner to open. If camera access is denied, the board is obscured, or image
+processing fails, say "Transcript only; board unavailable". If transcription is incomplete,
+identify that limitation too. On model failure, preserve the saved moment and the existing labelled
+offline recap. Do not promise sub-second fresh multimodal generation.
+
+**Initial engineering assumptions, not measured claims.** Try one board frame every 2 seconds,
+a 90-second local rolling image buffer, and at most 4 distinct frames per request. These are tuning
+starting points, not requirements supported by a run. Keep stable frame IDs, capture timestamps,
+transcript word timestamps, source availability, and generation provenance on each request. Bound
+image size, queue length, and request frequency; coalesce repeated presses without losing saved
+moments. Check whiteboard readability at the actual distance before committing to this camera.
+
+**Verification gate.** Use synthetic lesson content recorded by consenting adult teammates. Cover
+an equation referenced as "this term", an erased diagram, an obscured board, microphone/camera
+denial, slow or failed generation, repeated presses, and a press overlapping an EEG flag. Verify
+frame/transcript alignment and source citations, and measure press acknowledgement and explanation
+latency separately. Compare transcript-only versus transcript-plus-board explanations on questions
+that require the drawing. Treat this as a separate content-grounding evaluation; any outcome claim
+about sensor timing must still use the yoked random-timing control from Part I §9. No new accuracy
+or learning-benefit claim is [RUN] until a reproducing script has actually been executed.
 
 ## II.3. Signal engine
 
@@ -587,12 +678,19 @@ This reuses the exact feature math already built in `mindwave/features.py` (Part
 to implement here beyond the 15 s windowing against a per-learner 3-minute baseline instead of a
 calibration task.
 
-## II.4. The totem (UNO R4)
+## II.4. Physical input hub (UNO Q 4 GB; earlier UNO R4 route retained)
 
-Touch-capable pin → jumper → foil pad = "lost me" (official `Arduino_CapacitiveTouch` [U]). WiFi
-model's LED matrix: fit meter, one dot per saved span. Not entering Arduino's challenge (requires
-UNO Q [V8]). **Changed by Part III:** the "one dot per saved span" output is visible to anyone near
-the desk — Part III §2 replaces it with a private surface for the inclusion-classroom use case.
+The primary manual input is a **dedicated momentary pushbutton labelled "I'm stuck"**, connected
+to an appropriate UNO Q MCU digital input and ground with a pull-up configuration. Confirm the exact
+board and wiring before implementation. Firmware debounces the switch and emits one button count increment per press; the Q Linux relay forwards each increment as a BLE
+`tap` event to the laptop. A capacitive foil/heart pad is an optional alternative, not a
+required part. Both request the same catch-up and save the same kind of flagged moment.
+
+The target pairs the headset to the UNO Q Linux side and runs the existing MindWave pipeline
+there. The current direct-laptop connection is retained for bring-up and fallback. The webcam and microphone also connect to the laptop. Hardware failure must not stop
+capture: retain the on-screen/keyboard input, explicitly labelled simulated, and label simulated
+EEG separately. Default acknowledgement and catch-up output are private; do not expose learner
+struggles through desk LEDs. The original board/sponsor discussion remains in Part I §8.
 
 ## II.5. Tracks
 
@@ -609,7 +707,7 @@ notes, adaptive review, final quiz.
 
 | Number | Claim it tests | Tool / power |
 |---|---|---|
-| Recall on flagged vs unflagged spans, before review | The flags mean something | `reflow_eval.py outcome`; n=10 gives ~72% power for a 25-point gap, n=6 only 22% [RUN] |
+| Recall on flagged vs unflagged spans, before review | The flags mean something | `neuropace_eval.py outcome`; n=10 gives ~72% power for a 25-point gap, n=6 only 22% [RUN] |
 | Does the pooled loss map rank segment 3 first? | The crowd signal finds bad teaching; ground truth known | `lossmap_sim.py` for expectations |
 | Rescues per form in review | Descriptive only at this n; say so | tally panel |
 
@@ -619,7 +717,10 @@ every number with its interval, including nulls.
 ## II.7. Demo (~3 min; format is an open question) — current
 
 1. (0–20 s) Pitch. Name NeuroChat. "We don't believe in learning styles; we test it on you."
-2. (20–70 s) Replay of a real session at 4×: transcript, focus trace, flags, pad taps.
+2. (20–70 s) Show a consenting teammate teaching a synthetic lesson with a whiteboard. Press the
+   real Arduino button; show the saved moment, matching board image and transcript, and the
+   private explanation. Show EEG as the independent passive timing source. Use a labelled replay
+   if live classroom capture is unavailable; never present prerecorded generation as live.
 3. (70–130 s) That learner's gap notes, then live review: judge answers a card, misses or taps the
    pad → dissolve into the diagram form → hit.
 4. (130–170 s) Loss map from your study with the planted segment revealed; the flagged-vs-unflagged
@@ -632,11 +733,17 @@ Say "simulated" aloud if a forced trigger is ever used.
 
 | Stage | Hrs | Deliverable |
 |---|---|---|
-| A | 0–4 | Pad tap → transcript span → gap note → check question. **Gate at hr 1: real blinks on a real forehead** |
+| A | 0–4 | Dedicated Arduino button → transcript span → gap note → check question. **Gate at hr 1: real blinks on a real forehead** |
+| A+ | Re-estimate before build | Webcam + microphone capture → synchronized board frames/transcript → button-triggered multimodal explanation; source references, private display, explicit fallbacks |
 | B | 4–6 | Focus index as a second flag source; live trace |
 | C | 6–8 | Review player: miss or drop → re-teach in next form; dissolve; tally |
 | D | 8–12 | Study (II.6) + loss map. **Freeze at 12** |
 | — | 12–end | Replay recording, slides, rehearsal, fresh AAA, sleep in shifts |
+
+The original hour ranges predate A+ and are retained as the earlier baseline, not a promise
+that the camera extension fits for free. A+ is part of the requested product direction; first
+validate capture quality and end-to-end latency, then revise the schedule. Transcript-only mode
+remains a labelled fallback, not completion of the whiteboard feature.
 
 Roles: **S** signal · **A** Deepgram + LLM · **U** UI · **H** totem, lecture recording with planted
 flaw, recruiting.
@@ -653,9 +760,10 @@ or a later dashboard pass (Tier 2).
 
 ## II.9. Verified vs open
 
-**Ran today:** `bandit_sim.py`, `lossmap_sim.py`, `reflow_eval.py selftest`, per-learner tally null
+**Ran today:** `bandit_sim.py`, `lossmap_sim.py`, `neuropace_eval.py selftest`, per-learner tally null
 check.
-**Open:** HackMIT code rule; judging format; real-forehead performance; Deepgram/OpenAI challenge
+**Open:** whiteboard capture readability, audio quality, multimodal grounding, latency/cost,
+retention controls, and synchronization (II.2.1, all unverified); HackMIT code rule; judging format; real-forehead performance; Deepgram/OpenAI challenge
 requirements; fused-signal AUC 0.76 and the 60–90% "bad segment loses learners" range are
 ASSUMPTIONS; simulations assume independent noise across learners; everything tagged [U].
 
@@ -777,7 +885,7 @@ decision, not just a hardware one. The same research that explains why visible A
 also points at the fix: when a tool is something any student could plausibly be using — the way
 headphones now double as an assistive-listening device without anyone assuming the wearer has a
 diagnosis — the stigma drops, because nobody nearby can tell who's using it for what [V24]. Pitching
-Reflow as "the device for kids with learning disabilities" recreates exactly the visibility problem
+NeuroPace as "the device for kids with learning disabilities" recreates exactly the visibility problem
 you're trying to solve. Pitching it as a study tool any student in the room could opt into, with
 accommodation profiles underneath for students who need them, gets you the same accessibility
 benefit without singling anyone out. This is a five-minute framing change for the pitch, not a build
@@ -820,6 +928,20 @@ after a general-purpose note-taking product already exists. For the hackathon: k
 synthetic or from consenting adult teammates, and say in the pitch that you know this is the next
 real engineering item, not an afterthought.
 
+**Camera/audio extension, planned product requirements.** Before capture, explain which camera
+and microphone are active, what is saved, and whether selected transcript/images will be sent to
+an external model provider. Obtain agreement from the teacher and any recorded participants for
+the demo. Frame/crop to the board, avoid audience faces, and show a persistent recording indicator
+with pause/stop controls. Do not perform face recognition, gaze tracking, or learner emotion
+inference. These are product requirements, not a statement of legal compliance.
+
+Keep the rolling image buffer local and ephemeral; discard unselected frames as they age out.
+Save only the selected board excerpts and transcript spans needed for learner-owned notes, with
+an explicit session retention setting and delete action. Do not retain raw audio by default after
+transcription. Document external-provider retention before enabling upload; do not imply local
+processing when sending content off-device. Demo lessons remain synthetic. Classroom deployment,
+especially with minors, requires a separately scoped consent and access-control implementation.
+
 ## III.6. Build order — what this adds to Part II's stages
 
 | Tier | Addition | Why here |
@@ -840,12 +962,14 @@ real engineering item, not an afterthought.
 
 ## Appendix A: ideas explored and set aside (not disproven — kept in case they're worth reviving)
 
-- **Real-time, mid-sentence reflow while reading** (Part I's core mechanic). Set aside in Part II
+- **Real-time, mid-sentence neuropace while reading** (Part I's core mechanic). Set aside in Part II
   because a single dry electrode can't reliably tell *why* someone is stuck closely enough to pick
   an intervention live; moving the format-adaptation into a review phase, gated by a check
   question, is more defensible with the sensor actually available. Revive if the project moves
   toward a browser-reading-companion product rather than a lecture-companion product.
-- **Camera as a third witness** (Part I §5, MediaPipe Face Landmarker). Dropped from Part II for
+- **Camera as a third witness** (Part I §5, MediaPipe Face Landmarker). Still excluded; the
+  restored teacher/whiteboard camera in II.2.1 supplies lesson content, not learner-state signals.
+  Originally dropped from Part II for
   build-time scope, not because the signal is bad — brow furrow and gaze-off-screen are reasonable
   overload/disengagement cues. Would restore a two-of-three fusion rule instead of Part II's
   two-source (EEG + pad) rule.

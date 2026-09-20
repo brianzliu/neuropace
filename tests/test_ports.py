@@ -12,8 +12,8 @@ from mindwave.ports import (
     normalize,
     probe_thinkgear,
 )
-from reflow.signal.simulate import SimulatedEEG
-from reflow.totem.bridge import ARDUINO_VID
+from neuropace.signal.simulate import SimulatedEEG
+from neuropace.totem.bridge import ARDUINO_VID
 
 MAC_PORTS = [
     PortInfo("/dev/cu.debug-console", "n/a", "n/a"),
@@ -98,7 +98,7 @@ def test_probe_rejects_silent_and_unopenable_ports():
 def test_totem_autodetect_uses_arduino_vid_on_windows_and_skips_bluetooth(monkeypatch):
     from serial.tools import list_ports
 
-    from reflow.totem import bridge
+    from neuropace.totem import bridge
 
     class P:
         def __init__(self, info):

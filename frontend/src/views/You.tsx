@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { activeLearnerId } from "../lib/activeLearner";
 import { api, errorText } from "../lib/api";
 import { FORM_ICON, FORM_LABEL, FORMS, type Profile } from "../lib/types";
 import { Badge } from "../components/Badges";
@@ -8,7 +9,14 @@ export default function You() {
   const [p, setP] = useState<Profile | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
-  const load = () => api.profile().then(setP).catch((e) => setErr(errorText(e)));
+  const [learnerId, setLearnerId] = useState<string>();
+  const load = async () => {
+    try {
+      const id = await activeLearnerId();
+      setLearnerId(id);
+      setP(await api.profile(id));
+    } catch (e) { setErr(errorText(e)); }
+  };
   useEffect(() => {
     void load();
   }, []);
@@ -22,7 +30,7 @@ export default function You() {
     <div className="page narrow">
       <header className="hero">
         <h1 className="t-large">You</h1>
-        <p className="sub">Reflow does not assume a learning style. It tests explanations on you and keeps what lands.</p>
+        <p className="sub">See which explanations helped during your reviews.</p>
       </header>
       <div className="stats">
         <div className="stat orange">
@@ -82,21 +90,21 @@ export default function You() {
       </section>
 
       <footer className="you-foot">
-        <span>{p.calibrated ? "Focus calibration saved from your last lecture." : "Focus calibration is learned during your next lecture."} Your data stays on this laptop.</span>
+        <span>{p.calibrated ? "Focus calibration saved from your last lecture." : "Focus calibration is learned during your next lecture."} Saved notes stay on the connected backend.</span>
         {!confirm ? (
           <button className="linklike" onClick={() => setConfirm(true)}>
-            Not you? Start fresh
+            Reset preferences
           </button>
         ) : (
           <span className="row">
-            <span className="t-footnote">Forget the preferences and calibration on this device. Lectures stay.</span>
+            <span className="t-footnote">Reset this learner’s preferences and calibration. Lectures stay.</span>
             <button
               className="btn btn-sm btn-danger"
               onClick={() => {
-                api.resetProfile().then(() => {
+                api.resetProfile(learnerId).then(() => {
                   setConfirm(false);
                   void load();
-                });
+                }).catch(e => setErr(errorText(e)));
               }}
             >
               Start fresh

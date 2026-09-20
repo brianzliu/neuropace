@@ -1,4 +1,4 @@
-"""The team's mindwave pipeline as Reflow's headset front end. No hardware: FakeSource and byte-level cross-checks."""
+"""The team's mindwave pipeline as NeuroPace's headset front end. No hardware: FakeSource and byte-level cross-checks."""
 
 from __future__ import annotations
 
@@ -10,11 +10,11 @@ import pytest
 
 from mindwave import FakeSource, Pipeline
 from mindwave.thinkgear import PacketParser, parse_payload
-from reflow.config import Settings
-from reflow.signal.features import FocusEngine
-from reflow.signal.headset import MindwaveHeadset, make_headset
-from reflow.signal.simulate import SimulatedEEG
-from reflow.signal.thinkgear import ThinkGearParser
+from neuropace.config import Settings
+from neuropace.signal.features import FocusEngine
+from neuropace.signal.headset import MindwaveHeadset, make_headset
+from neuropace.signal.simulate import SimulatedEEG
+from neuropace.signal.thinkgear import ThinkGearParser
 
 
 def test_both_thinkgear_parsers_agree_on_the_same_bytes():
@@ -44,7 +44,7 @@ def _frames(state: str, n: int, seed: int = 0):
     return out
 
 
-def test_fake_pipeline_frames_have_the_fields_reflow_uses():
+def test_fake_pipeline_frames_have_the_fields_neuropace_uses():
     frames = _frames("easy", 8)
     f = frames[-1]
     assert f.quality == 0 and f.valid and np.isfinite(f.engagement) and np.isfinite(f.effort)

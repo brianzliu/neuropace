@@ -3,7 +3,7 @@
 Creates a learner and a scripted live session, connects the WebSocket, waits for the baseline, taps, measures tap-to-catch-up
 latency, forces an EEG-style flag, ends the session, walks the review, and prints the timings. Exit code 1 on any failure.
 
-    uv run reflow serve            # in one terminal
+    uv run neuropace serve            # in one terminal
     uv run python scripts/smoke_e2e.py [--base http://127.0.0.1:8765] [--baseline 8]
 """
 

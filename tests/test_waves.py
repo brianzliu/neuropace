@@ -12,9 +12,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from mindwave import FakeSource, Pipeline
-from reflow.clock import ManualClock
-from reflow.core.session import UV_PER_RAW, SessionRuntime
-from reflow.signal.headset import MindwaveHeadset
+from neuropace.clock import ManualClock
+from neuropace.core.session import UV_PER_RAW, SessionRuntime
+from neuropace.signal.headset import MindwaveHeadset
 
 
 def _runtime(settings, db, llm, headset, drive_manually=False, tick=0.2, headset_auto=False):
@@ -138,7 +138,7 @@ async def test_stream_stall_and_recovery_are_broadcast(settings, db, llm):
 
 @pytest.mark.asyncio
 async def test_headset_that_comes_on_mid_lecture_replaces_the_simulator(settings, db, llm, monkeypatch):
-    import reflow.signal.headset as hs_mod
+    import neuropace.signal.headset as hs_mod
 
     monkeypatch.setattr(
         hs_mod, "autodetect_headset_port", lambda probe=True: "/dev/cu.MindWaveMobile-SerialPort"
@@ -240,8 +240,8 @@ def test_devices_endpoint_is_cheap_and_cached(app):
 def test_virtual_headset_is_a_real_headset_to_the_pipeline(tmp_path):
     """ThinkGear bytes over a pty: the serial reader, parser, pipeline and stream health all see a real device."""
     from mindwave import MindWaveSource
-    from reflow.signal.headset import make_headset, resolve_headset
-    from reflow.signal.virtual_headset import VirtualHeadset
+    from neuropace.signal.headset import make_headset, resolve_headset
+    from neuropace.signal.virtual_headset import VirtualHeadset
 
     ctl = tmp_path / "ctl"
     vh = VirtualHeadset(state="easy", control_path=str(ctl), seed=2)
@@ -287,7 +287,7 @@ def test_virtual_headset_is_a_real_headset_to_the_pipeline(tmp_path):
 def test_one_headset_one_lecture_over_the_api(app, monkeypatch):
     """A second lecture on the same serial port is refused while the first records; a restudy session that is
     being replaced lets go of the port within seconds instead."""
-    from reflow.signal.virtual_headset import VirtualHeadset
+    from neuropace.signal.virtual_headset import VirtualHeadset
 
     vh = VirtualHeadset(state="easy", seed=4)
     path = vh.start()

@@ -9,11 +9,11 @@ import json
 import pytest
 from pydantic import ValidationError
 
-from reflow.config import Settings
-from reflow.llm import fallback
-from reflow.llm.artifacts import build_package, package_artifact_kinds
-from reflow.llm.client import LLMClient, LLMUnavailable
-from reflow.llm.schemas import (
+from neuropace.config import Settings
+from neuropace.llm import fallback
+from neuropace.llm.artifacts import build_package, package_artifact_kinds
+from neuropace.llm.client import LLMClient, LLMUnavailable
+from neuropace.llm.schemas import (
     ARTIFACT_KINDS,
     TEMPLATES,
     Animation,
@@ -24,7 +24,7 @@ from reflow.llm.schemas import (
     pick_artifact,
     strict_schema,
 )
-from reflow.store.db import DB
+from neuropace.store.db import DB
 
 SPAN = (
     "The pseudorange observable is corrupted by several additive error terms. The ionospheric delay is dispersive "

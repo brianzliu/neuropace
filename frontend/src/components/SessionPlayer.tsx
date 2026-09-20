@@ -1,3 +1,4 @@
+import { backendUrl } from "../lib/backend";
 import { useEffect, useRef, useState } from "react";
 import { mmss } from "../lib/format";
 import { Badge } from "./Badges";
@@ -80,7 +81,7 @@ export default function SessionPlayer({ lectureId, hasMedia, duration, onTime, p
 
   return (
     <div className="player">
-      {hasMedia && lectureId ? <video ref={videoRef} src={`/media/${lectureId}`} controls preload="auto" /> : null}
+      {hasMedia && lectureId ? <video ref={videoRef} src={backendUrl(`/media/${lectureId}`, true)} controls preload="auto" /> : null}
       {!hasMedia ? <span className="t-footnote label-2">virtual player (no media file): the transcript is revealed on this clock</span> : null}
       <span className="clock">
         {mmss(vt)}

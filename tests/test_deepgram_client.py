@@ -1,7 +1,7 @@
 """Offline tests of the Deepgram streaming client: URL, message parsing, lecture-time offset. No network."""
 
-from reflow.clock import ManualClock
-from reflow.transcribe.deepgram_live import DeepgramLive
+from neuropace.clock import ManualClock
+from neuropace.transcribe.deepgram_live import DeepgramLive
 
 
 def _client(clock):

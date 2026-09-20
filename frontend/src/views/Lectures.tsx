@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { activeLearnerId } from "../lib/activeLearner";
 import { api } from "../lib/api";
 import type { LectureFull, SessionPublic } from "../lib/types";
 import { Badge } from "../components/Badges";
@@ -9,12 +10,17 @@ export default function Lectures() {
   const [sessions, setSessions] = useState<SessionPublic[]>([]);
   const [lectures, setLectures] = useState<LectureFull[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   useEffect(() => {
-    Promise.allSettled([api.sessions(), api.lectures()]).then(([s, l]) => {
-      if (s.status === "fulfilled") setSessions(s.value.sessions.filter((x) => x.mode !== "review"));
-      if (l.status === "fulfilled") setLectures(l.value.lectures);
-      setLoaded(true);
-    });
+    let active = true;
+    void activeLearnerId().then(learner_id => Promise.all([api.sessions({ learner_id }), api.lectures()]))
+      .then(([s, l]) => {
+        if (!active) return;
+        setSessions(s.sessions.filter(x => x.mode !== "review"));
+        setLectures(l.lectures);
+        setLoaded(true);
+      }).catch(e => { if (active) setError(String(e)); });
+    return () => { active = false; };
   }, []);
   return (
     <div className="page narrow">
@@ -22,6 +28,7 @@ export default function Lectures() {
         <h1 className="t-large">Lectures</h1>
         <p className="sub">Everything you listened to. Open one to restudy the moments you missed.</p>
       </header>
+      {error && <div className="callout danger">{error}</div>}
       {loaded && sessions.length === 0 ? (
         <div className="empty-state">
           Nothing yet. <Link to="/">Start listening</Link> and your lectures will show up here.
@@ -32,7 +39,7 @@ export default function Lectures() {
           const lec = lectures.find((l) => l.id === s.lecture_id);
           const running = s.status === "running";
           const restudied = s.status === "reviewed";
-          const badge = running ? { t: "Listening now", tone: "success" as const } : restudied ? { t: "Restudied", tone: "accent" as const } : s.gaps ? { t: `${s.gaps} to restudy`, tone: "warning" as const } : { t: "All clear", tone: "neutral" as const };
+          const badge = running ? { t: "Listening now", tone: "success" as const } : restudied ? { t: "Restudied", tone: "accent" as const } : s.gaps ? { t: `${s.gaps} to restudy`, tone: "warning" as const } : { t: "No saved moments", tone: "neutral" as const };
           return (
             <Link key={s.id} className="list-row" to={running ? `/live/${s.id}` : `/lecture/${s.id}`}>
               <span className="lr-main">

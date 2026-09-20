@@ -1,3 +1,9 @@
-"""Reflow: notices the moment a lecture loses you, catches you up in one glance, and re-teaches what you missed."""
+"""Legacy import adapter. New code should import :mod:`neuropace`."""
 
-__version__ = "0.1.0"
+from neuropace import __path__ as _neuropace_path
+from neuropace import __version__
+
+# Let old imports such as ``reflow.config`` resolve to the renamed package.
+__path__ = _neuropace_path
+
+__all__ = ["__version__"]

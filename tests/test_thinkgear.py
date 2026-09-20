@@ -1,7 +1,7 @@
 import numpy as np
 
-from reflow.signal.simulate import SimulatedEEG
-from reflow.signal.thinkgear import CODE_RAW, ThinkGearParser, encode_packet, encode_raw, encode_status
+from neuropace.signal.simulate import SimulatedEEG
+from neuropace.signal.thinkgear import CODE_RAW, ThinkGearParser, encode_packet, encode_raw, encode_status
 
 
 def test_raw_roundtrip_and_sign():

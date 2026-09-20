@@ -1,4 +1,4 @@
-"""No placeholder text in the product: OpenAI is required, outages degrade to the verbatim transcript or a retry."""
+"""No placeholder text: a model provider is required; outages degrade to transcript or retry."""
 
 from __future__ import annotations
 
@@ -8,15 +8,15 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
-from reflow.api.app import create_app, ensure_demo_lecture
-from reflow.clock import ManualClock
-from reflow.config import FORMS, Settings
-from reflow.core.gaps import regenerate_packages
-from reflow.core.session import SessionRuntime
-from reflow.llm.artifacts import build_package
-from reflow.llm.client import LLMClient, LLMUnavailable
-from reflow.store.db import DB
-from reflow.transcribe.transcript import Word
+from neuropace.api.app import create_app, ensure_demo_lecture
+from neuropace.clock import ManualClock
+from neuropace.config import FORMS, Settings
+from neuropace.core.gaps import regenerate_packages
+from neuropace.core.session import SessionRuntime
+from neuropace.llm.artifacts import build_package
+from neuropace.llm.client import LLMClient, LLMUnavailable
+from neuropace.store.db import DB
+from neuropace.transcribe.transcript import Word
 
 GOOD_RECAP = json.dumps({"words": "p", "analogy": "a", "visual": "v", "doing": "d"})
 
@@ -77,7 +77,7 @@ def test_session_creation_is_refused_without_a_key(tmp_path):
         r = c.post(
             "/api/sessions", json={"learner_id": lr["id"], "lecture_id": "lec_demo0001", "mode": "live"}
         )
-        assert r.status_code == 400 and "OPENAI_API_KEY" in r.json()["detail"]
+        assert r.status_code == 400 and "OpenAI or OpenRouter" in r.json()["detail"]
 
 
 @pytest.mark.asyncio

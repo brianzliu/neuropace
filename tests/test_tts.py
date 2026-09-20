@@ -8,8 +8,8 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from reflow.config import Settings
-from reflow.tts import TTSUnavailable, cache_path, synthesize
+from neuropace.config import Settings
+from neuropace.tts import TTSUnavailable, cache_path, synthesize
 
 
 class FakeSpeak:

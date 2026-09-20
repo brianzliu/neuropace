@@ -10,10 +10,11 @@ export default function FocusCard({ last, headset, flags, rawAt }: { last: Focus
     return () => window.clearInterval(id);
   }, []);
   const real = headset?.kind === "real";
+  const practice = headset?.kind === "simulated" || headset?.kind === "fake";
+  const replay = headset?.kind === "replay";
   const streamLive = rawAt !== undefined ? rawAt > 0 && now - rawAt < 2000 : headset?.stream ? headset.stream.live : true;
   const lost = real && !streamLive;
-  const state = !headset ? "off" : lost ? "lost" : !last ? "off" : last.state;
-  const settling = state === "baseline";
+  const state = !headset ? "off" : lost ? "lost" : !last ? "off" : last.state;  const settling = state === "baseline";
   const pct = settling ? Math.round((last?.baseline_progress ?? 0) * 100) : 100;
   const tone = state === "drop" ? "drop" : state === "lost" ? "lost" : state === "bad" || state === "nosignal" || state === "off" ? "off" : settling ? "settle" : "steady";
   const title =
@@ -41,8 +42,7 @@ export default function FocusCard({ last, headset, flags, rawAt }: { last: Focus
             ? `Learning your normal focus during the first minutes · ${pct}%`
             : flags
               ? `${flags} moment${flags === 1 ? "" : "s"} saved for your notes.`
-              : "Listening along with you. Nothing saved yet.";
-  const r = 22;
+              : "Listening along with you. Nothing saved yet.";  const r = 22;
   const c = 2 * Math.PI * r;
   return (
     <div className={"focus-card " + tone}>
@@ -52,8 +52,8 @@ export default function FocusCard({ last, headset, flags, rawAt }: { last: Focus
         <circle cx="28" cy="28" r="6" className="core" />
       </svg>
       <div className="focus-text">
-        <div className="focus-title">{title}</div>
-        <div className="focus-body">{body}</div>
+        <div className="focus-title">{practice ? `Simulated · ${title}` : replay ? `Replay · ${title}` : title}</div>
+        <div className="focus-body">{practice ? "Practice signal, not a measurement of your attention." : replay ? "Previously recorded signal, not your current attention." : body}</div>
       </div>
     </div>
   );

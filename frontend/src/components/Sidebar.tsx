@@ -125,9 +125,9 @@ export default function Sidebar({ sessionId, sessionRunning, rail }: { sessionId
   const setupNeeded = !!doctor && !openaiOk;
   return (
     <aside className={"sidebar" + (rail ? " rail" : "")}>
-      <NavLink to="/" className="sb-brand" title="Reflow">
+      <NavLink to="/" className="sb-brand" title="NeuroPace">
         <span className="mark" />
-        {rail ? null : <span>Reflow</span>}
+        {rail ? null : <span>NeuroPace</span>}
       </NavLink>
       <nav className="sb-nav">
         <Item to="/" icon="start" label="Listen" end rail={rail} />

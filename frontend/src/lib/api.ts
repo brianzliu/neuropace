@@ -1,3 +1,4 @@
+import { backendFetch } from "./backend";
 import type {
   Profile,
   Devices,
@@ -20,7 +21,7 @@ export function errorText(e: unknown): string {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...init });
+  const res = await backendFetch(path, { headers: { "Content-Type": "application/json" }, ...init });
   if (!res.ok) {
     let detail = res.statusText;
     try {
@@ -53,8 +54,14 @@ export interface SessionCreate {
 }
 
 export const api = {
-  health: () => get<{ ok: boolean; version: string; voice?: boolean }>("/api/health"),
-  doctor: () => get<Doctor>("/api/doctor"),
+  dashboard: (id: string, organize = false) => get<import("./dashboardTypes").Dashboard>(`/api/learners/${id}/dashboard?organize=${organize}`),
+  saveCurriculum: (id: string, body: import("./dashboardTypes").Curriculum) => request<import("./dashboardTypes").Curriculum>(`/api/learners/${id}/curriculum`, { method: "PUT", body: JSON.stringify(body) }),
+  deepgramKeyStatus: () => get<{ configured: boolean }>("/api/settings/deepgram"),
+  setDeepgramKey: (api_key: string) => request<{ configured: boolean }>("/api/settings/deepgram", { method: "PUT", body: JSON.stringify({ api_key }) }),
+  modelSettings: () => get<{ provider: "openai" | "openrouter"; model: string; models: Record<"openai" | "openrouter", string>; configured: Record<"openai" | "openrouter", boolean> }>("/api/settings/model"),
+  setModelSettings: (body: { provider: "openai" | "openrouter"; api_key?: string; model: string }) =>
+    request<{ provider: "openai" | "openrouter"; model: string; models: Record<"openai" | "openrouter", string>; configured: Record<"openai" | "openrouter", boolean> }>("/api/settings/model", { method: "PUT", body: JSON.stringify(body) }),
+  health: () => get<{ ok: boolean; version: string; voice?: boolean }>("/api/health"),  doctor: () => get<Doctor>("/api/doctor"),
   devices: () => get<Devices>("/api/devices"),
   artifacts: (id: string) => get<{ gaps: GapArtifacts[] }>(`/api/sessions/${id}/artifacts`),
   learners: () => get<{ learners: Learner[] }>("/api/learners"),
@@ -84,8 +91,8 @@ export const api = {
   reviewAnswer: (id: string, card_id: string, choice: number, focus_ratio?: number | null) =>
     post<ReviewAnswer>(`/api/sessions/${id}/review/answer`, { card_id, choice, focus_ratio: focus_ratio ?? null }),
   reviewDrop: (id: string, card_id: string, focus_ratio?: number | null) => post<ReviewNext>(`/api/sessions/${id}/review/drop`, { card_id, focus_ratio: focus_ratio ?? null }),
-  profile: () => get<Profile>("/api/me/profile"),
-  resetProfile: () => post<{ ok: boolean }>("/api/me/reset"),
+  profile: (learnerId?: string) => get<Profile>(`/api/me/profile${learnerId ? `?learner_id=${encodeURIComponent(learnerId)}` : ""}`),
+  resetProfile: (learnerId?: string) => post<{ ok: boolean }>(`/api/me/reset${learnerId ? `?learner_id=${encodeURIComponent(learnerId)}` : ""}`),
   reviewAdvance: (id: string, card_id: string, focus_ratio?: number | null) =>
     post<ReviewNext>(`/api/sessions/${id}/review/advance`, { card_id, focus_ratio: focus_ratio ?? null }),
   quiz: (id: string) => get<QuizGet>(`/api/sessions/${id}/quiz`),

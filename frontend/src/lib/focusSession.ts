@@ -19,7 +19,7 @@ export interface FocusSession {
   endCard: () => number | null;
 }
 
-export function useFocusSession(enabled: boolean): FocusSession {
+export function useFocusSession(enabled: boolean, learnerId?: string): FocusSession {
   const [headset, setHeadset] = useState<HeadsetStatus | null>(null);
   const [last, setLast] = useState<FocusMsg | null>(null);
   const [raw, setRaw] = useState<number[]>([]);
@@ -38,7 +38,7 @@ export function useFocusSession(enabled: boolean): FocusSession {
     (async () => {
       try {
         // the lecture's own calibration carries over: focus counts from the first card instead of after a new baseline
-        const s = await api.createSession({ mode: "review", headset: "auto", totem: "keyboard", use_stored_baseline: true });
+        const s = await api.createSession({ mode: "review", learner_id: learnerId, headset: "auto", totem: "keyboard", use_stored_baseline: true });
         if (!alive) {
           await api.endSession(s.id).catch(() => undefined);
           return;
@@ -87,7 +87,7 @@ export function useFocusSession(enabled: boolean): FocusSession {
       sid.current = null;
       if (id) void api.endSession(id).catch(() => undefined);
     };
-  }, [enabled]);
+  }, [enabled, learnerId]);
 
   const startCard = useCallback(() => {
     card.current = { total: 0, dropped: 0, valid: 0 };

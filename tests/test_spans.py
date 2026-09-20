@@ -1,7 +1,7 @@
-from reflow.config import Settings
-from reflow.core.spans import eeg_span, merge_into_gaps, snap_end, tap_span
-from reflow.transcribe.scripted import script_from_text
-from reflow.transcribe.transcript import Transcript
+from neuropace.config import Settings
+from neuropace.core.spans import eeg_span, merge_into_gaps, snap_end, tap_span
+from neuropace.transcribe.scripted import script_from_text
+from neuropace.transcribe.transcript import Transcript
 
 TEXT = "Radio travels at the speed of light. Multiply the delay by the speed of light and you get the distance. One distance puts you on a sphere. Three spheres give two points."
 

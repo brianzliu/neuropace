@@ -7,11 +7,11 @@ What was checked, how, and what is still unverified. Re-run the commands before 
 | Check | Command | Result |
 |---|---|---|
 | Backend unit + integration tests (parser, features, blinks, spans, recaps, LLM client with a fake OpenAI, tally, review, loss map, session runtime, REST + WebSocket real-time flow, study analysis, Deepgram client parsing, mindwave bridge on `FakeSource` with a byte-level cross-check of both ThinkGear parsers, port detection on macOS and Windows listings with a fake serial module) | `uv run pytest -q` | 79 passed in about 22 s, no network, no hardware |
-| Lint | `uv run ruff check reflow tests scripts` | clean (the spec's three sim scripts are kept verbatim and excluded from style rules) |
+| Lint | `uv run ruff check neuropace tests scripts` | clean (the spec's three sim scripts are kept verbatim and excluded from style rules) |
 | Frontend types + build | `cd frontend && pnpm typecheck && pnpm build` | 0 errors, 67 modules, `dist/` served by the backend |
 | Firmware | `arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi firmware/totem` and `:minima` | both compile (57 KB / 44 KB) |
-| Spec toolkit | `uv run reflow sim selftest` | SELFTEST PASS |
-| Live end-to-end against a running server, everything simulated | `uv run reflow serve` then `uv run python scripts/smoke_e2e.py --baseline 8` | 14/14 PASS; tap to catch-up 1 to 3 ms |
+| Spec toolkit | `uv run neuropace sim selftest` | SELFTEST PASS |
+| Live end-to-end against a running server, everything simulated | `uv run neuropace serve` then `uv run python scripts/smoke_e2e.py --baseline 8` | 14/14 PASS; tap to catch-up 1 to 3 ms |
 | Tap confirms an EEG flag (TDD §6 linking rule) | unit test on the runtime plus a live WebSocket check: simulated drift, EEG flag opens, tap 8 s later | the tap span starts at the drop (`linked_eeg` set), the card carries `since` and `span_seconds`; a tap more than 10 s after the flag closed is not linked |
 
 ## The team's EEG pipeline (`mindwave/`, merged from brianzliu/neuropace)
@@ -27,7 +27,7 @@ What was checked, how, and what is still unverified. Re-run the commands before 
 
 | Check | How | Result |
 |---|---|---|
-| No OpenAI key | `POST /api/sessions` with the default settings | refused with 400 "OPENAI_API_KEY is missing: recaps, gap notes and review cards need it"; `reflow doctor` prints REQUIRED |
+| No selected model-provider key | `POST /api/sessions` with the default settings | refused with 400 explaining that an OpenAI or OpenRouter key is required; `neuropace doctor` prints REQUIRED |
 | OpenAI down mid-lecture | runtime test with a failing fake client | recaps skipped with one notice; the tap catch-up shows the verbatim transcript (`source: transcript`), all four forms identical, no "(offline)" text |
 | OpenAI down at session end | same test | gap package retried 3 times, stored as `package_source: failed` with the error; review refuses (409); `regenerate_packages` fills it once the API answers |
 | Real OpenAI call | not verified: no key on this machine | the client is exercised with a fake OpenAI (strict schema, cache, retries, reasoning-param fallback) |
@@ -36,8 +36,8 @@ What was checked, how, and what is still unverified. Re-run the commands before 
 
 | Check | How | Result |
 |---|---|---|
-| No Arduino → keyboard totem | unit tests on `make_totem` and `KeyboardTotem`; `reflow doctor` | kind `keyboard` with the hint "no Arduino: press Space or T, or use the on-screen pad" |
-| Terminal keys in `reflow serve` | server started under a pseudo-terminal, Space then L pressed in that terminal | flags `('key', simulated False)` then `('forced', simulated True)` on the running session |
+| No Arduino → keyboard totem | unit tests on `make_totem` and `KeyboardTotem`; `neuropace doctor` | kind `keyboard` with the hint "no Arduino: press Space or T, or use the on-screen pad" |
+| Terminal keys in `neuropace serve` | server started under a pseudo-terminal, Space then L pressed in that terminal | flags `('key', simulated False)` then `('forced', simulated True)` on the running session |
 | Browser/API tap source | WebSocket `tap` and `POST /tap` | source `key`, `simulated: false` (a learner action, not a simulation) |
 | Arduino plugged in mid-session | unit test with a fake serial totem and a patched detector | the session switches from keyboard to the Arduino within one 5 s probe, replays FIT/DOT, records `totem_kind = real` |
 
@@ -60,6 +60,10 @@ What was checked, how, and what is still unverified. Re-run the commands before 
 | Deepgram streaming | `DeepgramLive` fed 100 ms PCM frames at real-time pace, mic started 2 s into the lecture | 49 final words, interim results flowing, first word stamped at 2.12 s lecture time (offset correct) |
 | Microphone path through the server | WebSocket `audio_start` + binary PCM into a `transcript=deepgram` session | words broadcast on lecture time, tap produced a catch-up from the live transcript, gap built at session end |
 | OpenAI | not verified: no key on this machine yet | sessions now refuse to start without the key; the client is covered by tests with a fake OpenAI (strict schema, cache, retry, timeout, reasoning-param fallback) |
+
+## Merge with the team's NeuroPace shell (19 Sep, late night)
+
+The teammate's 20 commits (package renamed to `neuropace`, the Pocket Studio shell with Dashboard / Library / Insights, board capture, OpenAI or OpenRouter providers, local bridge, UNO Q relay) were merged with the work above, keeping both sides: their shell and theme, our features inside it (real brain-wave labels and the headset-lost state, the quit-recording guard, the templates and the preview page, private tutoring with the voice, review on my own, the combined ranking, the virtual headset, one headset one recording). Resolved by hand in 22 files; the two "lost me" buttons became "Catch me up". Two more decisions from the user's rule (his design, our features and quality): the API-key and model inputs left the student's start screen for the Team page, and the start screen got our device line ("Headset connected.", polled every 4 s). One collision found and fixed: the theme's global `.live` layout rule matched our `pill.live` and `waves.live` state classes and stretched them to the viewport; they are `is-live` now. Verified after the merge: `uv run pytest -q` 124 passed (the union of both suites), `pnpm build` clean, and a browser pass with the virtual headset through the merged screens: dashboard, start screen without key inputs, practice lecture with "live from your headset", the quit-recording guard from the top bar, done, private tutoring with the voice reading, the templates page, Library, You, Team.
 
 ## Real brain waves, templates, tutoring (19 Sep, late night)
 
@@ -127,12 +131,52 @@ See `docs/TDD.md` §3.3. With the defaults (enter −1.25, exit −0.6, 30 s cap
 
 ## On-device status (asked on 19 Sep, evening)
 
-Nothing has run on the physical devices. This Mac has no MindWave paired (Bluetooth shows only AirPods and a speaker) and no Arduino on USB, so the serial port list is empty apart from the system ports. To test on device: pair the headset (System Settings, Bluetooth, pin 0000), plug the UNO R4 in, flash `firmware/totem/totem.ino`, then `uv run reflow doctor` should show both ports and a live session with headset `auto` uses the real pipeline. The pipeline itself was validated on a real head by its author on a Windows laptop.
+Nothing has run on the physical devices. This Mac has no MindWave paired (Bluetooth shows only AirPods and a speaker) and no Arduino on USB, so the serial port list is empty apart from the system ports. To test on device: pair the headset (System Settings, Bluetooth, pin 0000), plug the UNO R4 in, flash `firmware/totem/totem.ino`, then `uv run neuropace doctor` should show both ports and a live session with headset `auto` uses the real pipeline. The pipeline itself was validated on a real head by its author on a Windows laptop. The current target is the UNO Q 4 GB relay (`firmware/uno_q_relay/`), which has not been compiled, flashed, or paired; its blockers are listed there. The R4 steps above are the direct fallback route.
 
 ## Not verified (needs the hardware or the event)
 
+### Vercel deployment, 19 Sep 2026
+
+**Historical deployment:** The existing Vercel hostname is
+https://neurospace-hackmit.vercel.app. It remains an allowed origin until the deployment is
+moved, but the product, package, CLI, and interface now use NeuroPace. Local connection copy
+uses `uv run neuropace serve`.
+
+- Production: https://reflow-neuropace.vercel.app, deployment
+  `dpl_DhSociVPcNKQvZhiN7TccTduxkLw`, confirmed Ready by `vercel inspect`.
+- `pnpm build` passed locally and on Vercel. Only the frontend directory was deployed.
+- `uv run pytest -q`: 76 passed. Includes hosted-origin HTTP pairing, CORS preflight,
+  media token enforcement, and WebSocket origin/token rejection and acceptance.
+- `uv run ruff check neuropace tests scripts` passed.
+- HTTPS checks returned 200 for `/`, `/session/new`, `/review/deployment-check`, and both
+  generated JS/CSS assets. The deployed bundle contains the local connection screen and
+  loopback backend address.
+- A browser was unavailable to the UI automation tool, so the hosted browser-to-localhost
+  permission flow, audio, camera, and media playback remain unverified in a real browser.
+  The already-running local backend needs a restart to load the pairing changes.
+
+### Remaining hardware and service checks
+
 - A real MindWave Mobile 2 on a real forehead: pairing, the serial port name, blink ticks on the trace, the false-flag rate and the drift latency of a real wearer (the hour-1 gate).
-- A real UNO R4 with a foil pad: touch threshold (`TOUCH_THRESHOLD` in the sketch), USB port name, LED matrix rendering.
-- OpenAI structured outputs with a real key and the event's model id (`reflow doctor` reports availability and alternatives).
+- A real UNO R4 with a foil pad (fallback route): touch threshold (`TOUCH_THRESHOLD` in the sketch), USB port name, LED matrix rendering.
+- A real UNO Q 4 GB: relay compile/flash, headset pairing and BLE permissions, App Lab compatibility, encrypted access, throughput/dropped frames, D2/GND wiring, and an end-to-end tap + feature-frame test. Blockers are listed in `firmware/uno_q_relay/README.md`.
+- OpenAI structured outputs with a real key and the event's model id (`neuropace doctor` reports availability and alternatives).
 - Browser microphone capture in the live view (getUserMedia + AudioWorklet): the server side of that path is verified; the browser side compiled and is exercised only by hand.
 - HackMIT's rule on pre-written code and AI assistance; the Deepgram and OpenAI booth requirements beyond the challenges PDF.
+
+### Pocket Studio and main integration, 19 Sep 2026
+
+The current product name is **NeuroPace**. Historical deployment URLs and CLI aliases
+remain compatible. Main's lecture, quiz, and restudy flow is merged with the Pocket
+Studio dashboard, syllabus, camera capture, and local device bridge.
+
+- Full backend suite: `uv run pytest -q`, **92 passed**.
+- `uv run ruff check neuropace tests scripts` passed.
+- `npm --prefix frontend run build` passed, including TypeScript checking.
+- Safari preview used an isolated temporary server on port 8766 with synthetic
+  sessions, simulated EEG, keyboard input, and explicitly enabled offline fixtures.
+  Dashboard concepts, activity, syllabus progress, Library, quiz questions and selection,
+  restudy, and the prominent Start session page were checked visually.
+- This verification did not exercise physical hardware, microphone/camera permissions,
+  external model generation, or production deployment. The existing local data and
+  backend on port 8765 were left untouched.

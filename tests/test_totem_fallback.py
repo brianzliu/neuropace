@@ -6,14 +6,14 @@ import threading
 
 import pytest
 
-from reflow import keys
-from reflow.clock import ManualClock
-from reflow.core.session import SessionRuntime
-from reflow.totem.bridge import KeyboardTotem, SerialTotem, SimulatedTotem, make_totem
+from neuropace import keys
+from neuropace.clock import ManualClock
+from neuropace.core.session import SessionRuntime
+from neuropace.totem.bridge import KeyboardTotem, SerialTotem, SimulatedTotem, make_totem
 
 
 def test_make_totem_routes_to_keyboard_without_an_arduino(monkeypatch):
-    from reflow.totem import bridge
+    from neuropace.totem import bridge
 
     monkeypatch.setattr(bridge, "autodetect_totem_port", lambda exclude=None: None)
     assert make_totem("auto", lambda t: None).kind == "keyboard"
@@ -93,7 +93,7 @@ class _FakeSerialTotem:
 
 @pytest.mark.asyncio
 async def test_arduino_plugged_in_mid_session_replaces_the_keyboard_totem(settings, db, llm, monkeypatch):
-    from reflow.totem import bridge
+    from neuropace.totem import bridge
 
     lec = db.get_lecture("lec_demo0001", full=True)
     lrn = db.create_learner("Ana")

@@ -1,4 +1,5 @@
-// Reflow totem for Arduino UNO R4 (WiFi or Minima). TDD §4.
+// NeuroPace totem for Arduino UNO R4 (WiFi or Minima) — direct-USB fallback path; the current target
+// is the UNO Q 4 GB BLE relay (firmware/uno_q_relay/, experimental, uncompiled). TDD §4.
 //
 // Touch pad on D2 (jumper -> foil pad) = "lost me". Sends "TAP <millis>" over USB serial.
 // UNO R4 WiFi LED matrix: row 0 = fit meter (FIT 0-8), rows 2-6 = one dot per saved span (DOT n),

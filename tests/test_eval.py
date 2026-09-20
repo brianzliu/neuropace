@@ -1,13 +1,13 @@
 import csv
 
-from reflow.config import Settings
-from reflow.core.study import analyze
-from reflow.eval import kaggle_check, reflow_eval
-from reflow.store.db import DB
+from neuropace.config import Settings
+from neuropace.core.study import analyze
+from neuropace.eval import kaggle_check, neuropace_eval
+from neuropace.store.db import DB
 
 
 def test_selftest_passes():
-    assert reflow_eval.selftest() == 0
+    assert neuropace_eval.selftest() == 0
 
 
 def test_kaggle_check_on_synthetic_csv(tmp_path):
@@ -94,7 +94,7 @@ def _seed_session(db, s, lecture, learner, flagged_items, correct_items, policy=
 def test_study_analysis_four_numbers_on_synthetic_sessions(tmp_path):
     s = Settings(data_dir=tmp_path)
     db = DB(s.db_path)
-    from reflow.api.app import ensure_demo_lecture
+    from neuropace.api.app import ensure_demo_lecture
 
     ensure_demo_lecture(db)
     lec = db.get_lecture("lec_demo0001")

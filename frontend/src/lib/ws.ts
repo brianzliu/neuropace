@@ -1,4 +1,5 @@
 import type { ServerMsg } from "./types";
+import { backendUrl } from "./backend";
 
 export type SocketStatus = "connecting" | "open" | "closed" | "reconnecting" | "failed";
 
@@ -16,8 +17,9 @@ export class SessionSocket {
   ) {}
 
   private url(): string {
-    const proto = location.protocol === "https:" ? "wss" : "ws";
-    return `${proto}://${location.host}/ws/session/${this.sessionId}`;
+    const url = new URL(backendUrl(`/ws/session/${this.sessionId}`, true));
+    url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+    return url.toString();
   }
 
   connect(): void {

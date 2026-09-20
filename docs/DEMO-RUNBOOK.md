@@ -2,12 +2,12 @@
 
 ## Before judging (do all of these, in order)
 
-1. `uv run reflow doctor`: both keys present, Deepgram ok, OpenAI model ok (if not, set `OPENAI_MODEL` to one of the listed alternatives), headset port found, totem port found, frontend built.
+1. `uv run neuropace doctor`: both keys present, Deepgram ok, OpenAI model ok (if not, set `OPENAI_MODEL` to one of the listed alternatives), headset port found, totem port found, frontend built.
 2. Fresh AAA in the headset. Spare AAA in your pocket.
 3. Calibrated wearer: the teammate who wears the headset in the live beat runs one full session earlier (3 min baseline). Their learner then has a stored baseline; start the demo session with "use stored baseline" so the trace is live from second one. The UI labels "stored baseline".
 4. Recorded replay session ready: one real session of the demo lecture with a tap and an EEG flag, ended, notes generated, review not yet started. Note its session id. Open `/replay/:id` once to check it plays.
 5. Loss map ready: `/lossmap/:lectureId` shows n ≥ 2 and a ranking. Do not click "reveal" until the beat.
-6. Study number ready: `uv run reflow study-analyze --lecture LEC_ID` output copied onto the slide, with its interval.
+6. Study number ready: `uv run neuropace study-analyze --lecture LEC_ID` output copied onto the slide, with its interval.
 7. Browser: one window, zoom so the transcript is readable at 3 m, mic permission already granted for the site, `/live` open on the demo learner.
 8. Rehearse the script below ten times. Say "simulated" out loud whenever `L`, `1`/`2`/`3` or a simulated headset is used. Space or `T` is the keyboard pad: a real tap, say "keyboard instead of the pad".
 
@@ -34,7 +34,7 @@ Restudy has two ways in: *Private tutoring* (explained first, the tutor voice re
 |---|---|
 | No transcript in the live beat | Say "scripted transcript" and start a session on the demo lecture (`lecture = How GPS finds you`); the pad still works |
 | No EEG flag fires in 60 s | Say so. The judge's tap carries the beat. Never press `L` without saying "simulated" |
-| No OpenAI key or the API is down | The app refuses to start a session without a key; mid-lecture the card shows the verbatim transcript (labelled) and failed notes offer a retry. Check `reflow doctor` before the slot |
+| No OpenAI key or the API is down | The app refuses to start a session without a key; mid-lecture the card shows the verbatim transcript (labelled) and failed notes offer a retry. Check `neuropace doctor` before the slot |
 | Headset poor signal | Reseat, check the ear clip, wait for the quality chip to go green; otherwise headset `sim` and say "simulated headset" |
 | Totem not detected | Reconnect USB (a running session picks it up within 5 s) or use the keyboard fallback: Space/`T` or the on-screen pad. A key tap is a real tap; say "keyboard instead of the pad" |
 | OpenAI down | Cards carry the `offline` badge; say "offline recap, extractive". The flow is the same |
@@ -48,6 +48,6 @@ Record here the one concrete way Codex changed the build, with the commit hash:
 
 ## Sponsor booths (verify at hour 0)
 
-- Deepgram: confirm the streaming call in `reflow/transcribe/deepgram_live.py` qualifies; ask about `keyterm` limits on nova-3.
+- Deepgram: confirm the streaming call in `neuropace/transcribe/deepgram_live.py` qualifies; ask about `keyterm` limits on nova-3.
 - OpenAI: confirm credits and the model id; put it in `.env` as `OPENAI_MODEL`.
 - HackMIT organizers: rule on code written before hacking opened and on AI assistance. Disclose AI help in the submission.
