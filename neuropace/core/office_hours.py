@@ -21,6 +21,7 @@ from ..store.db import DB
 log = logging.getLogger(__name__)
 
 MAX_LIVE_ELEMENTS = 24
+MAX_TRANSCRIPT_CHARS = 12000
 
 
 def replay_board(ops: list[dict]) -> dict[str, dict]:
@@ -78,7 +79,17 @@ class OfficeHoursEngine:
         self.messages: list[dict] = []
         self.board: dict[str, dict] = {}
         self._ord = 0
+        self._transcript = self._lecture_transcript()
         self._rebuild()
+
+    def _lecture_transcript(self) -> str:
+        """What the agent is grounded in (GROUNDING, llm/prompts.py): the lecture's own words, not summaries
+        the model would have to trust blindly. Empty when there is no lecture or no transcript yet."""
+        if not self.lecture:
+            return ""
+        words = self.lecture.get("words") or []
+        text = " ".join(w.get("w", "") for w in words).strip()
+        return text[:MAX_TRANSCRIPT_CHARS]
 
     def _rebuild(self) -> None:
         self.messages = self.db.oh_get_messages(self.session_id)
@@ -104,7 +115,7 @@ class OfficeHoursEngine:
             {"id": eid, "kind": el.get("kind"), "envelope": el.get("envelope")}
             for eid, el in self.board.items()
         ]
-        turn, source = await self.llm.office_hours_turn(history, board_summary, text)
+        turn, source = await self.llm.office_hours_turn(history, board_summary, text, self._transcript)
         if turn is None:
             return self._append_message(
                 "agent",

@@ -140,12 +140,17 @@ class LLMClient:
         return obj, source
 
     async def office_hours_turn(
-        self, history: list[dict], board_summary: list[dict], user_text: str
+        self, history: list[dict], board_summary: list[dict], user_text: str, lecture_transcript: str = ""
     ) -> tuple[OfficeHoursTurn | None, str]:
         """One Office Hours turn (docs/PRODUCT.md §5a): a reply plus board ops. Stateless — the engine owns
         history and re-sends it every call, since nothing in this client threads multi-turn conversation state.
         Never cached: a turn's correct output depends on history/board that changes between identical messages."""
-        payload = {"history": history[-20:], "board": board_summary, "message": user_text}
+        payload = {
+            "lecture_transcript": lecture_transcript,
+            "history": history[-20:],
+            "board": board_summary,
+            "message": user_text,
+        }
         return await self._with_retries(
             "office_hours_turn", OFFICE_HOURS_INSTRUCTIONS, payload, OfficeHoursTurn, 2200, use_cache=False
         )

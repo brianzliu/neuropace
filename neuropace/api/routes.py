@@ -946,7 +946,7 @@ def _office_hours(request: Request, session_id: str) -> OfficeHoursEngine:
         sess = db.get_session(session_id)
         if not sess or sess["mode"] != "office_hours":
             raise HTTPException(404, "unknown office hours session")
-        lecture = db.get_lecture(sess["lecture_id"]) if sess.get("lecture_id") else None
+        lecture = db.get_lecture(sess["lecture_id"], full=True) if sess.get("lecture_id") else None
         eng = OfficeHoursEngine(db, _s(request), app.state.llm, session_id, sess["learner_id"], lecture)
         app.state.office_hours[session_id] = eng
     return eng
