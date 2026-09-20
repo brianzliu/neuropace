@@ -29,15 +29,11 @@
 .topbar { max-width: 1600px; width: 100%; margin: auto; border: 0; padding-block: 1.35rem; }
 .brand { font-size: 1.85rem; letter-spacing: -.065em; display: inline-flex; align-items: center; gap: .6rem; font-family: var(--display); font-weight: 400; }
 .brand-dot { background: linear-gradient(135deg, var(--accent), var(--object)); box-shadow: inset 2px 2px 3px #ffffff55, 2px 3px 0 var(--object-dark); }
-/* Brand mark: a tilted pencil in a tactile squircle. Inline SVG so the
-  eraser, ferrule, body, wood, and lead all read crisply at any size. */
+/* Shared mascot mark for the main and compact page headers. */
 .brand-mark { position: relative; width: 38px; height: 38px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
-.brand-mark svg { width: 28px; height: 28px; display: block; overflow: visible; }
-/* Generated brain mark covers the pencil fallback when the file loads;
-   the pencil stays underneath for offline/missing-file cases. */
+.brand-mark img { width: 100%; height: 100%; display: block; object-fit: contain; }
 .brand-mark i { display: none; }
 .app-compact .brand-mark { width: 30px; height: 30px; }
-.app-compact .brand-mark svg { width: 22px; height: 22px; }
 .topnav > a { font-size: .9rem; }
 .main { padding-top: .25rem; }
 .welcome { padding: 1.5rem 0 2.5rem; gap: 3rem; min-height: 380px; }
