@@ -244,19 +244,24 @@ enough_data   = Σ_form attempts ≥ 12
 rescue_rate   = rescues / attempts  (null if attempts = 0)
 ```
 
-### 8.3 Review state machine (FR-R1..R6)
+### 8.3 Review state machine (FR-R1..R6, revised per PRODUCT.md §5: teach first)
 
 ```
-start(session): gaps in chronological order; streak = 0; for each gap forms_order = tally rank (posterior mean, desc)
-card = question(gap[0])
-answer(card, choice):
-   hit  -> credit(form_before) if form_before; gap closed; streak += 1; if streak == 3 or no open gaps: done
-   miss -> debit(form_before) if form_before; streak = 0;
-           next_form = first of forms_order not used for this gap; if none: gap exhausted -> next gap
-           else card = reteach(gap, next_form) ; after it, card = question(gap) again, form_before = next_form
-drop(card): like miss for the switch, but no tally change (P6)
-form_before for the first question of a gap = the live catch-up form if one was shown for any flag of that gap, else null
+start(session, mode): gaps in chronological order; streak = 0
+mode "tutor" (private tutoring): card = reteach(gap[0], form = Thompson pick on the tally; if used for this gap, first unused by rank)
+mode "manual" (review on my own): card = question(gap[0]) with form_before = null (a cold check scores nothing)
+advance(reteach): outcome "read", focus_ratio stored; card = question(gap); form_before = the reteach's form
+answer(question, choice):
+   hit  -> credit(form_before); gap closed; streak += 1; if streak == 3 or no open gaps: done, else card = reteach(next gap)
+   miss -> debit(form_before); streak = 0;
+           next_form = first of tally rank not used for this gap; if none: gap exhausted -> reteach(next gap)
+           else card = reteach(gap, next_form)
+drop(card): like miss for the switch, but no tally change (P6); focus_ratio stored on the dropped card
 ```
+
+Every check scores the explanation shown right before it. The live catch-up form is no longer credited (it was a glance, not an explanation). `focus_ratio` on reteach cards feeds the attention half of the combined ranking (`tally.combined_score`: 0.6 × posterior mean of rescues + 0.4 × mean focus per family; `preferred` = top of that ranking once `tally_enough_attempts` explanations are scored). Thompson sampling for the next family still draws on understanding alone.
+
+The reteach card carries `why` (the tutor's reason: preferred / not tried / exploring), `context` (note.connection) and `said` (the span text). The frontend's tutor (`lib/tutor.ts`) turns the card into spoken beats (`narrationForCard`), fetches each from `POST /api/tts` (Deepgram Aura, cached per beat under `data/cache/tts/`) and advances the template's reveal step with the voice.
 
 Rescue/attempt accounting: `credit(f)`: rescues += 1, attempts += 1. `debit(f)`: attempts += 1.
 
@@ -289,26 +294,29 @@ Requires ≥ 2 sessions; otherwise returns `{n, ready: false}`.
 | Method, path | Body → response |
 |---|---|
 | `GET /health` | `{ok, version}` |
-| `GET /doctor` | `{keys:{deepgram, openai}, openai_model:{name, available, alternatives}, headset:{port, kind}, totem:{port, kind}, frontend_built}` |
+| `GET /doctor` | `{keys:{deepgram, openai}, deepgram, openai:{ok, model, required}, tts:{ok, model}, headset:{port, kind, bridge}, totem:{port, kind}, frontend_built}` (network checks) |
+| `GET /devices` | `{headset:{port, kind}, totem:{port, kind}, checked_at}`: detection only, cached 4 s, polled by the Listen screen |
+| `POST /tts` | `{text}` → `audio/mpeg` for one beat of an explanation (503 without a Deepgram key) |
+| `GET /sessions/{id}/artifacts` | every generated artifact of every moment with its per-template source, for the team's preview |
 | `GET/POST /learners` | `{name}` → learner. One device has one learner, `lrn_me` ("you"), created on demand; `me` is accepted wherever a learner id is; sessions without `learner_id` use it, and the study can pass `learner_name` to keep a participant's tally separate |
 | `GET /learners/{id}/tally` | `{forms:{form:{rescues, attempts, rate, posterior_mean}}, pick, enough_data, total_attempts}` |
 | `GET/POST /lectures` | `POST` multipart `{title, file?, script?, segments?, quiz?, keyterms?}` → lecture (media is transcribed via Deepgram prerecorded when a key exists) |
 | `GET /lectures/{id}` | lecture without transcript words; `?full=1` includes them |
 | `GET /lectures/{id}/lossmap` | §8.4 output |
-| `POST /sessions` | `{learner_id, lecture_id?, mode, catchup_policy?, baseline_seconds?, use_stored_baseline?, auto_pause?}` → session |
+| `POST /sessions` | `{learner_id?, lecture_id?, mode, catchup_policy?, baseline_seconds?, use_stored_baseline?, auto_pause?, headset?, totem?}` → session; 409 when a lecture is still recording on the same real headset port |
 | `GET /sessions/{id}` | session + counts + best_form + flags + gaps summary |
 | `GET /sessions/{id}/events` | the JSONL as a JSON array (replay) |
 | `POST /sessions/{id}/end` | ends the runtime, builds gaps and packages → `{gaps:[…]}` (a gap whose generation failed carries `package_source: "failed"` and `error`) |
 | `POST /sessions/{id}/regenerate?only_failed=1` | re-runs gap generation → `{gaps, failed}` |
 | `GET /sessions/{id}/notes` | `{gaps:[{id, t_start, t_end, span_text, note, question(without correct_index)}]}` |
-| `POST /sessions/{id}/review/start` | → `{card, progress}` |
+| `POST /sessions/{id}/review/start` | `{mode?: tutor|manual}` → `{card, progress: {mode, …}, tally}` |
 | `POST /sessions/{id}/review/answer` | `{card_id, choice}` → `{outcome, correct_index, explanation, next: card or null, done, streak, tally}` |
 | `POST /sessions/{id}/review/drop` | `{card_id}` → `{next, …}` |
 | `POST /sessions/{id}/review/advance` | `{card_id}` after a reteach card is read → `{next}` |
 | `GET/POST /sessions/{id}/quiz` | `POST {phase, answers:{item_id: choice}}` → `{score, per_item}` |
 | `POST /sessions/{id}/sim/headset` | `{state}` (also available over WS) |
 
-Card shape: `{id, kind, gap_id, gap_ord, form, question?: {question, options}, reteach?: {form, content}, simulated_hint}` where `content` is the form's full-size payload (`plain` string, `keyterm` object, `analogy` string, `sketch` {line, diagram}).
+Card shape: `{id, kind, gap_id, gap_ord, form, forms_used, question?: {question, options}, reteach?: {form, artifact, content, key_term, context, said, why}}` where `artifact` is the template kind (words, analogy, diagram, chart, plot, timeline, compare, animation, steps, example) and `content` its data (schemas in `reflow/llm/schemas.py`).
 
 ### 9.2 WebSocket `/ws/session/{id}`
 

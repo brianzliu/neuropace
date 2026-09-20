@@ -11,10 +11,12 @@ interface Props {
   /** Bumps to cycle the form (the F key). */
   cycleToken: number;
   freeze?: boolean; // recorded mode: paused video, keep the card until resume
+  /** Team detail: where the line came from (model, cache, verbatim transcript). Students see none of that. */
+  details?: boolean;
 }
 
 /** One line, dim, static; fades over ttl_s (PRD P5). */
-export default function CatchupOverlay({ card, onExpire, onDismiss, cycleToken, freeze }: Props) {
+export default function CatchupOverlay({ card, onExpire, onDismiss, cycleToken, freeze, details }: Props) {
   const [form, setForm] = useState<Form | null>(null);
   useEffect(() => {
     setForm(null);
@@ -37,10 +39,11 @@ export default function CatchupOverlay({ card, onExpire, onDismiss, cycleToken, 
   const f = form ?? card.form;
   const line = card.forms[f] ?? card.line;
   const since = card.since !== undefined && (card.linked_eeg || (card.span_seconds ?? 0) >= 15) ? ` since ${mmss(card.since)}` : "";
+  const verbatim = card.source === "transcript";
   return (
     <div className={"hud" + (freeze ? "" : " fading")} style={{ ["--ttl" as string]: `${card.ttl_s}s` }} onClick={onDismiss} role="status">
       <div className="line">
-        <span className="lbl">You missed{since}</span>
+        <span className="lbl">{verbatim ? "What was said" : "You missed"}{since}</span>
         {line}
         {card.now_text ? (
           <>
@@ -53,12 +56,12 @@ export default function CatchupOverlay({ card, onExpire, onDismiss, cycleToken, 
       <div className="meta">
         <span>
           {FORM_LABEL[f]}
-          {f !== card.form ? " · press F to cycle" : " · best for this learner"}
+          {f !== card.form ? " · F for another way" : " · your best way"}
         </span>
-        <SourceBadge source={card.source} />
         {card.reason === "video_pause" ? <Badge tone="accent">video paused</Badge> : null}
-        {card.reason === "eeg" ? <Badge>eeg flag</Badge> : null}
-        {card.linked_eeg ? <Badge tone="accent">tap confirms an eeg flag · {Math.round(card.span_seconds ?? 0)} s</Badge> : null}
+        {card.reason === "eeg" ? <Badge>you drifted</Badge> : null}
+        {card.linked_eeg ? <Badge tone="accent">from where you drifted · {Math.round(card.span_seconds ?? 0)} s</Badge> : null}
+        {details ? <SourceBadge source={card.source} /> : null}
       </div>
     </div>
   );

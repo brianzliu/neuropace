@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import sys
+import time
 from pathlib import Path
 
 import httpx
@@ -52,35 +53,58 @@ async def check_openai(key: str | None, model: str) -> dict:
         return {"ok": False, "model": model, "reason": str(e)[:200]}
 
 
+_devices_cache: dict = {"t": 0.0, "value": None}
+_devices_lock = asyncio.Lock()
+
+
+async def detect_devices(s: Settings, max_age_s: float = 4.0) -> dict:
+    """Which headset and pad a session would get right now. Cached briefly: the Listen screen polls it and
+    Windows probes Bluetooth COM ports by opening them (a second or two each)."""
+    async with _devices_lock:
+        now = time.monotonic()
+        if _devices_cache["value"] is not None and now - _devices_cache["t"] < max_age_s:
+            return _devices_cache["value"]
+        hp = (
+            "sim"
+            if s.headset_port == "sim"
+            else (s.headset_port or await asyncio.to_thread(autodetect_headset_port))
+        )
+        tp = (
+            "keyboard"
+            if s.totem_port in ("sim", "keyboard")
+            else (s.totem_port or await asyncio.to_thread(autodetect_totem_port, hp))
+        )
+        value = {
+            "headset": {
+                "port": hp,
+                "kind": "simulated" if not hp or hp == "sim" else "real",
+                "setting": s.headset_port,
+                "bridge": "mindwave pipeline" if hp and hp != "sim" else None,
+            },
+            "totem": {
+                "port": tp,
+                "kind": "keyboard" if not tp or tp in ("sim", "keyboard") else "real",
+                "setting": s.totem_port,
+            },
+            "checked_at": time.time(),
+        }
+        _devices_cache.update(t=now, value=value)
+        return value
+
+
 async def run_doctor(s: Settings) -> dict:
-    dg, oa = await asyncio.gather(
-        check_deepgram(s.deepgram_api_key), check_openai(s.openai_api_key, s.openai_model)
-    )
-    hp = (
-        "sim"
-        if s.headset_port == "sim"
-        else (s.headset_port or await asyncio.to_thread(autodetect_headset_port))
-    )
-    tp = (
-        "keyboard"
-        if s.totem_port in ("sim", "keyboard")
-        else (s.totem_port or autodetect_totem_port(exclude=hp))
+    dg, oa, dev = await asyncio.gather(
+        check_deepgram(s.deepgram_api_key),
+        check_openai(s.openai_api_key, s.openai_model),
+        detect_devices(s, max_age_s=0.0),
     )
     return {
         "keys": {"deepgram": bool(s.deepgram_api_key), "openai": bool(s.openai_api_key)},
         "deepgram": dg,
+        "tts": {"ok": bool(s.deepgram_api_key) and dg.get("ok", False), "model": s.tts_model},
         "openai": {**oa, "required": not s.allow_offline_llm},
-        "headset": {
-            "port": hp,
-            "kind": "simulated" if not hp or hp == "sim" else "real",
-            "setting": s.headset_port,
-            "bridge": "mindwave pipeline" if hp and hp != "sim" else None,
-        },
-        "totem": {
-            "port": tp,
-            "kind": "keyboard" if not tp or tp in ("sim", "keyboard") else "real",
-            "setting": s.totem_port,
-        },
+        "headset": dev["headset"],
+        "totem": dev["totem"],
         "platform": sys.platform,
         "serial_ports": [
             {"device": p.device, "description": p.description, "hwid": p.hwid, "vid": p.vid}

@@ -6,24 +6,36 @@ Outputs are labelled source="offline" by the caller and the UI shows the badge.
 
 from __future__ import annotations
 
+import json
 import re
 from collections import Counter
 
 import numpy as np
 
 from .schemas import (
-    Artifacts,
+    XY,
+    Analogy,
+    Animation,
     Chart,
+    ChartPoint,
     CheckQuestion,
+    Compare,
+    CompareRow,
     GapNote,
-    GapPackage,
     KeyIdea,
+    Mapping,
+    Plan,
+    Plot,
     RecapForms,
     SceneEdge,
     SceneGraph,
     SceneNode,
     SceneStep,
+    Series,
     Steps,
+    Strict,
+    Timeline,
+    TimelineEvent,
     WorkedExample,
 )
 
@@ -100,7 +112,173 @@ _GENERIC = [
 ]
 
 
-def gap_package(span_text: str, context_text: str, corpus_text: str, seed: int = 0) -> GapPackage:
+def _numbers(text: str) -> list[tuple[str, float]]:
+    """(label, value) for numbers written as digits, label = the word before the number."""
+    out: list[tuple[str, float]] = []
+    for m in re.finditer(r"(?:([A-Za-z][A-Za-z'-]+)\s+)?(-?\d[\d,]*(?:\.\d+)?)", text):
+        try:
+            val = float(m.group(2).replace(",", ""))
+        except ValueError:
+            continue
+        out.append(((m.group(1) or "value").strip(), val))
+    return out[:8]
+
+
+def _animation_html(terms: list[str]) -> str:
+    """A canned, self-contained animation: a signal travelling along the key terms in order (offline stand-in)."""
+    labels = [t[:14] for t in (terms or ["idea"])[:4]]
+    n = len(labels)
+    xs = [80 + i * (440 // max(1, n - 1)) if n > 1 else 300 for i in range(n)]
+    nodes = "".join(
+        f"<circle cx='{x}' cy='130' r='26' fill='none' stroke='currentColor' stroke-width='2'/>"
+        f"<text x='{x}' y='185' text-anchor='middle' font-family='system-ui' font-size='15' fill='currentColor'>{lab}</text>"
+        for x, lab in zip(xs, labels, strict=True)
+    )
+    lines = "".join(
+        f"<line x1='{xs[i] + 26}' y1='130' x2='{xs[i + 1] - 26}' y2='130' stroke='currentColor' stroke-width='2'/>"
+        for i in range(n - 1)
+    )
+    return (
+        "<div><svg viewBox='0 0 600 260' width='100%' xmlns='http://www.w3.org/2000/svg'>"
+        f"{lines}{nodes}<circle id='dot' cx='{xs[0]}' cy='130' r='10' fill='#1cb0f6'/>"
+        "<text x='300' y='40' text-anchor='middle' font-family='system-ui' font-size='14' fill='currentColor'>"
+        "(offline) the idea moves through the key terms in order</text></svg>"
+        "<script>(function(){var xs=" + json.dumps(xs) + ";var dot=document.getElementById('dot');"
+        "var T=5000;function f(t){var p=(t%T)/T*(xs.length-1);var i=Math.min(xs.length-2,Math.floor(p));"
+        "var u=xs.length>1?p-i:0;var x=xs.length>1?xs[i]+(xs[i+1]-xs[i])*u:xs[0];dot.setAttribute('cx',x);"
+        "requestAnimationFrame(f);}requestAnimationFrame(f);})();</script></div>"
+    )
+
+
+def artifact(kind: str, span_text: str, context_text: str, corpus_text: str, seed: int = 0) -> Strict | None:
+    """One template filled extractively (tests only). None when the span cannot support that template."""
+    terms = rare_terms(span_text, corpus_text, 4)
+    term = terms[0]
+    sents = sentences(span_text) or [tail(span_text)]
+    short = lambda s, n=15: " ".join(s.split()[:n])  # noqa: E731
+    if kind == "analogy":
+        return Analogy(
+            story="(offline) " + tail(span_text, 60),
+            mapping=[
+                Mapping(idea=t, everyday="(offline) no everyday comparison available") for t in terms[:3]
+            ],
+            caveat="(offline) the extractive stand-in cannot map ideas onto everyday situations",
+        )
+    if kind == "diagram":
+        nodes = [SceneNode(id=f"n{i + 1}", label=t) for i, t in enumerate(terms[:4])]
+        if len(nodes) < 2:
+            nodes.append(SceneNode(id="n2", label="the point"))
+        edges = [
+            SceneEdge(from_id=nodes[i].id, to_id=nodes[i + 1].id, label="then") for i in range(len(nodes) - 1)
+        ]
+        steps = []
+        for i, n in enumerate(nodes):
+            cap = sents[i] if i < len(sents) else f"{n.label} is part of this idea."
+            steps.append(SceneStep(highlight=[m.id for m in nodes[: i + 1]], caption=short(cap, 20)))
+        return SceneGraph(title=f"(offline) {term}", nodes=nodes, edges=edges, steps=steps)
+    if kind == "chart":
+        nums = _numbers(span_text)
+        if len(nums) < 2:
+            return None
+        return Chart(
+            kind="bar",
+            title=f"(offline) numbers said about {term}",
+            unit="as said",
+            points=[ChartPoint(label=lab, value=val) for lab, val in nums],
+            takeaway="(offline) the numbers as they appeared in the transcript",
+        )
+    if kind == "plot":
+        nums = _numbers(span_text)
+        if len(nums) < 3:
+            return None
+        return Plot(
+            title=f"(offline) values in order, {term}",
+            x_label="order said",
+            y_label="value",
+            series=[
+                Series(name="as said", points=[XY(x=float(i + 1), y=v) for i, (_, v) in enumerate(nums)])
+            ],
+            annotations=[],
+            illustrative=False,
+            takeaway="(offline) each number in the order the lecturer said it",
+        )
+    if kind == "timeline":
+        if len(sents) < 3:
+            return None
+        ordinals = ["first", "then", "next", "after that", "later", "then", "finally", "last"]
+        events = [
+            TimelineEvent(when=ordinals[min(i, len(ordinals) - 1)], label=short(s, 6), detail=short(s, 20))
+            for i, s in enumerate(sents[:8])
+        ]
+        return Timeline(
+            title=f"(offline) {term}, in order",
+            events=events,
+            takeaway="(offline) the span, sentence by sentence",
+        )
+    if kind == "compare":
+        if len(terms) < 2:
+            return None
+        a, b = terms[0], terms[1]
+        rows = [
+            CompareRow(
+                aspect="what was said",
+                left_value=short(sentence_with(a, span_text), 12),
+                right_value=short(sentence_with(b, span_text), 12),
+            ),
+            CompareRow(
+                aspect="mentioned",
+                left_value=f"{span_text.lower().count(a.lower())} times",
+                right_value=f"{span_text.lower().count(b.lower())} times",
+            ),
+        ]
+        return Compare(
+            title=f"(offline) {a} vs {b}",
+            left=a,
+            right=b,
+            rows=rows,
+            verdict="(offline) two terms from the span, side by side",
+        )
+    if kind == "steps":
+        if len(sents) < 2:
+            return None
+        return Steps(title=f"(offline) {term}", steps=[short(s) for s in sents[:6]])
+    if kind == "example":
+        return WorkedExample(
+            title=f"(offline) {term}",
+            lines=[short(s) for s in sents[:4]] or [tail(span_text, 15)],
+            result=tail(span_text, 12),
+        )
+    if kind == "animation":
+        return Animation(
+            title=f"(offline) {term} in motion",
+            caption="(offline) a marker travels through the key terms in the order they were said",
+            html=_animation_html(terms),
+        )
+    raise ValueError(kind)
+
+
+def plan_for(span_text: str, corpus_text: str, seed: int = 0) -> Plan:
+    """The offline plan: numbers pick a chart or a plot, otherwise the visual rotates with the seed so every
+    template gets exercised in test mode; steps when there are two or more sentences."""
+    nums = _numbers(span_text)
+    sents = sentences(span_text)
+    terms = rare_terms(span_text, corpus_text, 4)
+    if len(nums) >= 3:
+        visual = "plot"
+    elif len(nums) >= 2:
+        visual = "chart"
+    else:
+        visual = ["diagram", "animation", "timeline", "compare"][seed % 4]
+        if visual == "timeline" and len(sents) < 3:
+            visual = "diagram"
+        if visual == "compare" and len(terms) < 2:
+            visual = "diagram"
+    doing = "steps" if len(sents) >= 2 else "example"
+    return Plan(visual=visual, doing=doing, why="(offline) chosen by counts of numbers, sentences and terms")
+
+
+def gap_package(span_text: str, context_text: str, corpus_text: str, seed: int = 0) -> dict:
+    """The whole package, extractively (tests only): every field the two-stage generator would produce."""
     rng = np.random.default_rng(seed)
     terms = rare_terms(span_text, corpus_text, 4)
     term = terms[0]
@@ -132,32 +310,23 @@ def gap_package(span_text: str, context_text: str, corpus_text: str, seed: int =
         correct_index=correct_index,
         explanation=f'The lecturer said: "{correct_phrase}".',
     )
-    nodes = [SceneNode(id=f"n{i + 1}", label=t) for i, t in enumerate(terms[:4])]
-    if len(nodes) < 2:
-        nodes.append(SceneNode(id="n2", label="the point"))
-    edges = [
-        SceneEdge(from_id=nodes[i].id, to_id=nodes[i + 1].id, label="then") for i in range(len(nodes) - 1)
-    ]
-    steps = []
-    for i, n in enumerate(nodes):
-        cap = sents[i] if i < len(sents) else f"{n.label} is part of this idea."
-        steps.append(SceneStep(highlight=[m.id for m in nodes[: i + 1]], caption=" ".join(cap.split()[:20])))
-    diagram = SceneGraph(title=f"(offline) {term}", nodes=nodes, edges=edges, steps=steps)
-    artifacts = Artifacts(
-        summary=tail(span_text, 60),
-        key_idea=KeyIdea(term=term, definition=definition, example=tail(span_text, 30)),
-        analogy="(offline) " + tail(span_text, 60),
-        diagram=diagram,
-        chart=Chart(applicable=False, kind="bar", title="", unit="", points=[], takeaway=""),
-        steps=Steps(
-            applicable=len(sents) >= 2,
-            title=f"(offline) {term}",
-            steps=[" ".join(s.split()[:15]) for s in sents[:6]],
-        ),
-        example=WorkedExample(
-            title=f"(offline) {term}",
-            lines=[" ".join(s.split()[:15]) for s in sents[:4]] or [tail(span_text, 15)],
-            result=tail(span_text, 12),
-        ),
-    )
-    return GapPackage(note=note, question=question, artifacts=artifacts)
+    plan = plan_for(span_text, corpus_text, seed)
+    artifacts: dict = {
+        "summary": tail(span_text, 60),
+        "key_idea": KeyIdea(term=term, definition=definition, example=tail(span_text, 30)).model_dump(),
+        "plan": plan.model_dump(),
+    }
+    sources: dict = {"core": "offline"}
+    for kind in ("analogy", plan.visual, plan.doing, "diagram", "example"):
+        if kind in artifacts:
+            continue
+        obj = artifact(kind, span_text, context_text, corpus_text, seed)
+        if obj is not None:
+            artifacts[kind] = obj.model_dump()
+            sources[kind] = "offline"
+    return {
+        "note": note.model_dump(),
+        "question": question.model_dump(),
+        "artifacts": artifacts,
+        "sources": sources,
+    }

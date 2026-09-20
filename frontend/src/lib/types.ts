@@ -12,14 +12,31 @@ export const FORM_LABEL: Record<Form, string> = {
 export const FORM_ICON: Record<Form, string> = { words: "Aa", analogy: "≈", visual: "◔", doing: "⇢" };
 
 /** One generated way of presenting a moment (docs/PRODUCT.md §4). */
-export type ArtifactKind = "words" | "analogy" | "diagram" | "chart" | "steps" | "example";
+export type ArtifactKind = "words" | "analogy" | "diagram" | "chart" | "plot" | "timeline" | "compare" | "animation" | "steps" | "example";
+export const ARTIFACT_KINDS: ArtifactKind[] = ["words", "analogy", "diagram", "chart", "plot", "timeline", "compare", "animation", "steps", "example"];
 export const ARTIFACT_LABEL: Record<ArtifactKind, string> = {
   words: "in words",
   analogy: "a comparison",
   diagram: "a picture",
   chart: "the numbers",
+  plot: "a curve",
+  timeline: "in order",
+  compare: "side by side",
+  animation: "in motion",
   steps: "step by step",
   example: "a worked example",
+};
+export const ARTIFACT_FAMILY: Record<ArtifactKind, Form> = {
+  words: "words",
+  analogy: "analogy",
+  diagram: "visual",
+  chart: "visual",
+  plot: "visual",
+  timeline: "visual",
+  compare: "visual",
+  animation: "visual",
+  steps: "doing",
+  example: "doing",
 };
 
 export interface Word {
@@ -119,12 +136,29 @@ export interface MindwaveStatus {
   frames?: number;
 }
 
+/** Is the brain-wave stream actually arriving (a chunk in the last 2 s)? */
+export interface StreamHealth {
+  live: boolean;
+  age_s: number | null;
+  chunks: number;
+}
+
 export interface HeadsetStatus {
   connected: boolean;
   kind: HeadsetKind;
+  /** true for every kind but "real": the waves on screen are not from a headset on this student's head */
+  simulated?: boolean;
   port: string | null;
   state: string | null;
+  stream?: StreamHealth;
   mw?: MindwaveStatus;
+}
+
+/** GET /api/devices: what a session would get right now (headset and pad), no network calls. */
+export interface Devices {
+  headset: { port: string | null; kind: "real" | "simulated" | string; setting: string | null; bridge?: string | null };
+  totem: { port: string | null; kind: "real" | "keyboard" | string; setting: string | null };
+  checked_at: number;
 }
 
 /** Per-frame extras from the mindwave pipeline, on focus samples when the bridge is the front end. */
@@ -299,6 +333,8 @@ export interface GapPublic {
   summary?: string | null;
   artifacts_available?: string[];
   forms_available?: Form[];
+  plan?: Plan | null;
+  kinds?: Record<Form, ArtifactKind> | null;
 }
 
 export interface RegenerateResponse {
@@ -342,7 +378,7 @@ export interface WordsContent {
   key_idea: KeyIdea;
 }
 export interface ChartContent {
-  applicable: boolean;
+  applicable?: boolean; // packages from before the plan
   kind: "bar" | "line";
   title: string;
   unit: string;
@@ -350,7 +386,7 @@ export interface ChartContent {
   takeaway: string;
 }
 export interface StepsContent {
-  applicable: boolean;
+  applicable?: boolean; // packages from before the plan
   title: string;
   steps: string[];
 }
@@ -359,7 +395,63 @@ export interface ExampleContent {
   lines: string[];
   result: string;
 }
-export type ReteachContent = WordsContent | string | SceneGraph | ChartContent | StepsContent | ExampleContent | null;
+/** By comparison: the story, the explicit mapping, and where it breaks. Older packages carry a plain string. */
+export interface AnalogyContent {
+  story: string;
+  mapping: { idea: string; everyday: string }[];
+  caveat: string;
+}
+export interface PlotContent {
+  title: string;
+  x_label: string;
+  y_label: string;
+  series: { name: string; points: { x: number; y: number }[] }[];
+  annotations: { x: number; y: number; text: string }[];
+  illustrative: boolean;
+  takeaway: string;
+}
+export interface TimelineContent {
+  title: string;
+  events: { when: string; label: string; detail: string }[];
+  takeaway: string;
+}
+export interface CompareContent {
+  title: string;
+  left: string;
+  right: string;
+  rows: { aspect: string; left_value: string; right_value: string }[];
+  verdict: string;
+}
+/** A self-contained web animation (inline svg or canvas plus one script), rendered in a sandboxed iframe. */
+export interface AnimationContent {
+  title: string;
+  caption: string;
+  html: string;
+}
+export interface Plan {
+  visual: ArtifactKind;
+  doing: ArtifactKind;
+  why: string;
+}
+export type ReteachContent =
+  | WordsContent
+  | string
+  | AnalogyContent
+  | SceneGraph
+  | ChartContent
+  | PlotContent
+  | TimelineContent
+  | CompareContent
+  | AnimationContent
+  | StepsContent
+  | ExampleContent
+  | null;
+
+/** GET /api/sessions/{id}/artifacts: every artifact of every moment, for the team's preview. */
+export interface GapArtifacts extends GapPublic {
+  artifacts: Record<string, unknown> & { summary?: string; key_idea?: KeyIdea; plan?: Plan };
+  sources: Record<string, PackageSource>;
+}
 
 export interface Card {
   id: string;
@@ -372,10 +464,24 @@ export interface Card {
   package_source: PackageSource | null;
   forms_used: Form[];
   question?: { question: string; options: string[] };
-  reteach?: { form: Form; artifact: ArtifactKind; content: ReteachContent; key_term: string | null };
+  reteach?: {
+    form: Form;
+    artifact: ArtifactKind;
+    content: ReteachContent;
+    key_term: string | null;
+    /** how the missed span connects to what the student did hear (docs/PRODUCT.md §5 "where you were") */
+    context: string;
+    /** the lecturer's own words for the span */
+    said: string;
+    /** the tutor's reason for this family: preferred, untried, or exploring */
+    why: string;
+  };
 }
 
+export type ReviewMode = "tutor" | "manual";
+
 export interface Progress {
+  mode?: ReviewMode;
   gaps_total: number;
   gaps_closed: number;
   gaps_exhausted: number;
@@ -397,6 +503,8 @@ export interface FormStat {
   rate: number | null;
   label?: string;
   focus?: { mean_focus: number | null; n: number };
+  /** 0.6 x posterior mean + 0.4 x mean focus (posterior alone until focus is measured) */
+  score?: number;
 }
 
 export interface Profile {
@@ -408,7 +516,11 @@ export interface Profile {
 
 export interface TallySummary {
   forms: Record<Form, FormStat>;
+  /** combined ranking: understanding first, attention second (docs/PRODUCT.md §5) */
   rank: Form[];
+  rank_understanding?: Form[];
+  /** the top of the ranking once enough explanations have been scored, else null */
+  preferred?: Form | null;
   pick: Form;
   enough_data: boolean;
   total_attempts: number;
@@ -471,6 +583,7 @@ export interface LossMap {
 export interface Doctor {
   keys: { deepgram: boolean; openai: boolean };
   deepgram: { ok: boolean; reason?: string; status?: number };
+  tts?: { ok: boolean; model: string };
   openai: { ok: boolean; model: string; reason?: string; alternatives?: string[]; required?: boolean };
   headset: { port: string | null; kind: string; setting: string | null; bridge?: string | null };
   totem: { port: string | null; kind: string; setting: string | null; hint?: string | null };

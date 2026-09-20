@@ -140,6 +140,15 @@ export default function Team() {
         <aside className="stack-lg">
           <div className="card">
             <div className="card-header">
+              <span className="card-title">Explanation templates</span>
+              <Link className="btn btn-sm" to="/team/artifacts/sample">
+                Sample data
+              </Link>
+            </div>
+            <div className="label-2 t-footnote">The ten renderings (words, comparison, picture, numbers, curve, in order, side by side, in motion, steps, worked example) with built-in data, to check each one without a session.</div>
+          </div>
+          <div className="card">
+            <div className="card-header">
               <span className="card-title">Lecture tools</span>
             </div>
             <div className="stack">
@@ -171,6 +180,11 @@ export default function Team() {
                     <Link className="btn btn-sm" to={`/team/replay/${s.id}`}>
                       Replay
                     </Link>
+                    {s.gaps ? (
+                      <Link className="btn btn-sm" to={`/team/artifacts/${s.id}`}>
+                        Explanations
+                      </Link>
+                    ) : null}
                     {s.lecture_id ? (
                       <Link className="btn btn-sm" to={`/team/quiz/${s.id}`}>
                         Quiz

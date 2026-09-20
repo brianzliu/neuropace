@@ -73,3 +73,25 @@ def test_tally_finds_true_preference_like_bandit_sim():
             counts[arm]["rescues"] += int(y)
         hits += T.rank(T.posteriors(counts, prior))[0] == "visual"
     assert hits / sims >= 0.8
+
+
+def test_combined_ranking_puts_understanding_first_and_attention_second():
+    """docs/PRODUCT.md §5: score = 0.6 x rescues posterior + 0.4 x mean focus; attention only once measured."""
+    import numpy as np
+
+    from reflow.config import Settings
+    from reflow.core import tally as t
+
+    s = Settings()
+    learner = {"words": {"rescues": 6, "attempts": 8}, "visual": {"rescues": 6, "attempts": 8}}
+    pop = {}
+    focus = {"visual": {"mean_focus": 0.95, "n": 4}, "words": {"mean_focus": 0.55, "n": 4}}
+    summ = t.summary(learner, pop, s, np.random.default_rng(0), focus=focus)
+    assert summ["rank"][0] == "visual", "same understanding: the family that held attention ranks first"
+    assert summ["forms"]["visual"]["score"] > summ["forms"]["words"]["score"]
+    assert summ["preferred"] == "visual" and summ["enough_data"]
+    plain = t.summary(learner, pop, s, np.random.default_rng(0), focus=None)
+    assert plain["forms"]["visual"]["score"] == plain["forms"]["visual"]["posterior_mean"]
+    assert plain["rank"] == plain["rank_understanding"]
+    few = t.summary({"visual": {"rescues": 2, "attempts": 2}}, pop, s, np.random.default_rng(0))
+    assert few["preferred"] is None and not few["enough_data"]

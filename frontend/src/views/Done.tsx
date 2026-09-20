@@ -34,18 +34,21 @@ export default function Done() {
           </div>
           <div className="stat">
             <div className="v">{taps}</div>
-            <div className="k">times you said I'm lost</div>
+            <div className="k">times you asked to catch up</div>
           </div>
           <div className="stat green">
             <div className="v">{sess.catchups_shown}</div>
             <div className="k">catch-ups</div>
           </div>
         </div>
-        <p className="sub">{sess.gaps ? "One quick question per moment, explained a different way if you need it. Five minutes." : "You stayed with it the whole way. Nothing to restudy this time."}</p>
+        <p className="sub">{sess.gaps ? "Each moment explained your way, then one quick question. About five minutes." : "You stayed with it the whole way. Nothing to restudy this time."}</p>
         {sess.gaps ? (
           <>
-            <Link className="btn btn-primary btn-lg" to={`/restudy/${sessionId}`}>
-              Restudy now
+            <Link className="btn btn-primary btn-lg" to={`/restudy/${sessionId}?mode=tutor`}>
+              Private tutoring
+            </Link>
+            <Link className="btn btn-blue" to={`/restudy/${sessionId}?mode=manual`}>
+              Review on my own
             </Link>
             <Link className="linklike" to={`/lecture/${sessionId}`}>
               Later

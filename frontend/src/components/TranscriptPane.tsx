@@ -6,19 +6,22 @@ interface Props {
   interim: Word[];
   flags: Flag[];
   now: number;
+  /** follow the newest words (live); off for reading a finished lecture from the top */
+  autoScroll?: boolean;
+  className?: string;
 }
 
-export default function TranscriptPane({ words, interim, flags, now }: Props) {
+export default function TranscriptPane({ words, interim, flags, now, autoScroll = true, className }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    if (!el || !autoScroll) return;
     el.scrollTop = el.scrollHeight;
-  }, [words.length, interim.length]);
+  }, [words.length, interim.length, autoScroll]);
   const spans = flags.filter((f) => f.t_start !== null).map((f) => [f.t_start, f.t_end ?? f.t_trigger] as const);
   const inFlag = (w: Word) => spans.some(([a, b]) => w.end > a && w.start < b);
   return (
-    <div ref={ref} className="document">
+    <div ref={ref} className={"document" + (className ? " " + className : "")}>
       {words.length === 0 && interim.length === 0 ? <span className="empty">Listening. Words appear here as they are spoken.</span> : null}
       {words.map((w, i) => (
         <span key={i} className={"w" + (inFlag(w) ? " flagged" : "") + (now - w.end < 2.5 && now - w.end >= 0 ? " now" : "")}>

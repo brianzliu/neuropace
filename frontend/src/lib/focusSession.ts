@@ -10,6 +10,7 @@ export interface FocusSession {
   headset: HeadsetStatus | null;
   last: FocusMsg | null;
   raw: number[];
+  rawAt: number;
   bands: { theta: number; alpha: number; beta: number } | null;
   /** Bumps when the headset flags a drop while a card is open. */
   driftSeq: number;
@@ -22,6 +23,7 @@ export function useFocusSession(enabled: boolean): FocusSession {
   const [headset, setHeadset] = useState<HeadsetStatus | null>(null);
   const [last, setLast] = useState<FocusMsg | null>(null);
   const [raw, setRaw] = useState<number[]>([]);
+  const [rawAt, setRawAt] = useState(0);
   const [bands, setBands] = useState<FocusSession["bands"]>(null);
   const [ready, setReady] = useState(false);
   const [driftSeq, setDriftSeq] = useState(0);
@@ -35,7 +37,8 @@ export function useFocusSession(enabled: boolean): FocusSession {
     let alive = true;
     (async () => {
       try {
-        const s = await api.createSession({ mode: "review", headset: "auto", totem: "keyboard" });
+        // the lecture's own calibration carries over: focus counts from the first card instead of after a new baseline
+        const s = await api.createSession({ mode: "review", headset: "auto", totem: "keyboard", use_stored_baseline: true });
         if (!alive) {
           await api.endSession(s.id).catch(() => undefined);
           return;
@@ -48,7 +51,7 @@ export function useFocusSession(enabled: boolean): FocusSession {
               setHeadset(m.headset);
               setReady(true);
             } else if (m.type === "headset") {
-              setHeadset({ connected: m.connected, kind: m.kind, port: m.port, state: m.state, mw: m.mw });
+              setHeadset({ connected: m.connected, kind: m.kind, simulated: m.simulated, port: m.port, state: m.state, stream: m.stream, mw: m.mw });
             } else if (m.type === "focus") {
               lastRef.current = m;
               setLast(m);
@@ -63,6 +66,7 @@ export function useFocusSession(enabled: boolean): FocusSession {
               }
             } else if (m.type === "raw") {
               setRaw((r) => (r.length > 512 ? r.slice(-512 + m.uv.length).concat(m.uv) : r.concat(m.uv)));
+              setRawAt(Date.now());
             } else if (m.type === "flag_open" && (m.flag.source === "eeg" || m.flag.source === "forced")) {
               if (card.current) setDriftSeq((n) => n + 1);
             }
@@ -95,5 +99,5 @@ export function useFocusSession(enabled: boolean): FocusSession {
     return Math.round((1 - c.dropped / c.valid) * 1000) / 1000;
   }, []);
 
-  return { ready, headset, last, raw, bands, driftSeq, startCard, endCard };
+  return { ready, headset, last, raw, rawAt, bands, driftSeq, startCard, endCard };
 }

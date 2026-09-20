@@ -136,7 +136,7 @@ export default function Sidebar({ sessionId, sessionRunning, rail }: { sessionId
         {sessionId ? (
           <>
             {rail ? null : <div className="sb-section">This lecture</div>}
-            {sessionRunning ? <Item to={`/live/${sessionId}`} icon="live" label="Listening" rail={rail} /> : null}
+            {sessionRunning ? <Item to={`/live/${sessionId}`} icon="live" label="Recording" rail={rail} /> : null}
             <Item to={`/lecture/${sessionId}`} icon="notes" label="What you missed" rail={rail} />
             <Item to={`/restudy/${sessionId}`} icon="review" label="Restudy" rail={rail} />
           </>

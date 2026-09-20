@@ -160,7 +160,8 @@ class MindwaveHeadset:
     ) -> None:
         self.on_frame = on_frame
         self.on_raw = on_raw
-        self.kind = "fake" if fake else ("replay" if replay_dir else "real")
+        self._mode = "fake" if fake else ("replay" if replay_dir else "real")
+        self.kind = self._mode  # what the app shows; the routing below follows _mode
         self.port = port or (f"replay:{replay_dir}" if replay_dir else "fake")
         self.replay_dir = replay_dir
         self.replay_speed = replay_speed
@@ -182,13 +183,13 @@ class MindwaveHeadset:
         from mindwave import FakeSource, MindWaveSource, Pipeline, ReplaySource
 
         self._loop = asyncio.get_running_loop()
-        if self.kind == "fake":
+        if self._mode == "fake":
             self.source = FakeSource(state=self._STATE_MAP.get(self.state, self.state))
-        elif self.kind == "replay":
+        elif self._mode == "replay":
             self.source = ReplaySource(self.replay_dir, speed=self.replay_speed)  # type: ignore[arg-type]
         else:
             self.source = MindWaveSource(self.port)
-        self.pipe = Pipeline(self.source, log_dir=(self.log_dir if self.kind == "real" else None))
+        self.pipe = Pipeline(self.source, log_dir=(self.log_dir if self._mode == "real" else None))
         self.pipe.on_frame(self._frame_cb)
         if self.on_raw is not None:
             self.pipe.on_raw(self._raw_cb)
@@ -208,7 +209,7 @@ class MindwaveHeadset:
         """Fake source only. Accepts reflow names (focused/drifting/poor) or the pipeline's own states."""
         mapped = self._STATE_MAP.get(state, state)
         self.state = state
-        if self.kind == "fake" and self.source is not None:
+        if self._mode == "fake" and self.source is not None:
             self.source.set_state(mapped)
 
     def calibrate(self, phase: str) -> None:

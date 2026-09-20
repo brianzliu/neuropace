@@ -68,6 +68,7 @@ class Settings:
     allow_offline_llm: bool = False
 
     headset_port: str | None = None  # None = auto-detect, "sim" = simulate
+    tts_model: str = "aura-2-thalia-en"  # the tutor voice (Deepgram Aura)
     totem_port: str | None = None
 
     # signal engine (TDD §3)
@@ -166,6 +167,7 @@ def load_settings(env_file: str | os.PathLike | None = None) -> Settings:
     s.openai_api_key = _env("OPENAI_API_KEY")
     s.openai_model = _env("OPENAI_MODEL", s.openai_model) or s.openai_model
     s.headset_port = _env("REFLOW_HEADSET_PORT")
+    s.tts_model = _env("REFLOW_TTS_MODEL", s.tts_model) or s.tts_model
     s.allow_offline_llm = (_env("REFLOW_ALLOW_OFFLINE_LLM", "0") or "0").lower() in ("1", "true", "yes")
     s.totem_port = _env("REFLOW_TOTEM_PORT")
     s.baseline_seconds = _env_float("REFLOW_BASELINE_SECONDS", s.baseline_seconds)

@@ -4,6 +4,8 @@ import { api, errorText } from "../lib/api";
 import type { NotesResponse } from "../lib/types";
 import { range } from "../lib/format";
 import { Badge } from "../components/Badges";
+import TranscriptPane from "../components/TranscriptPane";
+import type { Flag } from "../lib/types";
 
 /** One lecture: the way into restudy first, then the moments as a list (docs/PRODUCT.md §6). */
 export default function Lecture() {
@@ -78,16 +80,40 @@ export default function Lecture() {
         </div>
       ) : total > 0 ? (
         <div className="start">
-          <button className="btn btn-primary btn-lg btn-block" onClick={() => nav(`/restudy/${sessionId}`)} disabled={failed.length > 0}>
-            {closed === total ? "Restudy again" : "Restudy"}
+          <button className="btn btn-primary btn-lg btn-block" onClick={() => nav(`/restudy/${sessionId}?mode=tutor`)} disabled={failed.length > 0}>
+            {closed === total ? "Private tutoring, again" : "Private tutoring"}
           </button>
-          <div className="start-note">{failed.length ? "Some notes aren't written yet." : "One quick question per moment. Miss it, and it's explained a different way."}</div>
+          <button className="btn btn-blue btn-block" onClick={() => nav(`/restudy/${sessionId}?mode=manual`)} disabled={failed.length > 0}>
+            Review on my own
+          </button>
+          <div className="start-note">{failed.length ? "Some notes aren't written yet." : "Tutoring explains each moment your way (and can read it aloud), then asks. On your own, the question comes first and an explanation only if you miss."}</div>
           {failed.length ? (
             <button className="linklike" onClick={() => void regenerate()} disabled={regenerating}>
               {regenerating ? "Writing…" : "Try writing them again"}
             </button>
           ) : null}
         </div>
+      ) : null}
+
+      {data.words.length ? (
+        <details className="moment-row whole" open={total === 0}>
+          <summary>
+            <span className="m-body">
+              <span className="m-summary">The whole lecture</span>
+              <span className="m-meta">{data.words.length} words{total ? ` · the ${total} moment${total === 1 ? "" : "s"} you missed are highlighted` : ""}</span>
+            </span>
+          </summary>
+          <div className="m-detail">
+            <TranscriptPane
+              words={data.words}
+              interim={[]}
+              now={-1}
+              autoScroll={false}
+              className="reading"
+              flags={data.gaps.map((g): Flag => ({ id: g.id, source: "eeg", t_trigger: g.t_end, t_start: g.t_start, t_end: g.t_end, catchup_shown: null, catchup_form: null, opened: false }))}
+            />
+          </div>
+        </details>
       ) : null}
 
       {total > 0 ? (

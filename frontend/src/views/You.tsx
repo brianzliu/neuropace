@@ -16,7 +16,8 @@ export default function You() {
   if (!p) return <div className="page narrow"><div className="loading">Loading…</div></div>;
   const t = p.tally;
   const maxRescues = Math.max(1, ...FORMS.map((f) => t.forms[f].rescues));
-  const best = [...FORMS].sort((a, b) => t.forms[b].posterior_mean - t.forms[a].posterior_mean)[0];
+  const order = t.rank && t.rank.length ? t.rank : [...FORMS].sort((a, b) => t.forms[b].posterior_mean - t.forms[a].posterior_mean);
+  const best = t.preferred ?? order[0];
   return (
     <div className="page narrow">
       <header className="hero">
@@ -41,17 +42,18 @@ export default function You() {
       <section className="stack" style={{ marginTop: 28 }}>
         <div className="row between">
           <div className="eyebrow">How you learn best</div>
-          {t.enough_data ? <Badge tone="success">{FORM_LABEL[best]} leads</Badge> : <Badge>still learning · {t.total_attempts}/{t.needed_attempts} answers</Badge>}
+          {t.enough_data ? <Badge tone="success">{FORM_LABEL[best]} is your preferred way</Badge> : <Badge>still learning · {t.total_attempts}/{t.needed_attempts} explanations scored</Badge>}
         </div>
         <div className="prefs">
-          {FORMS.map((f) => {
+          {order.map((f, i) => {
             const st = t.forms[f];
             const focusPct = st.focus?.mean_focus != null ? Math.round(st.focus.mean_focus * 100) : null;
             return (
-              <div key={f} className="pref">
+              <div key={f} className={"pref" + (i === 0 && t.enough_data ? " top" : "")}>
                 <span className="f-icon">{FORM_ICON[f]}</span>
                 <div>
                   <div className="p-name">
+                    <span className="rank-num">{i + 1}</span>
                     {FORM_LABEL[f]}
                     {t.pick === f ? <Badge tone="accent">next time</Badge> : null}
                   </div>
@@ -76,7 +78,7 @@ export default function You() {
             );
           })}
         </div>
-        <div className="t-footnote label-2">Rescued means the explanation came right before a correct answer. Held your attention is measured with the headset while you read it; it can switch an explanation early, it never picks the winner.</div>
+        <div className="t-footnote label-2">Ranked by what works: whether the explanation came right before a correct answer counts most, how much of it held your attention (measured with the headset while you read) counts too. A drift while reading switches the explanation on the spot.</div>
       </section>
 
       <footer className="you-foot">

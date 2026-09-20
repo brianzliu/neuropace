@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useBlocker, useNavigate, useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { SessionSocket, type SocketStatus } from "../lib/ws";
 import { startMicStream, type MicStream } from "../lib/audio";
@@ -26,6 +26,15 @@ function inField(ev: KeyboardEvent): boolean {
   return tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || !!el?.isContentEditable;
 }
 
+function micMessage(e: unknown): string {
+  const name = (e as { name?: string })?.name ?? "";
+  if (name === "NotAllowedError" || name === "SecurityError") return "Reflow needs the microphone to hear the lecture. Allow it in the browser, then try again.";
+  if (name === "NotFoundError") return "No microphone found. Plug one in, then try again.";
+  return "The microphone could not start. " + (e instanceof Error ? e.message : String(e));
+}
+
+/** Listening (docs/PRODUCT.md §6). While the lecture is being recorded, leaving this screen asks first:
+ * in-app navigation is blocked with a question, closing the tab gets the browser's own prompt. */
 export default function Live() {
   const { sessionId = "" } = useParams();
   const nav = useNavigate();
@@ -58,6 +67,10 @@ export default function Live() {
   const sockRef = useRef<SessionSocket | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
+  const micRef = useRef<MicStream | null>(null);
+  micRef.current = mic;
+  const leaving = useRef(false); // set once the lecture is ended here, so the guard lets the navigation through
+  const micTried = useRef(false);
 
   useEffect(() => {
     const sock = new SessionSocket(
@@ -105,36 +118,98 @@ export default function Live() {
     },
     [send],
   );
-  const doEnd = useCallback(async () => {
-    if (ending) return;
+
+  const recording = status === "open" && !state.ended && !ending && !wsError;
+
+  const endLecture = useCallback(async (): Promise<boolean> => {
+    if (ending) return false;
     setEnding(true);
     try {
-      if (mic) await mic.stop();
+      if (micRef.current) await micRef.current.stop();
       await api.endSession(sessionId);
-      nav(`/done/${sessionId}`);
+      leaving.current = true;
+      return true;
     } catch (e) {
       setWsError(String(e));
       setEnding(false);
+      return false;
     }
-  }, [ending, mic, nav, sessionId]);
+  }, [ending, sessionId]);
+  const doEnd = useCallback(async () => {
+    if (await endLecture()) nav(`/done/${sessionId}`);
+  }, [endLecture, nav, sessionId]);
+
+  // in-app navigation while recording: ask first
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => recording && !leaving.current && currentLocation.pathname !== nextLocation.pathname);
+  useEffect(() => {
+    if (!recording) return;
+    const onUnload = (ev: BeforeUnloadEvent) => {
+      ev.preventDefault();
+      ev.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onUnload);
+    return () => window.removeEventListener("beforeunload", onUnload);
+  }, [recording]);
+  const stopAndLeave = useCallback(async () => {
+    if (await endLecture()) {
+      if (blocker.state === "blocked") blocker.reset();
+      nav(`/done/${sessionId}`);
+    }
+  }, [blocker, endLecture, nav, sessionId]);
+
+  // the lecture ended elsewhere (a teammate's terminal, another tab): move on to the summary
+  useEffect(() => {
+    if (state.ended && !ending) {
+      leaving.current = true;
+      nav(`/done/${sessionId}`, { replace: true });
+    }
+  }, [state.ended, ending, nav, sessionId]);
+
+  const startMic = useCallback(async () => {
+    setMicError(null);
+    try {
+      const sock = sockRef.current;
+      if (!sock) return;
+      const m = await startMicStream(sock);
+      setMic(m);
+    } catch (e) {
+      setMicError(micMessage(e));
+    }
+  }, []);
+  const stopMic = async () => {
+    if (mic) await mic.stop();
+    setMic(null);
+  };
+  // a live lecture listens by itself: the microphone starts as soon as the session is open
+  useEffect(() => {
+    if (status !== "open" || state.hello?.transcript_kind !== "deepgram" || micTried.current) return;
+    micTried.current = true;
+    void startMic();
+  }, [status, state.hello?.transcript_kind, startMic]);
 
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => {
       if (inField(ev) || ev.metaKey || ev.ctrlKey || ev.altKey) return;
       const k = ev.key.toLowerCase();
+      if (blocker.state === "blocked") {
+        if (k === "escape") blocker.reset();
+        else return;
+        ev.preventDefault();
+        return;
+      }
       if (k === " " || k === "t") doTap();
-      else if (k === "l") doForce();
+      else if (k === "l" && details) doForce();
       else if (k === "f") setCycleToken((x) => x + 1);
-      else if (k === "1") doSim("focused");
-      else if (k === "2") doSim("drifting");
-      else if (k === "3") doSim("poor");
+      else if (k === "1" && details) doSim("focused");
+      else if (k === "2" && details) doSim("drifting");
+      else if (k === "3" && details) doSim("poor");
       else if (k === "e") void doEnd();
       else return;
       ev.preventDefault();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [doTap, doForce, doSim, doEnd]);
+  }, [doTap, doForce, doSim, doEnd, details, blocker]);
 
   const onExpire = useCallback(() => setState((s) => clearCatchup(s)), []);
   const onDismiss = useCallback(() => {
@@ -154,22 +229,6 @@ export default function Live() {
 
   const onTime = useCallback((t: number, playing: boolean) => send({ type: "media_time", t, playing }), [send]);
 
-  const startMic = async () => {
-    setMicError(null);
-    try {
-      const sock = sockRef.current;
-      if (!sock) return;
-      const m = await startMicStream(sock);
-      setMic(m);
-    } catch (e) {
-      setMicError(String(e));
-    }
-  };
-  const stopMic = async () => {
-    if (mic) await mic.stop();
-    setMic(null);
-  };
-
   const hello = state.hello;
   const recorded = hello?.mode === "recorded";
   const freeze = recorded && !!state.catchup && state.catchup.reason === "video_pause";
@@ -177,22 +236,23 @@ export default function Live() {
   const showSim = hsKind === "simulated" || hsKind === "fake";
   const showCal = !!state.headset && hsKind !== "simulated";
   const totemKeyboard = state.totem ? state.totem.kind !== "real" : true;
+  const practice = (state.headset && state.headset.kind !== "real") || hello?.transcript_kind === "scripted";
 
   const controls = useMemo(
     () => (
       <>
-        <button className="btn btn-primary btn-lg pad-btn" onClick={doTap} title={totemKeyboard ? "No pad connected: Space works the same" : "Same as the pad"}>
-          I'm lost <span className="kbd">space</span>
+        <button className="btn btn-primary btn-lg pad-btn" onClick={doTap} title={totemKeyboard ? "No pad connected: Space does the same" : "Same as the pad"}>
+          Catch me up <span className="kbd">space</span>
         </button>
         {hello?.transcript_kind === "deepgram" ? (
           <div className="grp">
             {mic ? (
-              <button className="btn" onClick={() => void stopMic()}>
-                Stop microphone
+              <button className="btn" onClick={() => void stopMic()} title="Reflow stops hearing the lecture">
+                <span className="dot ok" /> Microphone on
               </button>
             ) : (
-              <button className="btn btn-primary" onClick={() => void startMic()}>
-                Start microphone
+              <button className="btn btn-blue" onClick={() => void startMic()}>
+                Turn the microphone on
               </button>
             )}
             {micError ? <span className="t-footnote error-text">{micError}</span> : null}
@@ -229,11 +289,11 @@ export default function Live() {
           </>
         ) : null}
         <button className="btn btn-danger right" onClick={() => void doEnd()} disabled={ending}>
-          {ending ? "Ending…" : "End lecture"} <span className="kbd">E</span>
+          {ending ? "Writing your notes…" : "End lecture"} <span className="kbd">E</span>
         </button>
       </>
     ),
-    [doTap, doForce, doSim, doCal, state.catchup, showSim, showCal, simState, calPhase, hello?.transcript_kind, mic, ending, micError, doEnd, totemKeyboard, details],
+    [doTap, doForce, doSim, doCal, state.catchup, showSim, showCal, simState, calPhase, hello?.transcript_kind, mic, ending, micError, doEnd, totemKeyboard, details, startMic],
   );
 
   const listening = status === "open" && !state.ended;
@@ -242,10 +302,10 @@ export default function Live() {
       <div className="row">
         <span className="t-title2">{hello?.lecture?.title ?? (hello?.transcript_kind === "deepgram" ? "Live lecture" : "Lecture")}</span>
         <span className={"pill " + (listening ? "live" : "")}>
-          <span className="dot" /> {state.ended ? "ended" : listening ? "listening" : status}
+          <span className="dot" /> {state.ended ? "ended" : listening ? "recording" : status}
         </span>
         <span className="t-subhead label-2 mono">{mmss(state.t)}</span>
-        {(state.headset && state.headset.kind !== "real") || hello?.transcript_kind === "scripted" ? (
+        {practice ? (
           <Badge tone="warning" title={[state.headset && state.headset.kind !== "real" ? "simulated headset" : "", hello?.transcript_kind === "scripted" ? "practice transcript" : ""].filter(Boolean).join(", ")}>
             practice
           </Badge>
@@ -262,7 +322,7 @@ export default function Live() {
             onResume={() => setState((s) => clearCatchup(s))}
           />
         ) : null}
-        <button className={"btn btn-sm" + (details ? " is-on" : "")} onClick={toggleDetails} title="Signal trace, headset and totem status, rolling recaps">
+        <button className={"btn btn-sm" + (details ? " is-on" : "")} onClick={toggleDetails} title="Signal trace, headset and pad status, rolling recaps">
           {details ? "Hide details" : "Details"}
         </button>
       </div>
@@ -270,38 +330,58 @@ export default function Live() {
   );
 
   if (wsError) {
+    const gone = /not running|unknown session/i.test(wsError);
     return (
       <div className="page narrow">
-        <div className="card">
-          <div className="error-text">{wsError}</div>
-          <div className="row" style={{ marginTop: 12 }}>
-            <button className="btn" onClick={() => nav(`/notes/${sessionId}`)}>
-              Notes
-            </button>
-            <button className="btn" onClick={() => nav(`/team/replay/${sessionId}`)}>
-              Replay
+        <div className="complete">
+          <h1 className="t-title1">{gone ? "This lecture has ended." : "Reflow lost the lecture."}</h1>
+          <p className="sub">{gone ? "Your notes are ready when you are." : "The connection to Reflow dropped. If it was restarted, the lecture so far is kept and its moments are on the lecture page."}</p>
+          <div className="row">
+            <button className="btn btn-primary btn-lg" onClick={() => nav(`/lecture/${sessionId}`)}>
+              See what you missed
             </button>
             <button className="btn btn-plain" onClick={() => nav("/")}>
               Home
             </button>
           </div>
+          {details ? <div className="t-footnote mono label-3">{wsError}</div> : null}
         </div>
       </div>
     );
   }
 
   return (
-    <LiveStage
-      state={state}
-      onCatchupExpire={onExpire}
-      onCatchupDismiss={onDismiss}
-      onOpenChip={onOpenChip}
-      onIgnoreChip={onIgnoreChip}
-      cycleToken={cycleToken}
-      freezeCatchup={freeze}
-      controls={controls}
-      head={head}
-      details={details}
-    />
+    <>
+      <LiveStage
+        state={state}
+        onCatchupExpire={onExpire}
+        onCatchupDismiss={onDismiss}
+        onOpenChip={onOpenChip}
+        onIgnoreChip={onIgnoreChip}
+        cycleToken={cycleToken}
+        freezeCatchup={freeze}
+        controls={controls}
+        head={head}
+        details={details}
+      />
+      {blocker.state === "blocked" ? (
+        <div className="modal-back" onClick={() => blocker.reset()} role="presentation">
+          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="quit-title" onClick={(e) => e.stopPropagation()}>
+            <h2 id="quit-title" className="t-title2">
+              Do you want to quit recording?
+            </h2>
+            <p className="sub">Reflow is still listening to this lecture. Leaving stops the recording and writes your notes from what it heard so far.</p>
+            <div className="row">
+              <button className="btn btn-primary" autoFocus onClick={() => blocker.reset()}>
+                Keep listening <span className="kbd">esc</span>
+              </button>
+              <button className="btn btn-danger" onClick={() => void stopAndLeave()} disabled={ending}>
+                {ending ? "Writing your notes…" : "Stop and leave"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }

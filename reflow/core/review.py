@@ -14,7 +14,16 @@ from . import tally as tallymod
 
 
 class ReviewEngine:
-    def __init__(self, db: DB, s: Settings, session_id: str, learner_id: str, seed: int = 0) -> None:
+    MODES = ("tutor", "manual")
+
+    def __init__(
+        self, db: DB, s: Settings, session_id: str, learner_id: str, seed: int = 0, mode: str = "tutor"
+    ) -> None:
+        """mode "tutor" (private tutoring, docs/PRODUCT.md §5): each moment is explained first, then checked.
+        mode "manual" (review on my own): the check comes first, an explanation only after a miss."""
+        if mode not in self.MODES:
+            raise ValueError(f"mode must be one of {self.MODES}")
+        self.mode = mode
         self.db = db
         self.s = s
         self.session_id = session_id
@@ -122,16 +131,32 @@ class ReviewEngine:
             out["question"] = {"question": q.get("question", ""), "options": [opts[i] for i in order]}
         else:
             kind, content = pick_artifact(pkg.get("artifacts") or {}, card["form"] or "words")
+            note = pkg.get("note") or {}
             out["reteach"] = {
                 "form": card["form"],
                 "artifact": kind,
                 "content": content,
-                "key_term": pkg.get("note", {}).get("key_term"),
+                "key_term": note.get("key_term"),
+                "context": note.get("connection") or "",
+                "said": gap.get("span_text") or "",
+                "why": self._why(card["form"] or "words"),
             }
         return out
 
+    def _why(self, form: str) -> str:
+        """The tutor says why this family, in one line (docs/PRODUCT.md §5): preferred, untried, or exploring."""
+        t = self.tally_summary()
+        st = t["forms"].get(form) or {}
+        label = st.get("label") or form
+        if t.get("enough_data") and t.get("rank") and t["rank"][0] == form:
+            return f"{label.capitalize()} usually works best for you, so here it is that way."
+        if not st.get("attempts"):
+            return f"Let's try it {label}. We have not tried that one yet."
+        return f"Let's try it {label} this time."
+
     def progress(self) -> dict:
         return {
+            "mode": self.mode,
             "gaps_total": len(self.gaps),
             "gaps_closed": sum(1 for g in self.gaps if g["status"] == "closed"),
             "gaps_exhausted": sum(1 for g in self.gaps if g["status"] == "exhausted"),
@@ -151,13 +176,33 @@ class ReviewEngine:
         )
 
     # ---- API ----
+    def _teach(self, gap: dict) -> dict:
+        """The first explanation of a moment: the family the preference model picks (exploit or explore)."""
+        used = self._forms_used.setdefault(gap["id"], [])
+        form = self.tally_summary()["pick"]
+        if form in used:
+            for f in self._tally_rank():
+                if f not in used:
+                    form = f
+                    break
+        used.append(form)
+        self._form_before[gap["id"]] = form
+        return self._new_card(gap, "reteach", form)
+
+    def _open_gap(self, gap: dict) -> dict:
+        """How a moment starts: explained first (tutor) or checked first (manual)."""
+        if self.mode == "manual":
+            self._form_before[gap["id"]] = None  # nothing was shown before this check: nothing to score
+            return self._new_card(gap, "question", None)
+        return self._teach(gap)
+
     def start(self) -> dict:
         if self.current is None and not self.done:
             gap = self._next_open_gap()
             if gap is None:
                 self.done = True
             else:
-                self._new_card(gap, "question", None)
+                self._open_gap(gap)
         return {
             "card": self._present(self.current),
             "progress": self.progress(),
@@ -203,7 +248,7 @@ class ReviewEngine:
             self.db.set_gap_status(gap["id"], "closed")
             self.current = None
             self._finish_if_needed()
-            nxt = None if self.done else self._new_card(self._next_open_gap(), "question", None)  # type: ignore[arg-type]
+            nxt = None if self.done else self._open_gap(self._next_open_gap())  # type: ignore[arg-type]
         else:
             self.streak = 0
             nxt = self._switch_form(gap)
@@ -211,7 +256,7 @@ class ReviewEngine:
                 self.current = None
                 self._finish_if_needed()
                 g2 = self._next_open_gap()
-                nxt = None if (self.done or g2 is None) else self._new_card(g2, "question", None)
+                nxt = None if (self.done or g2 is None) else self._open_gap(g2)
         return {
             "outcome": outcome,
             "correct_index": correct_shown,
@@ -238,7 +283,7 @@ class ReviewEngine:
             self.current = None
             self._finish_if_needed()
             g2 = self._next_open_gap()
-            nxt = None if (self.done or g2 is None) else self._new_card(g2, "question", None)
+            nxt = None if (self.done or g2 is None) else self._open_gap(g2)
         return {
             "outcome": "drop",
             "next": self._present(nxt),

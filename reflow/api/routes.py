@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Request, Response, UploadFile
 from pydantic import BaseModel
 
 from .. import __version__
@@ -22,8 +22,9 @@ from ..core.lossmap import compute_lossmap
 from ..core.review import ReviewEngine
 from ..core.session import SessionRuntime
 from ..core.study import analyze, lossmap_inputs
-from ..doctor import run_doctor
+from ..doctor import detect_devices, run_doctor
 from ..ids import new_id
+from ..llm.artifacts import package_artifact_kinds
 from ..signal.headset import resolve_headset
 from ..transcribe.scripted import script_from_text
 
@@ -40,13 +41,43 @@ def _s(request: Request):
 
 # ---------------------------------------------------------------- health / doctor
 @router.get("/health")
-def health():
-    return {"ok": True, "version": __version__, "time": time.time()}
+def health(request: Request):
+    # voice: the tutor can speak (a Deepgram key is set); cheap, no network
+    return {
+        "ok": True,
+        "version": __version__,
+        "time": time.time(),
+        "voice": bool(_s(request).deepgram_api_key),
+    }
 
 
 @router.get("/doctor")
 async def doctor(request: Request):
     return await run_doctor(_s(request))
+
+
+class TTSIn(BaseModel):
+    text: str
+
+
+@router.post("/tts")
+async def tts(body: TTSIn, request: Request):
+    """The tutor voice for one beat of an explanation (mp3), cached on disk."""
+    from ..tts import TTSUnavailable, synthesize
+
+    try:
+        audio = await synthesize(_s(request), body.text)
+    except TTSUnavailable as e:
+        raise HTTPException(503, str(e)) from e
+    return Response(
+        content=audio, media_type="audio/mpeg", headers={"Cache-Control": "private, max-age=86400"}
+    )
+
+
+@router.get("/devices")
+async def devices(request: Request):
+    """Headset and pad detection only (no network calls): cheap enough for the Listen screen to poll."""
+    return await detect_devices(_s(request))
 
 
 # ---------------------------------------------------------------- learners
@@ -312,12 +343,42 @@ async def create_session(body: SessionIn, request: Request):
         seed=seed,
         auto_pause=body.auto_pause,
     )
-    hp = await asyncio.to_thread(
-        resolve_headset, settings.headset_port if body.headset == "auto" else body.headset
-    )
+    headset_setting = settings.headset_port if body.headset == "auto" else body.headset
+    hp = await asyncio.to_thread(resolve_headset, headset_setting)
+    # one headset, one session: two readers on the same serial port would split the bytes and corrupt both.
+    # A lecture that is still recording wins (409). A session that is ending, or a headset-only restudy session
+    # being replaced by the next screen, is given a few seconds to let go of the port.
+    deadline = time.monotonic() + 4.0
+    while True:
+        holders = [
+            o
+            for o in app.state.runtimes.values()
+            if o.headset.kind == "real"
+            and getattr(o.headset, "port", None) == hp
+            and o.status in ("running", "ending")
+        ]
+        lectures = [o for o in holders if o.status == "running" and o.mode != "review"]
+        if lectures:
+            db.update_session(sess["id"], status="ended", ended_at=time.time())
+            raise HTTPException(
+                409,
+                f"The headset is already in use by a lecture that is still recording ({lectures[0].id}). End it first.",
+            )
+        if not holders or time.monotonic() > deadline:
+            break
+        await asyncio.sleep(0.1)
     tp = (settings.totem_port or "auto") if body.totem == "auto" else body.totem
     rt = SessionRuntime(
-        settings, db, app.state.llm, sess, learner, lecture, tk, headset_port=hp, totem_port=tp
+        settings,
+        db,
+        app.state.llm,
+        sess,
+        learner,
+        lecture,
+        tk,
+        headset_port=hp,
+        totem_port=tp,
+        headset_auto=(headset_setting or "auto") == "auto",
     )
     app.state.runtimes[sess["id"]] = rt
     await rt.start()
@@ -421,8 +482,10 @@ def _gap_public(g: dict) -> dict:
         "artifacts_available": sorted(
             k
             for k, v in (pkg.get("artifacts") or {}).items()
-            if v and not (isinstance(v, dict) and v.get("applicable") is False)
+            if v and k != "plan" and not (isinstance(v, dict) and v.get("applicable") is False)
         ),
+        "plan": (pkg.get("artifacts") or {}).get("plan"),
+        "kinds": package_artifact_kinds(pkg) if pkg.get("artifacts") else None,
         "question": q,
         "package_source": g.get("package_source"),
         "error": pkg.get("error"),
@@ -442,6 +505,25 @@ def session_notes(session_id: str, request: Request):
         "gaps": [_gap_public(g) for g in gaps],
         "words": db.get_words(session_id),
     }
+
+
+@router.get("/sessions/{session_id}/artifacts")
+def session_artifacts(session_id: str, request: Request):
+    """Every generated artifact of every moment, for the team's preview (the check answers stay out)."""
+    db = _db(request)
+    if not db.get_session(session_id):
+        raise HTTPException(404, "unknown session")
+    out = []
+    for g in db.get_gaps(session_id):
+        pkg = g.get("package") or {}
+        out.append(
+            {
+                **_gap_public(g),
+                "artifacts": pkg.get("artifacts") or {},
+                "sources": pkg.get("sources") or {},
+            }
+        )
+    return {"gaps": out}
 
 
 @router.post("/sessions/{session_id}/regenerate")
@@ -497,9 +579,17 @@ class CardIn(BaseModel):
     focus_ratio: float | None = None
 
 
+class ReviewStartIn(BaseModel):
+    mode: str = "tutor"  # tutor (explained first, the voice can read it) | manual (the check first, no voice)
+
+
 @router.post("/sessions/{session_id}/review/start")
-def review_start(session_id: str, request: Request):
+def review_start(session_id: str, request: Request, body: ReviewStartIn | None = None):
     eng = _review(request, session_id)
+    mode = (body.mode if body else "tutor").strip().lower()
+    if mode not in ReviewEngine.MODES:
+        raise HTTPException(400, "mode must be tutor or manual")
+    eng.mode = mode  # only decides how the next moment opens; a card already open stays
     out = eng.start()
     if out["progress"]["done"]:
         _db(request).update_session(session_id, status="reviewed")

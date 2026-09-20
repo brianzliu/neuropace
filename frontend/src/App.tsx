@@ -11,6 +11,7 @@ import Team from "./views/Team";
 import LossMapView from "./views/LossMap";
 import Replay from "./views/Replay";
 import Quiz from "./views/Quiz";
+import Artifacts from "./views/Artifacts";
 import Sidebar from "./components/Sidebar";
 import { useFlash } from "./lib/flash";
 import { api } from "./lib/api";
@@ -19,8 +20,8 @@ import { api } from "./lib/api";
 export default function App() {
   const loc = useLocation();
   const fl = useFlash();
-  const m = loc.pathname.match(/^\/(?:team\/)?(live|lecture|restudy|done|replay|quiz)\/([^/]+)/);
-  const sessionId = m ? m[2] : null;
+  const m = loc.pathname.match(/^\/(?:team\/)?(live|lecture|restudy|done|replay|quiz|artifacts)\/([^/]+)/);
+  const sessionId = m && m[2] !== "sample" ? m[2] : null;
   const rail = !!m && (m[1] === "live" || m[1] === "replay" || m[1] === "restudy");
   const [running, setRunning] = useState(false);
   useEffect(() => {
@@ -58,6 +59,7 @@ export default function App() {
           <Route path="/team/replay/:sessionId" element={<Replay />} />
           <Route path="/team/lossmap/:lectureId" element={<LossMapView />} />
           <Route path="/team/quiz/:sessionId" element={<Quiz />} />
+          <Route path="/team/artifacts/:sessionId" element={<Artifacts />} />
           {/* old links */}
           <Route path="/notes/:sessionId" element={<Lecture />} />
           <Route path="/review/:sessionId" element={<Restudy />} />

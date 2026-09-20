@@ -6,8 +6,9 @@ from pydantic import ValidationError
 
 from reflow.config import FORMS, Settings
 from reflow.llm import fallback
+from reflow.llm.artifacts import build_package
 from reflow.llm.client import LLMClient
-from reflow.llm.schemas import CheckQuestion, GapPackage, RecapForms, SceneGraph, strict_schema
+from reflow.llm.schemas import CheckQuestion, GapCore, RecapForms, SceneGraph, strict_schema
 from reflow.store.db import DB
 
 SPAN = "The pseudorange observable is corrupted by several additive error terms. The ionospheric delay is dispersive and proportional to total electron content divided by frequency squared."
@@ -15,9 +16,9 @@ CTX = "Three distances narrow you to two points, and one of them is out in space
 
 
 def test_strict_schema_shape():
-    sch = strict_schema(GapPackage)
+    sch = strict_schema(GapCore)
     assert sch["additionalProperties"] is False
-    assert set(sch["required"]) == {"note", "question", "artifacts"}
+    assert set(sch["required"]) == {"note", "question", "summary", "key_idea", "plan"}
     q = sch["$defs"]["CheckQuestion"]
     assert q["additionalProperties"] is False and set(q["required"]) == {
         "question",
@@ -57,10 +58,12 @@ def test_fallback_outputs_are_valid_and_grounded():
     assert all(getattr(r, f) for f in FORMS)
     assert r.words.split(": ", 1)[-1] in SPAN and "(offline)" in r.analogy
     p = fallback.gap_package(SPAN, CTX, CTX + " " + SPAN, seed=1)
-    assert len(p.question.options) == 4 and 0 <= p.question.correct_index < 4
-    assert p.question.options[p.question.correct_index] in SPAN
-    assert 2 <= len(p.artifacts.diagram.nodes) <= 8 and p.artifacts.example.lines
-    assert p.note.key_term.lower() in SPAN.lower()
+    q = p["question"]
+    assert len(q["options"]) == 4 and 0 <= q["correct_index"] < 4
+    assert q["options"][q["correct_index"]] in SPAN
+    arts = p["artifacts"]
+    assert 2 <= len(arts["diagram"]["nodes"]) <= 8 and arts["example"]["lines"]
+    assert p["note"]["key_term"].lower() in SPAN.lower()
 
 
 class FakeResponses:
@@ -137,5 +140,5 @@ def test_no_key_means_offline_without_network(tmp_path):
     s = Settings(data_dir=tmp_path, openai_api_key=None, allow_offline_llm=True)
     c = LLMClient(s, DB(s.db_path))
     assert not c.enabled
-    pkg, source = asyncio.run(c.gap_package(SPAN, CTX, CTX + " " + SPAN))
-    assert source == "offline" and isinstance(pkg, GapPackage)
+    pkg, source = asyncio.run(build_package(c, SPAN, CTX, CTX + " " + SPAN))
+    assert source == "offline" and pkg["artifacts"]["plan"] and pkg["sources"]["core"] == "offline"

@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from reflow.clock import ManualClock
 from reflow.config import FORMS
 from reflow.core.session import SessionRuntime
-from reflow.llm.schemas import pick_artifact
+from reflow.llm.schemas import ARTIFACT_KINDS, pick_artifact
 from reflow.store.db import DB
 
 
@@ -123,26 +123,24 @@ def test_review_records_focus_and_profile_reset(app):
         c.post(f"/api/sessions/{sid}/end")
         st = c.post(f"/api/sessions/{sid}/review/start").json()
         card = st["card"]
-        assert card["kind"] == "question"
+        assert card["kind"] == "reteach", "teach first, then check (docs/PRODUCT.md §5)"
+        assert (
+            card["reteach"]["artifact"] in ARTIFACT_KINDS
+            and card["reteach"]["why"]
+            and "said" in card["reteach"]
+        )
+        adv = c.post(
+            f"/api/sessions/{sid}/review/advance", json={"card_id": card["id"], "focus_ratio": 0.6}
+        ).json()
+        assert adv["next"]["kind"] == "question"
+        fam = card["form"]
+        assert adv["tally"]["forms"][fam]["focus"]["mean_focus"] == 0.6
+        assert adv["tally"]["forms"][fam]["score"] is not None and "preferred" in adv["tally"]
         ans = c.post(
             f"/api/sessions/{sid}/review/answer",
-            json={"card_id": card["id"], "choice": 0, "focus_ratio": 0.9},
+            json={"card_id": adv["next"]["id"], "choice": 0, "focus_ratio": 0.9},
         ).json()
-        if ans["next"] and ans["next"]["kind"] == "reteach":
-            assert ans["next"]["reteach"]["artifact"] in (
-                "words",
-                "analogy",
-                "chart",
-                "diagram",
-                "steps",
-                "example",
-            )
-            adv = c.post(
-                f"/api/sessions/{sid}/review/advance", json={"card_id": ans["next"]["id"], "focus_ratio": 0.6}
-            ).json()
-            assert adv["next"]["kind"] == "question"
-            fam = ans["next"]["form"]
-            assert adv["tally"]["forms"][fam]["focus"]["mean_focus"] == 0.6
+        assert ans["outcome"] in ("hit", "miss") and ans["credited_form"] == fam
         prof = c.get("/api/me/profile").json()
         assert (
             prof["learner"]["id"] == "lrn_me"

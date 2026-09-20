@@ -13,6 +13,7 @@ from reflow.clock import ManualClock
 from reflow.config import FORMS, Settings
 from reflow.core.gaps import regenerate_packages
 from reflow.core.session import SessionRuntime
+from reflow.llm.artifacts import build_package
 from reflow.llm.client import LLMClient, LLMUnavailable
 from reflow.store.db import DB
 from reflow.transcribe.transcript import Word
@@ -44,7 +45,7 @@ def test_client_raises_without_a_key_when_offline_is_not_allowed(tmp_path):
     with pytest.raises(LLMUnavailable, match="no OPENAI_API_KEY"):
         asyncio.run(c.recap("words", "corpus"))
     with pytest.raises(LLMUnavailable):
-        asyncio.run(c.gap_package("span", "ctx", "corpus"))
+        asyncio.run(build_package(c, "span", "ctx", "corpus"))
     assert c.stats["unavailable"] == 2 and c.stats["fallbacks"] == 0
 
 
@@ -60,7 +61,7 @@ def test_gap_package_retries_then_raises_with_the_last_error(tmp_path, monkeypat
 
     monkeypatch.setattr(asyncio, "sleep", no_sleep)
     with pytest.raises(LLMUnavailable, match="rate limited"):
-        asyncio.run(c.gap_package("span text here", "ctx", "corpus"))
+        asyncio.run(build_package(c, "span text here", "ctx", "corpus"))
     assert fake.responses.calls == 3
 
 
@@ -134,8 +135,8 @@ async def test_outage_gives_verbatim_transcript_and_failed_packages_then_regener
     monkeypatch.setattr(asyncio, "sleep", no_sleep)
     gaps = await rt.end()
     assert gaps and gaps[0]["package_source"] == "failed" and "down" in gaps[0]["package"]["error"]
-    # the API comes back: regenerate fills the failed gap
-    good_pkg = json.dumps(
+    # the API comes back: regenerate fills the failed gap (one core call, then one call per planned template)
+    core_json = json.dumps(
         {
             "note": {"what_was_said": "w", "key_term": "k", "definition": "d", "connection": "c"},
             "question": {
@@ -144,30 +145,22 @@ async def test_outage_gives_verbatim_transcript_and_failed_packages_then_regener
                 "correct_index": 1,
                 "explanation": "e",
             },
-            "artifacts": {
-                "summary": "s",
-                "key_idea": {"term": "k", "definition": "d", "example": "e"},
-                "analogy": "a",
-                "diagram": {
-                    "title": "t",
-                    "nodes": [{"id": "n1", "label": "x"}, {"id": "n2", "label": "y"}],
-                    "edges": [{"from_id": "n1", "to_id": "n2", "label": "to"}],
-                    "steps": [{"highlight": ["n1"], "caption": "c"}],
-                },
-                "chart": {
-                    "applicable": True,
-                    "kind": "bar",
-                    "title": "t",
-                    "unit": "s",
-                    "points": [{"label": "a", "value": 1}, {"label": "b", "value": 2}],
-                    "takeaway": "tk",
-                },
-                "steps": {"applicable": False, "title": "", "steps": []},
-                "example": {"title": "ex", "lines": ["l1", "l2"], "result": "r"},
-            },
+            "summary": "s",
+            "key_idea": {"term": "k", "definition": "d", "example": "e"},
+            "plan": {"visual": "diagram", "doing": "example", "why": "w"},
         }
     )
-    fake.responses.outputs = [good_pkg]
+    analogy_json = json.dumps({"story": "a", "mapping": [{"idea": "k", "everyday": "e"}], "caveat": "c"})
+    diagram_json = json.dumps(
+        {
+            "title": "t",
+            "nodes": [{"id": "n1", "label": "x"}, {"id": "n2", "label": "y"}],
+            "edges": [{"from_id": "n1", "to_id": "n2", "label": "to"}],
+            "steps": [{"highlight": ["n1"], "caption": "c"}],
+        }
+    )
+    example_json = json.dumps({"title": "ex", "lines": ["l1", "l2"], "result": "r"})
+    fake.responses.outputs = [core_json, analogy_json, diagram_json, example_json]
     gaps2 = await regenerate_packages(db, llm, rt.id)
     assert gaps2[0]["package_source"] == "llm" and gaps2[0]["package"]["question"]["options"] == [
         "a",

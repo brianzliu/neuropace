@@ -19,6 +19,7 @@ import numpy as np
 from ..clock import LiveClock, MediaClock
 from ..config import FORMS, Settings
 from ..ids import new_id
+from ..llm.artifacts import build_package
 from ..llm.client import LLMClient, LLMUnavailable
 from ..llm.fallback import recap_forms as offline_recap
 from ..signal.features import DetectorEvent, FocusEngine
@@ -51,6 +52,7 @@ class SessionRuntime:
         totem_port: str | None = None,
         tick_interval: float = 1.0,
         drive_manually: bool = False,
+        headset_auto: bool = False,
     ) -> None:
         self.s = s
         self.db = db
@@ -69,7 +71,9 @@ class SessionRuntime:
         )
         self.seed = int(session.get("seed") or 0)
         self.rng = np.random.default_rng(self.seed)
-        self.clock = LiveClock() if self.mode == "live" else MediaClock()
+        # recorded lectures follow the video; live lectures and restudy (headset only) follow the wall clock.
+        # A paused MediaClock in restudy would mark every second paused: no focus ratio, no drift switch.
+        self.clock = MediaClock() if self.mode == "recorded" else LiveClock()
         self.transcript = Transcript()
         stored = None
         if session.get("baseline") and session["baseline"].get("stored"):
@@ -103,6 +107,12 @@ class SessionRuntime:
             on_raw=self._on_raw_chunk,
         )
         self._totem_setting = totem_port
+        # "auto" and nothing found at start: keep looking for a headset every 5 s and switch to it (README "EEG bridge")
+        self._headset_auto = bool(headset_auto) and self.headset.kind == "simulated"
+        self._headset_probe_task: asyncio.Task | None = None
+        self._raw_last_mono = 0.0  # monotonic time of the last brain-wave chunk (any source)
+        self._raw_chunks = 0
+        self._last_headset_key: tuple | None = None
         self.totem = make_totem(
             totem_port, self._on_totem_tap, exclude_port=getattr(self.headset, "port", None)
         )
@@ -161,16 +171,45 @@ class SessionRuntime:
         if self.tick_interval > 0 and not self.drive_manually:
             self._tick_task = asyncio.create_task(self._tick_loop(), name=f"tick-{self.id}")
 
+    RAW_STALE_S = 2.0  # no brain-wave chunk for this long = the stream is not live
+
     def headset_status(self) -> dict:
+        age = (time.monotonic() - self._raw_last_mono) if self._raw_last_mono else None
         d = {
             "connected": bool(getattr(self.headset, "connected", False)),
             "kind": self.headset.kind,
+            "simulated": self.headset.kind != "real",
             "port": getattr(self.headset, "port", None),
             "state": getattr(self.headset, "state", None),
+            "stream": {
+                "live": age is not None and age < self.RAW_STALE_S,
+                "age_s": (round(age, 2) if age is not None else None),
+                "chunks": self._raw_chunks,
+            },
         }
         if hasattr(self.headset, "status"):
             d["mw"] = self.headset.status()
         return d
+
+    def _headset_key(self) -> tuple:
+        st = self.headset_status()
+        return (st["kind"], st["connected"], st["stream"]["live"])
+
+    def _broadcast_headset_if_changed(self) -> None:
+        """The student's screen learns about a headset that connects, drops or stalls within a second."""
+        key = self._headset_key()
+        if key == self._last_headset_key:
+            return
+        prev = self._last_headset_key
+        self._last_headset_key = key
+        self.broadcast({"type": "headset", **self.headset_status()})
+        if prev is not None and key[0] == "real":
+            if prev[2] and not key[2]:
+                self.notice(
+                    "warn", "The headset stopped sending. Reconnecting; focus pauses until it is back."
+                )
+            elif not prev[2] and key[2]:
+                self.notice("info", "Headset back. Focus tracking resumed.")
 
     def calibrate(self, phase: str) -> None:
         """Drive the mindwave pipeline's three-anchor calibration (eyes_closed | easy | hard | done | reset)."""
@@ -246,6 +285,8 @@ class SessionRuntime:
     def _on_raw_chunk(self, msg: dict) -> None:
         """A 64 Hz microvolt trace chunk from the mindwave pipeline: {"t", "fs", "uv": [...]}."""
         if self.status == "running":
+            self._raw_last_mono = time.monotonic()
+            self._raw_chunks += 1
             self.broadcast({"type": "raw", "fs": msg.get("fs", 64), "uv": msg.get("uv", [])})
 
     def _decimate_raw(self, raws: list[int]) -> None:
@@ -257,6 +298,8 @@ class SessionRuntime:
                 self._raw_chunk.append(round(sum(acc) / len(acc), 1))
                 acc.clear()
                 if len(self._raw_chunk) >= 8:
+                    self._raw_last_mono = time.monotonic()
+                    self._raw_chunks += 1
                     self.broadcast({"type": "raw", "fs": self.engine.fs // 8, "uv": self._raw_chunk})
                     self._raw_chunk = []
 
@@ -584,7 +627,9 @@ class SessionRuntime:
         elif self.totem.fit != 8:
             self.totem.send("FIT 8")
         self._on_detector_events(events, t)
+        self._broadcast_headset_if_changed()
         self._maybe_attach_totem(t)
+        self._maybe_attach_headset(t)
         if not self.review_only:
             self.recaps.maybe_run(t)
         self._focus_hist.append(d)
@@ -624,6 +669,49 @@ class SessionRuntime:
         self.db.update_session(self.id, totem_kind=new.kind)
         self.notice("info", f"Arduino totem attached on {port}")
         self.broadcast({"type": "totem", **new.status(), "pulse": False})
+
+    def _maybe_attach_headset(self, t: float) -> None:
+        """Hot-plug: a session that started on the simulator because no headset was on keeps looking every 5 s."""
+        if not self._headset_auto or self.headset.kind != "simulated" or self.drive_manually:
+            return
+        if int(t) % 5 != 0 or (self._headset_probe_task is not None and not self._headset_probe_task.done()):
+            return
+        self._headset_probe_task = asyncio.create_task(
+            self._attach_headset_if_found(), name=f"headset-probe-{self.id}"
+        )
+
+    def _make_real_headset(self, port: str):
+        from ..signal.headset import MindwaveHeadset
+
+        return MindwaveHeadset(
+            self._on_frame, port=port, log_dir=str(self.s.data_dir / "eeg"), on_raw=self._on_raw_chunk
+        )
+
+    async def _attach_headset_if_found(self) -> None:
+        from ..signal.headset import autodetect_headset_port
+
+        port = await asyncio.to_thread(autodetect_headset_port)
+        if not port or self.status != "running" or self.headset.kind != "simulated":
+            return
+        old = self.headset
+        new = self._make_real_headset(port)
+        try:
+            await new.start()
+        except Exception as e:  # noqa: BLE001
+            log.warning("headset found on %s but failed to start: %s", port, e)
+            return
+        with contextlib.suppress(Exception):
+            await old.stop()
+        self.headset = new
+        # the simulator's baseline means nothing for a real forehead: the engine starts over (stored baseline kept)
+        b = self.engine.baseline
+        stored = (b.mu, b.sigma) if (b.stored and b.mu is not None and b.sigma is not None) else None
+        self.engine = FocusEngine(self.s, stored_baseline=stored)
+        self._raw_acc, self._raw_chunk = [], []
+        self.db.update_session(self.id, headset_kind=new.kind)
+        self.notice("info", f"Headset connected on {port}. Focus now comes from your MindWave.")
+        self._last_headset_key = None
+        self._broadcast_headset_if_changed()
 
     async def _tick_loop(self) -> None:
         next_t = time.monotonic()
@@ -722,8 +810,13 @@ class SessionRuntime:
         async def fill(row: dict, i: int) -> None:
             async with sem:
                 try:
-                    pkg, source = await self.llm.gap_package(
-                        row["span_text"], row["context_text"], corpus, self.keyterms, seed=self.seed + i
+                    pkg, source = await build_package(
+                        self.llm,
+                        row["span_text"],
+                        row["context_text"],
+                        corpus,
+                        self.keyterms,
+                        seed=self.seed + i,
                     )
                 except LLMUnavailable as e:
                     row["package"] = {"error": str(e)}
@@ -733,7 +826,7 @@ class SessionRuntime:
                         f"Gap {row['ord'] + 1}: notes not generated ({e}). Retry from the notes page.",
                     )
                     return
-                row["package"] = pkg.model_dump()
+                row["package"] = pkg
                 row["package_source"] = source
 
         await asyncio.gather(*(fill(r, i) for i, r in enumerate(rows)))

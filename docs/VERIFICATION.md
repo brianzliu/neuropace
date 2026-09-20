@@ -61,6 +61,36 @@ What was checked, how, and what is still unverified. Re-run the commands before 
 | Microphone path through the server | WebSocket `audio_start` + binary PCM into a `transcript=deepgram` session | words broadcast on lecture time, tap produced a catch-up from the live transcript, gap built at session end |
 | OpenAI | not verified: no key on this machine yet | sessions now refuse to start without the key; the client is covered by tests with a fake OpenAI (strict schema, cache, retry, timeout, reasoning-param fallback) |
 
+## Real brain waves, templates, tutoring (19 Sep, late night)
+
+Asked for: brain waves that are the device's own bytes with a fallback that says so, a "quit recording?" guard, richer generation types built from type-specific data (including web animations), a rethink of restudy, and a test of the whole site as if a real headset were connected.
+
+**The virtual headset.** `reflow virtual-headset` puts a MindWave on a pseudo-terminal: one 0x80 raw packet per sample at 512 Hz and a 1 Hz status packet (poor_signal, eSense, eight EEG power bands), from the pipeline's FakeSource. The server was started with `REFLOW_HEADSET_PORT=/dev/ttys037`, so the serial reader, the parser, the pipeline and every screen saw a headset of kind `real`; only the bytes were synthetic. Nothing above the serial port was mocked.
+
+| Check | How | Result |
+|---|---|---|
+| Raw path per headset kind | `tests/test_waves.py` | simulator: 24 chunks of 8 µV samples per 3 s at 64 Hz; pipeline fake: chunks through the runtime, stream live; replay: first chunk equals the mean of the recording's first 8 samples × UV_PER_RAW, bit for bit |
+| Virtual headset over the pty | `tests/test_waves.py::test_virtual_headset…` | frames with quality 0 and finite engagement, raw chunks, `state off` → poor_signal 200, `pause 4` → disconnected after 3 s and back without reopening the port |
+| Live screen with the virtual headset | ego-browser | "live from your headset", trace with blinks, focus ring "Getting to know you" → "Steady"; Space → "Catching you up" + the one-line card in the student's best family |
+| Drift from the device | `state drowsy` in the control file | flagged after 11 s (lecture) and 8.8 s (restudy); chip "Want a quick catch-up?"; card with "you drifted", "since 0:29" |
+| Dropout and recovery | `pause 7` | waves "waiting for the headset" in 2.4 s, focus card "Headset lost"; "live from your headset" again 7.2 s later; notices "The headset stopped sending" / "Headset back" |
+| Headset switched on mid-lecture | `test_headset_that_comes_on_mid_lecture…` | a session that started simulated attaches the pipeline within a few seconds, the engine restarts on the real frames, `sim: false` on focus samples |
+| One headset, one recording | `test_one_headset_one_lecture_over_the_api` | second lecture on the same port → 409; a restudy session being replaced releases the port within seconds |
+| Quit-recording guard | ego-browser | clicking Lectures while recording opens "Do you want to quit recording?"; Escape keeps listening; "Stop and leave" ends the lecture and lands on the summary; `beforeunload` armed while recording |
+| Restudy on the wall clock | `test_restudy_session_measures_focus_on_the_wall_clock` | found and fixed: review sessions ran on a paused media clock, so no card ever had a focus ratio and no drift ever switched an explanation |
+| Templates | `tests/test_artifacts.py` + `/team/artifacts/sample` | one core call then one call per planned template (asserted call by call with a fake client), failure falls back inside the family, validators reject thin data and unsafe animation code; all ten renderings captured in the browser (curve with two series and an annotation, timeline, side by side, animation running in the sandboxed iframe, chart, diagram, steps, worked example, comparison mapping, words) |
+| Offline stand-in | `test_offline_stand_in_fills_every_template…` | every template filled and labelled "(offline)"; the visual rotates across diagram, animation, timeline, compare so test mode exercises each |
+| Restudy: private tutoring | ego-browser | explanation first with the reason ("Let's try it in words this time"), "Where you were", the voice reading beat by beat (first beat 0.6 s after the card, highlight follows, "Skip the reading"), then the check |
+| Restudy: review on my own | ego-browser | the check first, no voice toggle, explanation after a miss |
+| Drift during an explanation | `state drowsy` while reading | "You drifted. Switching to another way." → the next family (side by side) |
+| Lecture page | ego-browser | Private tutoring / Review on my own; "The whole lecture" with the 56 missed words highlighted out of 114 |
+| You | ego-browser | ranking 1 to 4 with rescued and held-attention bars, "still learning · 10/12 explanations scored" |
+| Tutor voice | `tests/test_tts.py` + curl | Deepgram Aura returns audio/mpeg (36 KB for one sentence in 3.1 s), cached per beat, 503 without a key |
+| Live microphone lecture | ego-browser | "Start listening" opens the live screen and the microphone starts by itself: the browser's own permission prompt appeared, which is the expected behaviour; not verified past the prompt (needs a person to allow it) |
+| Suite | `uv run pytest -q` | 106 passed (see the git log for the exact run) |
+
+Not verified: a real MindWave on a real forehead (still no hardware here), a real OpenAI pass over the templates (no key on this machine; the stand-ins are labelled), Windows execution.
+
 ## Product v2, streamlined (19 Sep, night)
 
 After the user's note that the screens carried purposeless boxes and repeated content: Home is one button ("Start listening", or "Back to the lecture" while one runs, or "Try a practice lecture" when live is unavailable) plus at most one "Next up"; the practice lecture is a fallback link, not a peer choice; Lectures is the only history; a lecture leads with Restudy and lists its moments as expandable rows; Restudy is a single column (progress, card, brain waves only with a headset; preferences appear at the lesson end and on You); You is one column with one footer line for the device. Orphaned "running" sessions from a previous server process are closed at startup with their flags kept as moments. Verified in the browser: Home, Lectures, Lecture, Restudy, You.

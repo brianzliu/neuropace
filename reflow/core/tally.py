@@ -66,6 +66,28 @@ def rank(post: dict[str, FormStat]) -> list[str]:
     return sorted(FORMS, key=lambda f: (-post[f].posterior_mean, FORMS.index(f)))
 
 
+UNDERSTANDING_WEIGHT = 0.6
+ATTENTION_WEIGHT = 0.4
+
+
+def combined_score(post: dict[str, FormStat], focus: dict[str, dict] | None) -> dict[str, float]:
+    """Understanding first, attention second (docs/PRODUCT.md §5): 0.6 x posterior mean of rescues plus
+    0.4 x mean focus while reading, when focus has been measured for that family at all."""
+    out = {}
+    for f in FORMS:
+        u = post[f].posterior_mean
+        fo = (focus or {}).get(f) or {}
+        m = fo.get("mean_focus")
+        out[f] = (
+            round(UNDERSTANDING_WEIGHT * u + ATTENTION_WEIGHT * float(m), 4) if m is not None else round(u, 4)
+        )
+    return out
+
+
+def combined_rank(scores: dict[str, float]) -> list[str]:
+    return sorted(FORMS, key=lambda f: (-scores[f], FORMS.index(f)))
+
+
 def summary(
     learner: Counts, pop: Counts, s: Settings, rng: np.random.Generator, focus: dict[str, dict] | None = None
 ) -> dict:
@@ -73,14 +95,20 @@ def summary(
     post = posteriors(learner, prior)
     total = sum(st.attempts for st in post.values())
     forms = {f: st.to_dict() for f, st in post.items()}
+    scores = combined_score(post, focus)
     for f in FORMS:
         forms[f]["label"] = FORM_LABELS[f]
         forms[f]["focus"] = (focus or {}).get(f, {"mean_focus": None, "n": 0})
+        forms[f]["score"] = scores[f]
+    ranking = combined_rank(scores)
+    enough = total >= s.tally_enough_attempts
     return {
         "forms": forms,
-        "rank": rank(post),
+        "rank": ranking,
+        "rank_understanding": rank(post),
+        "preferred": ranking[0] if enough else None,
         "pick": thompson_pick(post, rng),
-        "enough_data": total >= s.tally_enough_attempts,
+        "enough_data": enough,
         "total_attempts": total,
         "needed_attempts": s.tally_enough_attempts,
         "population": {f: pop.get(f, {"rescues": 0, "attempts": 0}) for f in FORMS},

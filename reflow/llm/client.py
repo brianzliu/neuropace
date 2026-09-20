@@ -13,8 +13,8 @@ from pydantic import BaseModel, ValidationError
 from ..config import Settings
 from ..store.db import DB
 from . import fallback
-from .prompts import PACKAGE_INSTRUCTIONS, PROMPT_VERSION, RECAP_INSTRUCTIONS
-from .schemas import GapPackage, RecapForms, strict_schema
+from .prompts import CORE_INSTRUCTIONS, PROMPT_VERSION, RECAP_INSTRUCTIONS, TEMPLATE_INSTRUCTIONS
+from .schemas import TEMPLATES, GapCore, RecapForms, Strict, strict_schema
 
 log = logging.getLogger(__name__)
 T = TypeVar("T", bound=BaseModel)
@@ -55,7 +55,7 @@ class LLMClient:
     def offline_allowed(self) -> bool:
         return bool(self.s.allow_offline_llm)
 
-    def _unavailable(self, task: str) -> LLMUnavailable:
+    def unavailable(self, task: str) -> LLMUnavailable:
         self.stats["unavailable"] += 1
         reason = "no OPENAI_API_KEY" if not self.enabled else (self.last_error or "OpenAI call failed")
         return LLMUnavailable(f"{task}: {reason}")
@@ -70,36 +70,49 @@ class LLMClient:
         )
         if obj is None:
             if not self.offline_allowed:
-                raise self._unavailable("recap")
+                raise self.unavailable("recap")
             self.stats["fallbacks"] += 1
             return fallback.recap_forms(window_text, corpus_text), "offline"
         return obj, source
 
-    async def gap_package(
-        self,
-        span_text: str,
-        context_text: str,
-        corpus_text: str,
-        keyterms: list[str] | None = None,
-        seed: int = 0,
-    ) -> tuple[GapPackage, str]:
+    async def gap_core(
+        self, span_text: str, context_text: str, keyterms: list[str] | None = None
+    ) -> tuple[GapCore | None, str]:
+        """Stage one of a missed moment: note, question, words family, plan. None when the API kept failing."""
         payload = {"missed_span": span_text, "context_before_span": context_text, "key_terms": keyterms or []}
-        obj: GapPackage | None = None
+        return await self._with_retries("core", CORE_INSTRUCTIONS, payload, GapCore, 1800)
+
+    async def gap_artifact(
+        self, kind: str, span_text: str, context_text: str, note: dict, keyterms: list[str] | None = None
+    ) -> tuple[Strict | None, str]:
+        """Stage two: one template, its own schema and prompt. None when the API kept failing (the caller falls back)."""
+        model_cls = TEMPLATES[kind]
+        payload = {
+            "missed_span": span_text,
+            "context_before_span": context_text,
+            "key_term": note.get("key_term", ""),
+            "definition": note.get("definition", ""),
+            "key_terms": keyterms or [],
+        }
+        max_tokens = 3000 if kind == "animation" else 1400
+        return await self._with_retries(
+            f"artifact:{kind}", TEMPLATE_INSTRUCTIONS[kind], payload, model_cls, max_tokens
+        )
+
+    async def _with_retries(
+        self, task: str, instructions: str, payload: dict, model_cls: type[T], max_tokens: int
+    ) -> tuple[T | None, str]:
+        obj: T | None = None
         source = "offline"
         attempts = 3 if self.enabled else 1
         for attempt in range(attempts):
             if attempt:
                 await asyncio.sleep(2.0 * attempt)
             obj, source = await self._structured(
-                "package", PACKAGE_INSTRUCTIONS, payload, GapPackage, self.s.package_timeout_seconds, 2500
+                task, instructions, payload, model_cls, self.s.package_timeout_seconds, max_tokens
             )
             if obj is not None:
                 break
-        if obj is None:
-            if not self.offline_allowed:
-                raise self._unavailable("gap package")
-            self.stats["fallbacks"] += 1
-            return fallback.gap_package(span_text, context_text, corpus_text, seed=seed), "offline"
         return obj, source
 
     # ---- machinery ----

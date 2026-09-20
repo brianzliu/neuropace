@@ -26,6 +26,7 @@ export interface SessionState {
   bestForm: Form;
   catchupSeq: number;
   raw: number[]; // last ~8 s of the 64 Hz brain-wave trace, microvolts
+  rawAt: number; // Date.now() of the last raw chunk: the trace is live only while chunks keep arriving
   bands: { theta: number; alpha: number; beta: number } | null;
 }
 
@@ -50,6 +51,7 @@ export const initialState: SessionState = {
   bestForm: "words",
   catchupSeq: 0,
   raw: [],
+  rawAt: 0,
   bands: null,
 };
 
@@ -90,7 +92,7 @@ export function reduce(s: SessionState, m: ServerMsg): SessionState {
     }
     case "raw": {
       const raw = s.raw.length > 512 ? s.raw.slice(-512 + m.uv.length).concat(m.uv) : s.raw.concat(m.uv);
-      return { ...s, raw };
+      return { ...s, raw, rawAt: Date.now() };
     }
     case "flag_open":
     case "flag_close": {
@@ -117,7 +119,7 @@ export function reduce(s: SessionState, m: ServerMsg): SessionState {
     case "totem":
       return { ...s, totem: { connected: m.connected, kind: m.kind, port: m.port, dots: m.dots, fit: m.fit, pulse: m.pulse, hint: m.hint ?? null } };
     case "headset":
-      return { ...s, headset: { connected: m.connected, kind: m.kind, port: m.port, state: m.state, mw: m.mw } };
+      return { ...s, headset: { connected: m.connected, kind: m.kind, simulated: m.simulated, port: m.port, state: m.state, stream: m.stream, mw: m.mw } };
     case "pause_request":
       return { ...s, pauseRequest: { flag_id: m.flag_id, seq: (s.pauseRequest?.seq ?? 0) + 1 } };
     case "session_ended":

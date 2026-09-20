@@ -523,3 +523,92 @@ a.linklike { font-size: var(--fs-subhead); }
 .you-foot { margin-top: 32px; padding-top: 18px; border-top: 2px solid var(--line); display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; font-size: var(--fs-footnote); color: var(--label-2); font-weight: 600; }
 .complete .linklike { font-size: var(--fs-subhead); }
 .complete .family-list { width: 100%; text-align: left; }
+
+/* ---- brain waves: live / practice / waiting ---- */
+.waves-sub { display: inline-flex; align-items: center; gap: 6px; }
+.waves-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--label-3); }
+.waves.live .waves-dot { background: var(--green); box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 25%, transparent); animation: pulse 1.6s ease-in-out infinite; }
+.waves.live .waves-sub { color: var(--green-dark); }
+.waves.practice .waves-dot { background: var(--orange); }
+.waves.practice .waves-sub { color: var(--orange-dark); }
+.waves.waiting .waves-dot { background: var(--orange); animation: pulse 1s ease-in-out infinite; }
+.waves-note { font-size: var(--fs-footnote); color: var(--label-2); font-weight: 600; }
+.focus-card.lost .arc { stroke: var(--orange); }
+.focus-card.lost .core { fill: var(--orange); animation: pulse 1s ease-in-out infinite; }
+.start-note.ok { color: var(--green-dark); }
+.sb-item .dot.rec { width: 8px; height: 8px; border-radius: 50%; background: var(--red); margin-left: auto; animation: pulse 1.2s ease-in-out infinite; }
+
+/* ---- quit-recording dialog ---- */
+.modal-back { position: fixed; inset: 0; z-index: 90; background: rgba(0, 0, 0, 0.45); display: flex; align-items: center; justify-content: center; padding: 24px; animation: fade var(--t-med) ease-out; }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+.modal { width: min(520px, 100%); background: var(--surface); border: 2px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow-pop); padding: 26px 28px; display: flex; flex-direction: column; gap: 14px; animation: rise var(--t-med) var(--spring); }
+.modal .sub { margin: 0; }
+.modal .row { justify-content: flex-end; flex-wrap: wrap; }
+
+/* ---- templates: comparison mapping, curve, in order, side by side, in motion ---- */
+.mapping { display: flex; flex-direction: column; gap: 8px; }
+.map-row { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center; padding: 10px 14px; border-radius: 14px; background: var(--surface-2); animation: rise 0.35s var(--spring); font-weight: 700; }
+.map-idea { color: var(--brand); }
+.map-arrow { font-size: var(--fs-caption); text-transform: uppercase; letter-spacing: 0.08em; color: var(--label-3); font-weight: 800; }
+.map-everyday { text-align: right; }
+.plot { width: 100%; height: auto; display: block; }
+.plot .axis-line { stroke: var(--line-2); stroke-width: 2; }
+.plot .lbl { fill: var(--label-2); font-size: 12px; font-weight: 700; font-family: var(--font); }
+.plot .tick { fill: var(--label-3); font-size: 11px; font-weight: 700; font-family: var(--font); }
+.plot .plot-line { fill: none; stroke: var(--brand); stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 2000; stroke-dashoffset: 2000; animation: draw 1.4s ease-out forwards; }
+.plot .series.s1 .plot-line { stroke: var(--orange); }
+.plot .series.s2 .plot-line { stroke: var(--green); }
+.plot .series-name { font-size: 12px; font-weight: 800; font-family: var(--font); fill: var(--brand); }
+.plot .series.s1 .series-name { fill: var(--orange-dark); }
+.plot .series.s2 .series-name { fill: var(--green-dark); }
+.plot .annot circle { fill: var(--label); }
+.plot .annot-text { fill: var(--label); font-size: 12px; font-weight: 800; font-family: var(--font); }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+.timeline { position: relative; height: 112px; margin: 8px 18px 0; }
+.tl-line { position: absolute; left: 0; right: 0; top: 46px; height: 4px; border-radius: 2px; background: var(--line); }
+.tl-line i { display: block; height: 100%; border-radius: 2px; background: var(--brand); transition: width 0.5s var(--ease); }
+.tl-event { position: absolute; top: 0; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; width: 120px; text-align: center; opacity: 0.35; transition: opacity 0.3s; }
+.tl-event.on { opacity: 1; }
+.tl-when { font-size: var(--fs-caption); font-weight: 800; color: var(--label-3); text-transform: uppercase; letter-spacing: 0.06em; height: 16px; }
+.tl-dot { width: 18px; height: 18px; border-radius: 50%; background: var(--surface); border: 3px solid var(--line-2); transition: border-color 0.3s, transform 0.3s var(--spring); }
+.tl-event.on .tl-dot { border-color: var(--brand); }
+.tl-event.cur .tl-dot { background: var(--brand); transform: scale(1.25); }
+.tl-label { font-size: var(--fs-footnote); font-weight: 700; line-height: 1.2; }
+.caption.takeaway { color: var(--brand-dark); }
+.compare { width: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--fs-subhead); font-weight: 600; }
+.compare th, .compare td { padding: 10px 12px; text-align: left; vertical-align: top; border-bottom: 2px solid var(--line); }
+.compare thead th { font-size: var(--fs-caption); text-transform: uppercase; letter-spacing: 0.08em; color: var(--brand); font-weight: 800; }
+.compare tbody th { color: var(--label-2); font-weight: 800; width: 28%; }
+.compare .cmp-row { animation: rise 0.35s var(--spring); }
+.animation-card { background: var(--surface-2); border-radius: var(--r); border: 2px solid var(--line); padding: 8px; }
+.animation-frame { width: 100%; height: 260px; border: 0; display: block; background: transparent; }
+
+/* ---- team: explanation preview ---- */
+.tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.tab { appearance: none; font: inherit; display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 12px; border-radius: 12px; border: 2px solid var(--line); background: var(--surface); cursor: pointer; font-weight: 800; font-size: var(--fs-footnote); color: var(--label-2); }
+.tab.is-active { border-color: var(--brand); color: var(--brand); background: color-mix(in srgb, var(--brand) 10%, transparent); }
+.tab-fam { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--label-3); font-weight: 800; }
+.tab-src { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--label-3); }
+.tab-src.failed { color: var(--red); }
+.preview { padding: 18px 20px; border-radius: var(--r); border: 2px solid var(--line); background: var(--surface); margin-bottom: 12px; }
+
+/* ---- restudy: the tutor voice, where you were, what was said ---- */
+.tutor-toggle.is-on { border-color: var(--brand); color: var(--brand); }
+.why-line { margin: 0; font-size: var(--fs-subhead); font-weight: 700; color: var(--brand-dark); }
+.context-line { margin: 0; font-size: var(--fs-subhead); font-weight: 600; color: var(--label-2); }
+.context-line .lbl { font-size: var(--fs-caption); font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--label-3); margin-right: 6px; }
+.why-line, .context-line, .caption, .step-item, .ex-line, .map-row, .cmp-row { border-radius: 8px; transition: background 0.3s; }
+.spoken { background: color-mix(in srgb, var(--brand) 14%, transparent); box-shadow: 0 0 0 6px color-mix(in srgb, var(--brand) 14%, transparent); }
+.said { font-size: var(--fs-subhead); color: var(--label-2); }
+.said summary { cursor: pointer; font-weight: 800; font-size: var(--fs-caption); text-transform: uppercase; letter-spacing: 0.08em; color: var(--label-3); list-style: none; }
+.said summary::before { content: "▸ "; }
+.said[open] summary::before { content: "▾ "; }
+.said p { margin: 8px 0 0; line-height: 1.5; font-weight: 600; }
+.moment-row.whole .m-detail { padding: 0; }
+.document.reading { max-height: 460px; font-size: 19px; padding: 22px 26px; }
+.rank-num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--surface-2); color: var(--label-3); font-size: var(--fs-caption); font-weight: 800; margin-right: 8px; }
+.pref.top .rank-num { background: var(--green); color: #fff; }
+.mode-tag { font-size: var(--fs-caption); font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--label-3); white-space: nowrap; }
+.start .btn-block + .btn-block { margin-top: 10px; }
+.moment-row.whole > summary { grid-template-columns: 1fr; }
+.moment-row.whole .m-body { min-width: 0; }

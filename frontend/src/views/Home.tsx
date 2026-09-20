@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, errorText } from "../lib/api";
-import type { Doctor, LectureFull, SessionPublic } from "../lib/types";
+import type { Devices, Doctor, LectureFull, SessionPublic } from "../lib/types";
 
 /** Listen (docs/PRODUCT.md §6): one button. A practice lecture is a fallback, not a peer choice.
  * "Next up" shows at most one lecture with moments left to restudy; the history lives on Lectures. */
@@ -14,6 +14,19 @@ export default function Home() {
   const [running, setRunning] = useState<SessionPublic | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [devices, setDevices] = useState<Devices | null>(null);
+
+  // the headset is often switched on after this screen opens: ask every few seconds, cheaply
+  useEffect(() => {
+    let alive = true;
+    const load = () => api.devices().then((d) => alive && setDevices(d)).catch(() => undefined);
+    void load();
+    const id = window.setInterval(load, 4000);
+    return () => {
+      alive = false;
+      window.clearInterval(id);
+    };
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -47,11 +60,12 @@ export default function Home() {
     }
   };
 
-  const statusLine = !doctor
+  const dev = devices ?? doctor;
+  const statusLine = !dev
     ? ""
     : [
-        doctor.headset.kind === "real" ? "Headset connected." : "No headset today, so focus is simulated for practice.",
-        doctor.totem.kind === "real" ? "Pad connected." : "Press Space whenever you feel lost.",
+        dev.headset.kind === "real" ? "Headset connected." : "Turn your headset on before you start; without one, focus is simulated for practice.",
+        dev.totem.kind === "real" ? "Pad connected." : "Press Space whenever you want a catch-up.",
       ].join(" ");
 
   return (
@@ -82,7 +96,7 @@ export default function Home() {
             Nothing to listen to yet
           </button>
         )}
-        <div className="start-note">{statusLine}</div>
+        <div className={"start-note" + (dev && dev.headset.kind === "real" ? " ok" : "")}>{statusLine}</div>
         {liveOk && practice && !running ? (
           <div className="start-alt">
             No lecture right now?{" "}

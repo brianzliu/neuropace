@@ -1,25 +1,47 @@
+import { useEffect, useState } from "react";
 import type { FocusMsg, HeadsetStatus } from "../lib/types";
 
-/** The student-facing focus indicator: one calm ring and one sentence. The z-score trace lives in Details. */
-export default function FocusCard({ last, headset, flags }: { last: FocusMsg | null; headset: HeadsetStatus | null; flags: number }) {
-  const state = !headset?.connected ? "off" : !last ? "off" : last.state;
+/** The student-facing focus indicator: one calm ring and one sentence. The z-score trace lives in Details.
+ * "Headset lost" follows the same arrival-time test as the brain waves, so the two never disagree. */
+export default function FocusCard({ last, headset, flags, rawAt }: { last: FocusMsg | null; headset: HeadsetStatus | null; flags: number; rawAt?: number }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 500);
+    return () => window.clearInterval(id);
+  }, []);
+  const real = headset?.kind === "real";
+  const streamLive = rawAt !== undefined ? rawAt > 0 && now - rawAt < 2000 : headset?.stream ? headset.stream.live : true;
+  const lost = real && !streamLive;
+  const state = !headset ? "off" : lost ? "lost" : !last ? "off" : last.state;
   const settling = state === "baseline";
   const pct = settling ? Math.round((last?.baseline_progress ?? 0) * 100) : 100;
-  const tone = state === "drop" ? "drop" : state === "bad" || state === "nosignal" || state === "off" ? "off" : settling ? "settle" : "steady";
+  const tone = state === "drop" ? "drop" : state === "lost" ? "lost" : state === "bad" || state === "nosignal" || state === "off" ? "off" : settling ? "settle" : "steady";
   const title =
-    tone === "drop" ? "You may have drifted" : tone === "off" ? (headset?.connected ? "Adjust the headset" : "No headset yet") : settling ? "Getting to know you" : "Steady";
+    tone === "drop"
+      ? "You may have drifted"
+      : tone === "lost"
+        ? "Headset lost"
+        : tone === "off"
+          ? headset && headset.kind !== "real"
+            ? "Practice focus"
+            : "Adjust the headset"
+          : settling
+            ? "Getting to know you"
+            : "Steady";
   const body =
     tone === "drop"
-      ? "Tap Lost me for a one-line catch-up, or keep listening."
-      : tone === "off"
-        ? headset?.connected
-          ? "The pad is not touching your forehead. Nothing is recorded until it does."
-          : "Focus is simulated for this session."
-        : settling
-          ? `Learning your normal focus during the first minutes · ${pct}%`
-          : flags
-            ? `${flags} moment${flags === 1 ? "" : "s"} saved for your notes.`
-            : "Listening along with you. Nothing saved yet.";
+      ? "Tap Catch me up for a one-line recap, or keep listening."
+      : tone === "lost"
+        ? "Reconnecting to your headset. Focus pauses until it is back; the lecture keeps recording."
+        : tone === "off"
+          ? headset && headset.kind !== "real"
+            ? "No headset today, so focus is simulated. Catch me up still works."
+            : "The pad is not touching your forehead. Nothing is recorded until it does."
+          : settling
+            ? `Learning your normal focus during the first minutes · ${pct}%`
+            : flags
+              ? `${flags} moment${flags === 1 ? "" : "s"} saved for your notes.`
+              : "Listening along with you. Nothing saved yet.";
   const r = 22;
   const c = 2 * Math.PI * r;
   return (

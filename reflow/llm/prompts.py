@@ -1,6 +1,11 @@
-"""Prompt text, versioned. Bump PROMPT_VERSION when wording changes so the cache does not replay old outputs."""
+"""Prompt text, versioned. Bump PROMPT_VERSION when wording changes so the cache does not replay old outputs.
 
-PROMPT_VERSION = "4"
+Generation is two-stage (docs/PRODUCT.md §4): one light call decides the note, the question, the words family and
+a plan (which visual and which doing template fit the moment); then one focused call per template asks for exactly
+the data that template renders. Each template prompt lists its fields and nothing else.
+"""
+
+PROMPT_VERSION = "5"
 
 GROUNDING = (
     "Ground every word in the transcript text you are given. Quote or closely paraphrase it. "
@@ -19,23 +24,82 @@ RECAP_INSTRUCTIONS = (
     "Write for a glance: no preamble, no 'the lecturer said'. " + GROUNDING
 )
 
-PACKAGE_INSTRUCTIONS = (
-    "You build the study material for ONE span of a lecture that a student missed. You get: the missed span, the transcript "
-    "just before it (context the student did hear), and optional key terms. Produce a note, a check question and every "
-    "artifact below, all grounded in the span.\n"
-    "note.what_was_said: two sentences quoting the span. note.key_term: the single most important term. note.definition: its "
-    "definition as the lecturer used it. note.connection: one sentence on how the span connects to the context the student heard.\n"
-    "question: multiple choice, answerable from the span alone, four options, exactly one correct, plausible distractors, a "
-    "one-line explanation.\n"
-    "artifacts.summary: the span in 1 to 3 plain sentences. artifacts.key_idea: term, definition, one example from the span.\n"
-    "artifacts.analogy: the idea mapped onto an everyday situation, at most 80 words, with the mapping explicit.\n"
-    "artifacts.diagram: a concept graph with 3 to 7 nodes (short labels, ids n1, n2, ...), labelled directed edges, and 2 to 6 "
-    "steps that walk the idea in order, each highlighting node ids with a caption of at most 20 words.\n"
-    "artifacts.chart: ONLY numbers the lecturer actually said. If the span has at least two comparable quantities, set "
-    "applicable=true, kind 'bar' or 'line', a title, the unit, 2 to 8 points {label, value} and a one-line takeaway; otherwise "
-    "applicable=false with empty fields.\n"
-    "artifacts.steps: if the span describes a process, method or procedure, applicable=true with a title and 2 to 8 ordered "
-    "steps of at most 15 words each; otherwise applicable=false with an empty list.\n"
-    "artifacts.example: always. A concrete instance carried through to its result: a title, 2 to 8 lines (one beat each, at most "
-    "15 words), and the result line. Use the lecturer's own numbers or cases when there are any. " + GROUNDING
+CORE_INSTRUCTIONS = (
+    "You prepare the study material for ONE span of a lecture that a student missed. You get the missed span, the "
+    "transcript just before it (context the student did hear) and optional key terms.\n"
+    "note.what_was_said: two sentences quoting the span. note.key_term: the single most important term. "
+    "note.definition: its definition as the lecturer used it. note.connection: one sentence on how the span connects to "
+    "the context the student heard.\n"
+    "question: multiple choice, answerable from the span alone, four options, exactly one correct, plausible "
+    "distractors, a one-line explanation.\n"
+    "summary: the span in 1 to 3 plain sentences. key_idea: the term, its definition, one example from the span.\n"
+    "plan: pick the ONE visual template and the ONE doing template that fit this span best, judged by content:\n"
+    "  visual = 'chart' when the span gives two or more comparable numbers for named categories; "
+    "'plot' when it describes how one quantity changes with another (a curve, a trend, two curves crossing, a formula's "
+    "shape); 'timeline' when it is dated events or the phases of a process in order; 'compare' when it contrasts two "
+    "things aspect by aspect; 'animation' when it describes a mechanism in motion (something orbiting, travelling, "
+    "flowing, oscillating, sorting, filling) that a moving picture would make obvious; otherwise 'diagram' (a concept "
+    "graph of how the ideas connect).\n"
+    "  doing = 'steps' when the span describes a procedure, method or algorithm the student could follow; otherwise "
+    "'example' (a concrete instance carried through to a result).\n"
+    "plan.why: one line naming the content cue that decided it. " + GROUNDING
 )
+
+TEMPLATE_INSTRUCTIONS: dict[str, str] = {
+    "analogy": (
+        "Explain the missed idea by comparison with an everyday situation. Fields: story (at most 80 words: the "
+        "everyday situation told so the idea's behaviour shows through), mapping (2 to 5 pairs: idea = the lecture's "
+        "term or part, everyday = what it stands for in the story), caveat (one line: where the comparison stops "
+        "holding). Keep the lecturer's terms exact in 'idea'. " + GROUNDING
+    ),
+    "diagram": (
+        "Draw the missed idea as a concept graph. Fields: title; nodes (3 to 7, ids n1, n2, ..., labels of at most 4 "
+        "words using the lecturer's terms); edges (directed, from_id, to_id, a label of 1 to 3 words saying the "
+        "relation); steps (2 to 6, walking the idea in order: highlight = the node ids lit at that step, caption = at "
+        "most 20 words). " + GROUNDING
+    ),
+    "chart": (
+        "Show the numbers the lecturer gave as a small chart. Fields: kind ('bar' for categories, 'line' when the "
+        "categories are ordered), title, unit (as said, or 'count'), points (2 to 8: label = the category as named, "
+        "value = the number exactly as said), takeaway (one line: what the comparison shows). Use ONLY numbers that "
+        "appear in the span; never estimate. " + GROUNDING
+    ),
+    "plot": (
+        "Show the relationship the lecturer described as a curve on numeric axes. Fields: title; x_label and y_label "
+        "(the quantities, with units only if the lecturer gave them); series (1 to 3, each with a short name and 6 to "
+        "40 points {x, y} sampled along the curve); annotations (0 to 4 short labels at notable points: a crossing, a "
+        "peak, a threshold); illustrative: false only when the points come from numbers or a formula the lecturer "
+        "actually gave, true when you are drawing the SHAPE the lecturer described (rising, saturating, crossing) with "
+        "unit-free axes; takeaway (one line: what the shape means). " + GROUNDING
+    ),
+    "timeline": (
+        "Lay the missed content out in order. Fields: title; events (3 to 8, in order: when = a date, year, time or "
+        "phase label as the lecturer gave it, label = at most 6 words, detail = one line of at most 20 words); takeaway "
+        "(one line: what the order tells you). " + GROUNDING
+    ),
+    "compare": (
+        "Contrast the two things the lecturer compared. Fields: title; left and right (the two things, named as the "
+        "lecturer did); rows (2 to 6: aspect = the dimension compared, left_value and right_value = each side in at "
+        "most 12 words); verdict (one line: the point of the comparison). " + GROUNDING
+    ),
+    "steps": (
+        "Turn the missed procedure into steps a student could follow. Fields: title; steps (2 to 8, in order, each at "
+        "most 15 words, one action per step, using the lecturer's terms). " + GROUNDING
+    ),
+    "example": (
+        "Carry one concrete instance of the missed idea through to its result. Fields: title; lines (2 to 8, one beat "
+        "per line, at most 15 words each; use the lecturer's own numbers or cases when there are any); result (the "
+        "final line). " + GROUNDING
+    ),
+    "animation": (
+        "Write a small self-contained web animation that shows the mechanism in this span in motion. Fields: title; "
+        "caption (one line, at most 25 words, saying what the motion shows); html.\n"
+        "html rules: ONE <div> wrapping an inline <svg viewBox='0 0 600 260' width='100%'> (or a <canvas width=600 "
+        "height=260 style='width:100%'>) and ONE inline <script>. Animate with requestAnimationFrame, loop forever, one "
+        "cycle of 4 to 8 seconds. Label the moving parts with short text. Use fill='currentColor' for text and outlines "
+        "so it reads on light and dark backgrounds, #1cb0f6 for the main moving part and #ff9600 for a second one. No "
+        "external resources of any kind (no http, no import, no fetch, no fonts, no libraries), no cookies or storage, "
+        "no access to parent or top, no eval. Under 4000 characters. Depict only what the lecturer described; if a "
+        "detail is unknown, leave it out rather than invent it."
+    ),
+}

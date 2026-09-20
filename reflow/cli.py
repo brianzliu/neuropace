@@ -215,6 +215,17 @@ def cmd_sim(args: argparse.Namespace) -> int:
     return 2
 
 
+def cmd_virtual_headset(args: argparse.Namespace) -> int:
+    from .signal.virtual_headset import main as vh_main
+
+    argv = ["--state", args.state, "--seed", str(args.seed)]
+    if args.control:
+        argv += ["--control", args.control]
+    if args.port_file:
+        argv += ["--port-file", args.port_file]
+    return vh_main(argv)
+
+
 def cmd_kaggle(args: argparse.Namespace) -> int:
     from .eval.kaggle_check import main as kmain
 
@@ -258,6 +269,15 @@ def main(argv: list[str] | None = None) -> int:
     sp.add_argument("which", choices=["selftest", "bandit", "lossmap"])
     sp.add_argument("--sims", type=int, default=1000)
     sp.set_defaults(fn=cmd_sim)
+    sp = sub.add_parser(
+        "virtual-headset",
+        help="a MindWave on a pseudo-terminal: real ThinkGear bytes, the app sees a real headset (macOS/Linux)",
+    )
+    sp.add_argument("--state", default="easy", help="easy | hard | drowsy | eyes_closed | off")
+    sp.add_argument("--control", help="control file: state <s> | blink | pause <seconds>")
+    sp.add_argument("--seed", type=int, default=0)
+    sp.add_argument("--port-file", help="write the device path here for scripts")
+    sp.set_defaults(fn=cmd_virtual_headset)
     sp = sub.add_parser("kaggle-check", help="hour-0 feature check on the Wang et al. EEG confusion CSV")
     sp.add_argument("path")
     sp.set_defaults(fn=cmd_kaggle)

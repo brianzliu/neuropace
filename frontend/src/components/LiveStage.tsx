@@ -26,7 +26,7 @@ interface Props {
   details: boolean;
 }
 
-/** The stage shared by the live view and the replay view: transcript, focus card, optional details, control bar, HUD and chip. */
+/** The stage shared by the live view and the replay view: transcript, brain waves, focus card, optional details, control bar, HUD and chip. */
 export default function LiveStage(props: Props) {
   const { state, onCatchupExpire, onCatchupDismiss, onOpenChip, onIgnoreChip, cycleToken, freezeCatchup, controls, head, inspectorExtra, details } = props;
   const flags = state.flagOrder.map((id) => state.flags[id]).filter(Boolean);
@@ -42,8 +42,8 @@ export default function LiveStage(props: Props) {
           <TranscriptPane words={state.words} interim={state.interim} flags={flags} now={state.t} />
         </div>
         <div className="inspector">
-          <BrainWaves samples={state.raw} bands={state.bands} connected={!!state.headset?.connected} />
-          <FocusCard last={last} headset={state.headset} flags={flags.length} />
+          <BrainWaves samples={state.raw} rawAt={state.rawAt} bands={state.bands} headset={state.headset} />
+          <FocusCard last={last} headset={state.headset} flags={flags.length} rawAt={state.rawAt} />
           {errors.length ? (
             <div className="callout danger" style={{ margin: 0 }}>
               {errors[errors.length - 1].text}
@@ -77,7 +77,7 @@ export default function LiveStage(props: Props) {
         </div>
       </div>
       {controls ? <div className="controlbar">{controls}</div> : null}
-      <CatchupOverlay card={state.catchup} onExpire={onCatchupExpire} onDismiss={onCatchupDismiss} cycleToken={cycleToken} freeze={freezeCatchup} />
+      <CatchupOverlay card={state.catchup} onExpire={onCatchupExpire} onDismiss={onCatchupDismiss} cycleToken={cycleToken} freeze={freezeCatchup} details={details} />
       <Chip count={state.chipIds.length} onOpen={onOpenChip} onIgnore={onIgnoreChip} />
     </>
   );

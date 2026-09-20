@@ -1,5 +1,7 @@
 import type {
   Profile,
+  Devices,
+  GapArtifacts,
   Doctor, EventsResponse, LectureFull, Learner, LossMap, NotesResponse, QuizGet, QuizResult, RegenerateResponse, ReviewAnswer,
   ReviewNext, ReviewStart, SessionPublic, TallySummary, GapPublic,
 } from "./types";
@@ -51,8 +53,10 @@ export interface SessionCreate {
 }
 
 export const api = {
-  health: () => get<{ ok: boolean; version: string }>("/api/health"),
+  health: () => get<{ ok: boolean; version: string; voice?: boolean }>("/api/health"),
   doctor: () => get<Doctor>("/api/doctor"),
+  devices: () => get<Devices>("/api/devices"),
+  artifacts: (id: string) => get<{ gaps: GapArtifacts[] }>(`/api/sessions/${id}/artifacts`),
   learners: () => get<{ learners: Learner[] }>("/api/learners"),
   createLearner: (name: string) => post<Learner>("/api/learners", { name }),
   learner: (id: string) => get<Learner>(`/api/learners/${id}`),
@@ -75,7 +79,7 @@ export const api = {
   events: (id: string) => get<EventsResponse>(`/api/sessions/${id}/events`),
   notes: (id: string) => get<NotesResponse>(`/api/sessions/${id}/notes`),
   regenerate: (id: string) => post<RegenerateResponse>(`/api/sessions/${id}/regenerate`),
-  reviewStart: (id: string) => post<ReviewStart>(`/api/sessions/${id}/review/start`),
+  reviewStart: (id: string, mode: "tutor" | "manual" = "tutor") => post<ReviewStart>(`/api/sessions/${id}/review/start`, { mode }),
   reviewState: (id: string) => get<ReviewStart>(`/api/sessions/${id}/review`),
   reviewAnswer: (id: string, card_id: string, choice: number, focus_ratio?: number | null) =>
     post<ReviewAnswer>(`/api/sessions/${id}/review/answer`, { card_id, choice, focus_ratio: focus_ratio ?? null }),

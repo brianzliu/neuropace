@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import time
 
+from ..llm.artifacts import build_package
 from ..llm.client import LLMClient, LLMUnavailable
 from ..store.db import DB
 
@@ -27,14 +28,14 @@ async def regenerate_packages(
     async def fill(g: dict) -> None:
         async with sem:
             try:
-                pkg, source = await llm.gap_package(
-                    g["span_text"], g.get("context_text") or "", corpus, keyterms, seed=seed + g["ord"]
+                pkg, source = await build_package(
+                    llm, g["span_text"], g.get("context_text") or "", corpus, keyterms, seed=seed + g["ord"]
                 )
             except LLMUnavailable as e:
                 g["package"] = {"error": str(e)}
                 g["package_source"] = "failed"
                 return
-            g["package"] = pkg.model_dump()
+            g["package"] = pkg
             g["package_source"] = source
 
     await asyncio.gather(*(fill(g) for g in todo))

@@ -106,20 +106,34 @@ def test_full_flow_over_http_and_ws_realtime(app):
         )
         notes = c.get(f"/api/sessions/{sess['id']}/notes").json()
         assert len(notes["gaps"]) == len(end["gaps"]) and notes["words"]
-        st = c.post(f"/api/sessions/{sess['id']}/review/start").json()
-        card = st["card"]
-        assert card["kind"] == "question" and st["progress"]["gaps_total"] == len(end["gaps"])
+        manual = c.post(f"/api/sessions/{sess['id']}/review/start", json={"mode": "manual"}).json()
+        assert manual["card"]["kind"] == "question" and manual["progress"]["mode"] == "manual"
+        assert c.post(f"/api/sessions/{sess['id']}/review/start", json={"mode": "nope"}).status_code == 400
+        # the same lesson, switched to private tutoring: the open check stays, the next moment is explained first
+        st = c.post(f"/api/sessions/{sess['id']}/review/start", json={"mode": "tutor"}).json()
+        card0 = st["card"]
+        assert card0["kind"] == "question" and st["progress"]["mode"] == "tutor"
+        ans0 = c.post(
+            f"/api/sessions/{sess['id']}/review/answer", json={"card_id": card0["id"], "choice": 0}
+        ).json()
+        assert ans0["credited_form"] is None
+        st = c.get(f"/api/sessions/{sess['id']}/review").json()
+        first = st["card"]
+        if first is None or first["kind"] != "reteach":
+            first = ans0["next"]
+        assert first["kind"] == "reteach" and st["progress"]["gaps_total"] == len(end["gaps"])
+        assert first["reteach"]["why"] and first["reteach"]["said"]
+        adv = c.post(f"/api/sessions/{sess['id']}/review/advance", json={"card_id": first["id"]}).json()
+        card = adv["next"]
+        assert card["kind"] == "question"
         ans = c.post(
             f"/api/sessions/{sess['id']}/review/answer", json={"card_id": card["id"], "choice": 0}
         ).json()
         assert ans["outcome"] in ("hit", "miss") and 0 <= ans["correct_index"] < 4
+        assert ans["credited_form"] == first["form"]
         if ans["next"] and ans["next"]["kind"] == "reteach":
-            adv = c.post(
-                f"/api/sessions/{sess['id']}/review/advance", json={"card_id": ans["next"]["id"]}
-            ).json()
-            assert adv["next"]["kind"] == "question"
             drop = c.post(
-                f"/api/sessions/{sess['id']}/review/drop", json={"card_id": adv["next"]["id"]}
+                f"/api/sessions/{sess['id']}/review/drop", json={"card_id": ans["next"]["id"]}
             ).json()
             assert drop["outcome"] == "drop"
         assert (
