@@ -53,7 +53,7 @@ Open the printed URL, pick the demo lecture, and start a session with the simula
 | **Frontend** | Vite + React |
 | **Backend** | Python (FastAPI), via `uv` |
 
-## 🔒 What's mine stays mine
+## 🔒 Privacy
 
 There is no teacher or institutional view of any student's gap history in this product. Everything NeuroPace learns about your attention and your review history belongs to you.
 
