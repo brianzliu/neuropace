@@ -267,7 +267,11 @@ body { overflow-x: clip; }
 .dashboard-empty h3 { font-family: var(--display); font-weight: 400; font-size: 1.35rem; margin: .5rem 0; }
 .dashboard-empty p { font-size: .85rem; color: var(--muted); max-width: 340px; margin: .6rem auto 1rem; }
 .session-sidebar { border-left: 1px solid var(--line); padding-left: 1.8rem; }
-.session-history-item { border-bottom: 1px solid var(--line); padding: 1.3rem 0; }
+.session-history-item { border: 1px solid var(--line); border-radius: 16px; background: var(--bg-2); padding: .9rem 1rem 1rem; margin-bottom: .75rem; box-shadow: 0 3px 0 var(--surface-edge); }
+/* Whole-card status wash keyed off the pill inside — playful but soft.
+   Meaning still rides on the pill's dot + word, never color alone. */
+.session-history-item:has(.session-status.is-ended) { background: color-mix(in srgb, var(--good) 9%, var(--bg-2)); border-color: color-mix(in srgb, var(--good) 38%, var(--line)); }
+.session-history-item:has(.session-status.is-running) { background: color-mix(in srgb, var(--accent) 12%, var(--bg-2)); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
 .session-date { display: flex; justify-content: space-between; font-size: .7rem; color: var(--muted); }
 .session-history-item h3 { font-size: .97rem; font-weight: 500; margin: .5rem 0 .8rem; }
 .session-history-item a { font-size: .77rem; }
