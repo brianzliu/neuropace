@@ -1,20 +1,20 @@
-import { useEffect, useRef, useState } from "react";
-import { api } from "../lib/api";
+import { useCallback, useEffect, useState } from "react";
+import { api, errorText } from "../lib/api";
 import type { Dashboard } from "../lib/dashboardTypes";
+import type { Profile } from "../lib/types";
 import NewSessionButton from "../components/dashboard/NewSessionButton";
-import DemoModeToggle from "../components/dashboard/DemoModeToggle";
 import ReviewQueue from "../components/dashboard/ReviewQueue";
 import SessionsSidebar from "../components/dashboard/SessionsSidebar";
-import SessionActivity from "../components/dashboard/SessionActivity";
+import { TallyCard } from "./Tally";
 import { readLocalSetting, writeLocalSetting } from "../lib/storage";
 
-/** Learner-owned dashboard. Preserve an existing profile; new devices use the default learner. */
+/** The one learner page: moments worth another look, the lectures they came from, and which
+ * explanation form has been landing. Preserve an existing profile; new devices use the default learner. */
 export default function Home() {
   const [learnerId, setLearnerId] = useState(() => readLocalSetting("learner") ?? "");
   const [data, setData] = useState<Dashboard | null>(null);
-  const [organizing, setOrganizing] = useState(false);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState("");
-  const generation = useRef(0);
 
   useEffect(() => {
     let active = true;
@@ -22,65 +22,58 @@ export default function Home() {
       const saved = readLocalSetting("learner");
       const learner = learners.find(item => item.id === saved) ?? await api.learner("me");
       if (active) setLearnerId(learner.id);
-    }).catch(e => { if (active) setError(String(e)); });
+    }).catch(e => { if (active) setError(errorText(e)); });
     return () => { active = false; };
   }, []);
 
-  useEffect(() => {
-    const version = ++generation.current;
-    setData(null); setError("");
-    setOrganizing(false);
+  const load = useCallback(async () => {
     if (!learnerId) return;
-    writeLocalSetting("learner", learnerId);
-    let active = true;
-    let loading = false;
-    const load = async (organize = false, loud = true) => {
-      if (loading) return;
-      loading = true;
-      try {
-        const fresh = await api.dashboard(learnerId, organize);
-        if (active && version === generation.current) setData(fresh);
-      } catch (e) { if (active && loud) setError(String(e)); }
-      finally { loading = false; }
-    };
-    void load().then(async () => {
-      if (!active) return;
-      setOrganizing(true);
-      // Quiet: a slow/failed organize pass keeps the deterministic data
-      // instead of painting the whole dashboard red.
-      await load(true, false);
-      if (active) setOrganizing(false);
-    });
-    const refresh = () => { if (document.visibilityState === "visible") void load(true); };
-    window.addEventListener("focus", refresh);
-    return () => { active = false; window.removeEventListener("focus", refresh); };
+    try {
+      const [fresh, prof] = await Promise.all([api.dashboard(learnerId), api.profile(learnerId)]);
+      setData(fresh);
+      setProfile(prof);
+      setError("");
+    } catch (e) { setError(errorText(e)); }
   }, [learnerId]);
 
-  // Office Hours and Restudy-only sessions aren't lectures: they'd otherwise show up here as a
-  // phantom "Live lecture" row stuck on "running" forever, since neither mode ever transitions a
-  // session to "ended" the way a recorded/live capture does. Same filter Library.tsx uses.
+  useEffect(() => {
+    setData(null); setProfile(null);
+    if (!learnerId) return;
+    writeLocalSetting("learner", learnerId);
+    void load();
+    const refresh = () => { if (document.visibilityState === "visible") void load(); };
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
+  }, [learnerId, load]);
+
+  const resetPatterns = async () => {
+    try {
+      await api.resetProfile(learnerId);
+      await load();
+    } catch (e) { setError(errorText(e)); }
+  };
+
+  // Office Hours and review-only sessions aren't lectures: they never transition to "ended" the way a
+  // recorded/live capture does and would sit here as a phantom "running" row forever.
   const sessions = data?.sessions.filter(s => s.mode !== "review" && s.mode !== "office_hours");
 
   return <div className="dashboard">
     <div className="dashboard-toolbar">
       <div className="dashboard-actions">
-        <DemoModeToggle />
         <NewSessionButton />
       </div>
     </div>
     {error && <div className="panel error" role="alert">{error}</div>}
     <div className="dashboard-grid">
       <div className="dashboard-main">
-        <ReviewQueue
-          concepts={data?.concepts}
-          closed={data?.closed ?? 0}
-          summary={data?.summary}
-          organizationSource={data?.organization_source}
-          organizing={organizing}
-        />
-        <SessionActivity sessions={sessions} />
+        <ReviewQueue concepts={data?.concepts} closed={data?.closed ?? 0} />
+        {profile ? (
+          <section className="insights tally-section" aria-label="What helps you understand">
+            <TallyCard tally={profile.tally} onReset={() => void resetPatterns()} />
+          </section>
+        ) : null}
       </div>
-      <SessionsSidebar sessions={sessions} concepts={data?.concepts} closed={data?.closed ?? 0} />
+      <SessionsSidebar sessions={sessions} />
     </div>
   </div>;
 }

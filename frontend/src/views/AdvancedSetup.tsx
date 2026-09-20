@@ -1,7 +1,7 @@
 import { backendFetch } from "../lib/backend";
 import DeskObject from "../components/DeskObject";
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { api, type SessionCreate } from "../lib/api";
 import type { Doctor, LectureFull, Learner } from "../lib/types";
 import { mmss } from "../lib/format";
@@ -260,8 +260,6 @@ export default function Setup() {
                 <button className="primary" disabled={!form.learner_id || busy} onClick={() => void start()}>
                   {busy ? "starting…" : "Start session"}
                 </button>
-                {learner ? <Link to={`/tally/${learner.id}`}>My review preferences</Link> : null}
-                {form.lecture_id ? <Link to={`/lossmap/${form.lecture_id}`}>Lecture overview</Link> : null}
               </div>
             </>
           )}
