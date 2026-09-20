@@ -7,7 +7,7 @@ export function openStudio() {
 export default function NewSessionButton() {
   return (
     <button className="primary new-session" onClick={openStudio}>
-      <span aria-hidden="true">＋</span> Start session
+      <span aria-hidden="true">＋</span> New session
     </button>
   );
 }

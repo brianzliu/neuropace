@@ -181,12 +181,14 @@ select {
 .theme-pocket .theme-miniature i { background: #f4d76a; box-shadow: 0 4px 0 #b9a046; }
 .theme-pocket .theme-miniature b { background: #fff3b5; box-shadow: 0 2px 0 #c6ac4d; }
 .dashboard { padding-top: 1.8rem; }
-.dashboard-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 1.5rem 2rem; flex-wrap: wrap; margin-bottom: 1.5rem; background: var(--bg-3); border: 1px solid var(--line); border-bottom: 4px solid var(--surface-edge); border-radius: var(--radius); padding: 1.2rem 1.5rem; box-shadow: 0 8px 20px var(--shadow); }
+.dashboard-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem 1.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; padding: .25rem 0; }
 .dashboard-toolbar h1 { font-size: clamp(2rem, 3.5vw, 3rem); margin: .5rem 0; font-weight: 400; }
 .dashboard-toolbar p { margin: 0; }
-.new-session { min-width: 175px; flex-shrink: 0; }
+.dashboard-actions { display: flex; align-items: center; gap: 1rem 1.25rem; flex-wrap: wrap; }
+.new-session { flex-shrink: 0; font-size: 1.15rem; padding: 1rem 1.9rem; border-radius: 16px; transform: rotate(-2deg); transition: transform .12s ease; }
+.new-session:hover:not(:disabled) { transform: rotate(0deg) scale(1.03); }
+.new-session:active:not(:disabled) { transform: rotate(-2deg) translateY(3px); }
 .new-session > span { font-size: 1.3rem; }
-.new-session small { display: block; font-size: .68rem; font-weight: 400; margin-top: .2rem; }
 .profile-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 1.3rem; border-bottom: 1px solid var(--line); padding-bottom: 1.2rem; margin-bottom: 2rem; }
 .profile-toolbar > label { flex-direction: row; align-items: center; gap: .7rem; }
 .profile-toolbar select { width: 160px; min-height: 36px; }
@@ -440,6 +442,8 @@ img, video, canvas { max-width: 100%; }
   .dissolve.active span, .reteach, .caption, .diagram .node, .diagram .edge path, .diagram .edge text { transition: none; animation: none; }
   .home-page .welcome, .home-page .home { animation: none; }
   button:hover:not(:disabled), .top-tabs a:hover, .toptabs a:hover, .sub-tabs a:hover, .library-tab:hover, .practice-go:hover, .practice-go:active, .icon-button:hover, .icon-button:active, .theme-option:hover:not(:disabled) { transform: none; }
+  .new-session { transition: none; }
+  .new-session:hover:not(:disabled), .new-session:active:not(:disabled) { transform: rotate(-2deg); }
   .sim-flash, .catchup.fading { animation: none; opacity: 1; }
 }
 @media (max-width: 640px) {
