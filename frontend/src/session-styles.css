@@ -199,10 +199,10 @@ h1, h2, h3 { margin: 0; letter-spacing: -0.01em; }
 .session-switcher > summary:hover { background: var(--surface-2); }
 .session-switcher > summary:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
 .session-switcher[open] > summary { border-color: var(--brand); }
-.switcher-text { display: grid; text-align: left; min-width: 0; }
+.switcher-text { display: grid; text-align: left; min-width: 0; flex: 1 1 auto; }
 .switcher-text b { font-size: var(--fs-subhead); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px; }
 .switcher-text small { font-size: var(--fs-caption); color: var(--label-3); font-weight: 600; }
-.switcher-caret { color: var(--label-3); font-size: 14px; transition: transform var(--t-fast) var(--ease); }
+.switcher-caret { color: var(--label-3); font-size: 14px; margin-left: auto; flex: none; transition: transform var(--t-fast) var(--ease); }
 .session-switcher[open] .switcher-caret { transform: rotate(180deg); }
 .switcher-menu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 60; width: min(340px, calc(100vw - 40px)); max-height: min(60vh, 400px); overflow: auto; padding: 6px; background: var(--surface); border: 2px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow-pop); display: grid; gap: 2px; animation: pop var(--t-fast) var(--ease); }
 .switcher-option { display: grid; grid-template-columns: 18px minmax(0, 1fr); align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: 12px; background: transparent; color: var(--label); font: inherit; text-align: left; cursor: pointer; }
