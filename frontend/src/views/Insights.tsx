@@ -79,7 +79,6 @@ export default function Insights({ learnerId: learnerProp, lectureId: lecturePro
     return () => { alive = false; };
   }, [lectureId, refresh]);
 
-  const learner = learners.find((l) => l.id === learnerId) ?? null;
   const pickLearner = (id: string) => {
     setSelectedLearner(id);
     if (!pinnedLearner) {
@@ -112,7 +111,6 @@ export default function Insights({ learnerId: learnerProp, lectureId: lecturePro
           </div>
           <p className="muted small" style={{ margin: 0 }}>
             We don't believe in learning styles. We test it on you, and show you the data.
-            {learner ? ` · ${learner.name}` : ""}
           </p>
           {tallyErr ? <div className="panel error" role="alert">{tallyErr}</div> : null}
           {!learnerId ? (
@@ -140,7 +138,6 @@ export default function Insights({ learnerId: learnerProp, lectureId: lecturePro
               ) : null}
             </div>
           </div>
-          <p className="muted small" style={{ margin: 0 }}>Aggregate and anonymous. It grades the lecture, never a student.</p>
           {lmErr ? <div className="panel error" role="alert">{lmErr}</div> : null}
           {!lectureId ? (
             <div className="panel muted">No lecture selected yet.</div>

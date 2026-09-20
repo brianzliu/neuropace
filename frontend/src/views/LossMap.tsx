@@ -19,12 +19,15 @@ export function LossMapCard({ lm, lecture }: { lm: LossMap; lecture: LectureFull
     <>
       <div className="muted">Where the room was lost. Aggregate and anonymous: it grades the lecture, never a student. n = {lm.n} learner{lm.n === 1 ? "" : "s"}.</div>
       {!lm.ready ? (
-        <div className="panel">needs 2 or more learners on this lecture ({lm.n} so far)</div>
+        <div className="panel waiting-card">
+          <h2>Waiting for company</h2>
+          <p className="muted small">Pooled insights appear once 2 or more learners finish this lecture ({lm.n} so far).</p>
+        </div>
       ) : (
         <>
           <div className="panel">
             <h2>
-              Pooled loss per {lm.bin_seconds} s{peak ? <span className="muted"> · peak 40 s: <span className="mono" style={{ color: "var(--bad)" }}>{range(peak.t_start, peak.t_end)}</span></span> : null}
+              Pooled loss per {lm.bin_seconds} s{peak ? <span className="muted"> (toughest 40 s: <span className="mono" style={{ color: "var(--bad)" }}>{range(peak.t_start, peak.t_end)}</span>)</span> : null}
             </h2>
             <div className="lossbars">
               {bins.map((b) => {

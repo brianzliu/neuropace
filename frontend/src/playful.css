@@ -240,7 +240,7 @@ select {
 .concept-box.is-warm { background: color-mix(in srgb, var(--object) 30%, var(--bg-2)); border-color: color-mix(in srgb, var(--object-dark) 55%, var(--line)); }
 .concept-box-note.is-warm-note { color: var(--accent-2); }
 [data-theme="paper"] .concept-box.is-warm { background: color-mix(in srgb, var(--cap) 35%, var(--bg-2)); }
-.concept-box-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .6rem; padding-top: .3rem; }
+.concept-box-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .6rem; padding-top: .3rem; margin-top: auto; }
 .concept-source { font-size: .74rem; color: var(--muted); }
 .concept-source span { display: block; font-size: .68rem; color: var(--dim); }
 /* Side blobs (user-directed polish): organic shapes flanking the content in
@@ -272,8 +272,10 @@ body { overflow-x: clip; }
 .session-history-item { border: 1px solid var(--line); border-radius: 16px; background: var(--bg-2); padding: .9rem 1rem 1rem; margin-bottom: .75rem; box-shadow: 0 3px 0 var(--surface-edge); }
 /* Whole-card status wash keyed off the pill inside — playful but soft.
    Meaning still rides on the pill's dot + word, never color alone. */
-.session-history-item:has(.session-status.is-ended) { background: color-mix(in srgb, var(--good) 9%, var(--bg-2)); border-color: color-mix(in srgb, var(--good) 38%, var(--line)); }
-.session-history-item:has(.session-status.is-running) { background: color-mix(in srgb, var(--accent) 12%, var(--bg-2)); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.session-history-item.is-ended { background: color-mix(in srgb, var(--good) 9%, var(--bg-2)); border-color: color-mix(in srgb, var(--good) 38%, var(--line)); }
+.session-history-item.is-reviewed { background: color-mix(in srgb, var(--accent-2) 10%, var(--bg-2)); border-color: color-mix(in srgb, var(--accent-2) 40%, var(--line)); }
+.session-history-item.is-running { background: color-mix(in srgb, var(--accent) 12%, var(--bg-2)); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .session-date { display: flex; justify-content: space-between; font-size: .7rem; color: var(--muted); }
 .session-history-item h3 { font-size: .97rem; font-weight: 500; margin: .5rem 0 .8rem; }
 .session-history-item a { font-size: .77rem; }
@@ -453,4 +455,24 @@ img, video, canvas { max-width: 100%; }
   .pill { font-size: .72rem; }
   .studio-steps { margin-inline: -.25rem; padding-inline: .25rem; }
   .session-setup, .dashboard-empty, .syllabus-form { max-width: 100%; }
+}
+/* Insights: playful rescue bars, prior disclosure, waiting card. All
+   numbers are real tally counts; the spotlight names a best form only
+   when enough_data is true. */
+.tally-spotlight { background: color-mix(in srgb, var(--object) 22%, var(--bg-2)); border-bottom-width: 4px; }
+.tally-spotlight p { margin: 0; font-size: .95rem; line-height: 1.6; }
+.tally-spotlight strong { font-family: var(--display); font-weight: 400; font-size: 1.1rem; }
+.rescue-row { display: grid; gap: .35rem; padding: .8rem 0; border-top: 1px solid var(--line); }
+.rescue-row:first-of-type { border-top: 0; }
+.rescue-head { display: flex; align-items: center; justify-content: space-between; gap: .6rem; font-weight: 600; font-size: .88rem; }
+.rescue-tag { font-size: .68rem; font-weight: 700; color: var(--cap-text); background: var(--cap); border: 1px solid var(--cap-dark); border-radius: 99px; padding: .15rem .6rem; box-shadow: 0 2px 0 var(--cap-dark); }
+.rescue-track { height: 16px; border-radius: 99px; background: var(--bg-3); border: 1px solid var(--line); overflow: hidden; }
+.rescue-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--object), var(--accent)); transition: width .4s ease; }
+.rescue-row.is-best .rescue-fill { background: linear-gradient(90deg, var(--cap-dark), var(--object)); }
+.prior-details summary { cursor: pointer; font-weight: 600; font-size: .9rem; }
+.waiting-card { border-style: dashed; text-align: left; }
+.waiting-card h2 { font-family: var(--display); font-weight: 400; font-size: 1.2rem; margin: 0 0 .3rem; }
+.waiting-card p { margin: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .rescue-fill { transition: none; }
 }
