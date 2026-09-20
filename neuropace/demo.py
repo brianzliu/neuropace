@@ -72,18 +72,20 @@ LECTURES = [
 
 
 def _quiz(term: str) -> list[dict]:
-    return [{
-        "id": f"q_{term.replace(' ', '_')}",
-        "question": f"Which idea best describes {term}?",
-        "options": [
-            f"The lecture's explanation of {term}",
-            "A deadline mentioned before class",
-            "An unrelated historical date",
-            "A measurement with no context",
-        ],
-        "correct_index": 0,
-        "segment": None,
-    }]
+    return [
+        {
+            "id": f"q_{term.replace(' ', '_')}",
+            "question": f"Which idea best describes {term}?",
+            "options": [
+                f"The lecture's explanation of {term}",
+                "A deadline mentioned before class",
+                "An unrelated historical date",
+                "A measurement with no context",
+            ],
+            "correct_index": 0,
+            "segment": None,
+        }
+    ]
 
 
 def seed_demo_database(db: DB) -> None:
@@ -91,15 +93,18 @@ def seed_demo_database(db: DB) -> None:
         return
     learner = db.default_learner()
     now = time.time()
-    db.set_curriculum(learner["id"], {
-        "title": "Foundations of science and data",
-        "topics": [
-            {"title": "Cellular respiration", "completed": True},
-            {"title": "Statistical inference", "completed": False},
-            {"title": "Orbital mechanics", "completed": False},
-            {"title": "Scientific communication", "completed": False},
-        ],
-    })
+    db.set_curriculum(
+        learner["id"],
+        {
+            "title": "Foundations of science and data",
+            "topics": [
+                {"title": "Cellular respiration", "completed": True},
+                {"title": "Statistical inference", "completed": False},
+                {"title": "Orbital mechanics", "completed": False},
+                {"title": "Scientific communication", "completed": False},
+            ],
+        },
+    )
     for index, (lecture_id, title, text, term) in enumerate(LECTURES):
         words = [word.to_dict() for word in script_from_text(text, wpm=145)]
         duration = words[-1]["end"] if words else 0
@@ -107,13 +112,15 @@ def seed_demo_database(db: DB) -> None:
             title=title,
             kind="scripted",
             words=words,
-            segments=[{
-                "id": "seg1",
-                "title": title,
-                "t_start": 0,
-                "t_end": duration,
-                "planted_bad": False,
-            }],
+            segments=[
+                {
+                    "id": "seg1",
+                    "title": title,
+                    "t_start": 0,
+                    "t_end": duration,
+                    "planted_bad": False,
+                }
+            ],
             quiz=_quiz(term),
             keyterms=[term],
             duration=duration,
@@ -134,25 +141,40 @@ def seed_demo_database(db: DB) -> None:
         started = now - index * 86400 - 3600
         db.update_session(session["id"], status="ended", started_at=started, ended_at=started + duration)
         db.add_words(session["id"], words, 0)
-        db.add_focus_samples(session["id"], [
-            {"t": second, "e": 0.55, "x": 0.45, "z": -0.2, "w15": -0.1,
-             "quality": "good", "state": "steady", "artifact": False, "blink": False, "paused": False}
-            for second in range(1, max(2, int(duration)), 4)
-        ])
+        db.add_focus_samples(
+            session["id"],
+            [
+                {
+                    "t": second,
+                    "e": 0.55,
+                    "x": 0.45,
+                    "z": -0.2,
+                    "w15": -0.1,
+                    "quality": "good",
+                    "state": "steady",
+                    "artifact": False,
+                    "blink": False,
+                    "paused": False,
+                }
+                for second in range(1, max(2, int(duration)), 4)
+            ],
+        )
         span = text.split(". ")[min(2, len(text.split(". ")) - 1)] + "."
         package = gap_package(span, text.split(". ")[0] + ".", text, seed=index)
-        gaps = [{
-            "id": f"gap_demo_{index + 1}",
-            "ord": 0,
-            "t_start": round(duration * 0.45, 2),
-            "t_end": round(duration * 0.68, 2),
-            "span_text": span,
-            "context_text": text,
-            "flag_ids": [f"flag_demo_{index + 1}"],
-            "package": package,
-            "package_source": "demo",
-            "status": "closed" if index == 2 else "open",
-        }]
+        gaps = [
+            {
+                "id": f"gap_demo_{index + 1}",
+                "ord": 0,
+                "t_start": round(duration * 0.45, 2),
+                "t_end": round(duration * 0.68, 2),
+                "span_text": span,
+                "context_text": text,
+                "flag_ids": [f"flag_demo_{index + 1}"],
+                "package": package,
+                "package_source": "demo",
+                "status": "closed" if index == 2 else "open",
+            }
+        ]
         db.replace_gaps(session["id"], gaps)
     for form, outcomes in {"words": (1, 3), "analogy": (3, 4), "visual": (4, 5), "doing": (2, 3)}.items():
         rescues, attempts = outcomes
