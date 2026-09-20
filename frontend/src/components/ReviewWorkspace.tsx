@@ -15,12 +15,11 @@ export default function ReviewWorkspace() {
   const [view, setView] = useState<"practice" | "board">("practice");
   const [mood, setMood] = useState("ready");
   const [learnerId, setLearnerId] = useState("");
-  const [reason, setReason] = useState("");
   const [officeId, setOfficeId] = useState<string | null>(null);
   const [prompt, setPrompt] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [signal, setSignal] = useState("Waiting for headset");
+  const [, setSignal] = useState("Waiting for headset");
   const creating = useRef(false);
   const alive = useRef(true);
   const officeRef = useRef<string | null>(null);
@@ -30,8 +29,8 @@ export default function ReviewWorkspace() {
     alive.current = true;
     return () => { alive.current = false; };
   }, []);
-  const openBoard = useCallback(async (why: string) => {
-    setView("board"); setReason(why);
+  const openBoard = useCallback(async () => {
+    setView("board");
     if (officeRef.current || creating.current) return;
     creating.current = true; setLoading(true); setError("");
     try {
@@ -61,12 +60,11 @@ export default function ReviewWorkspace() {
         conversation_session_id: officeRef.current,
       });
       if (!alive.current) return;
-      setReason(result.reason);
-      if (result.mode === "whiteboard") await openBoard(result.reason);
+      if (result.mode === "whiteboard") await openBoard();
       else { driftHandled.current = false; setView("practice"); }
     } catch (e) {
       if (!alive.current) return;
-      if (useBoardOnError) await openBoard("Let's draw this one out another way.");
+      if (useBoardOnError) await openBoard();
       else setError(errorText(e));
     }
   }, [learnerId, openBoard, sessionId]);
@@ -80,9 +78,8 @@ export default function ReviewWorkspace() {
     guideRef.current?.reportOutcome(outcome);
     if (outcome === "miss" || outcome === "drop") {
       lastMissRef.current = outcome === "miss" ? missDetail ?? null : null;
-      setReason(outcome === "miss" ? "That answer needs another look." : "Let's try a different explanation.");
       void recommend("practice", true);
-    } else if (outcome === "hit") setReason("That answer was right. Keep the explanation nearby if you need it.");
+    }
   }, [recommend]);
   const onSignal = useCallback((headset: HeadsetStatus | null, frame: FocusMsg | null) => {
     const simulated = !!headset && (headset.kind !== "real" || !!headset.simulated || !!frame?.sim);
@@ -90,35 +87,31 @@ export default function ReviewWorkspace() {
     if (headset?.kind === "real" && headset.connected && !simulated && frame?.quality === "good" && frame.baseline_ready && !frame.artifact && !frame.paused && frame.state === "drop") {
       if (!driftHandled.current) {
         driftHandled.current = true;
-        void openBoard("Your focus signal changed, so we're drawing the idea another way.");
+        void openBoard();
       }
     }
   }, [openBoard]);
   const paused = !!guide?.paused;
   return <section className="review-workspace">
     <div className="review-workspace-tools">
-      <h3>Review</h3>
-      <button className="btn btn-sm" onClick={() => {
-        if (view === "practice") void openBoard("Let's draw this one out together.");
-        else { driftHandled.current = false; setView("practice"); }
-      }}>{view === "practice" ? "Draw this out" : "Try a question"}</button>
       <fieldset className="review-mood"><legend>How is it going?</legend><div>
-        {[["ready", "Ready to try"], ["stuck", "I'm stuck"], ["tired", "Need a breather"]].map(([value, label]) => <button type="button" key={value} aria-pressed={mood === value} className={mood === value ? "selected" : ""} onClick={() => {
+        {[["ready", "Ready to try", "mood-ready"], ["tired", "Need a breather", "mood-tired"], ["stuck", "I'm stuck", "mood-stuck"]].map(([value, label, tier]) => <button type="button" key={value} aria-pressed={mood === value} className={tier + (mood === value ? " selected" : "")} onClick={() => {
           setMood(value);
-          if (value === "stuck") void openBoard("You said you're stuck. Let's take it one idea at a time.");
+          if (value === "stuck") void openBoard();
           if (value === "ready") { driftHandled.current = false; setView("practice"); }
-          if (value === "tired") setReason("Pause when you need to. We'll keep this short.");
         }}>{label}</button>)}
+        <button type="button" className="mood-draw" onClick={() => {
+          if (view === "practice") void openBoard();
+          else { driftHandled.current = false; setView("practice"); }
+        }}>{view === "practice" ? "Draw this out" : "Try a question"}</button>
       </div></fieldset>
     </div>
-    <p className="review-signal">{signal}</p>
-    {reason && <div className="review-adaptation" role="status"><span>{reason}</span></div>}
     <div hidden={view !== "practice"}>
       {guide ? <GuideContext.Provider value={{ ...guide, reportOutcome }}><ExplainDeck active={view === "practice" && !paused} onFocusState={onSignal} /></GuideContext.Provider> : <ExplainDeck active={view === "practice"} onFocusState={onSignal} />}
     </div>
     {view === "board" && <div className="review-board-pane">
       {loading && <p role="status">Opening your whiteboard…</p>}
-      {error && <div className="callout danger">{error}<button className="btn" onClick={() => void openBoard(reason)}>Try again</button></div>}
+      {error && <div className="callout danger">{error}<button className="btn" onClick={() => void openBoard()}>Try again</button></div>}
       {officeId && <OfficeHours sessionId={officeId} original={sessionId} openingPrompt={prompt} paused={paused} onTurnComplete={() => void recommend("whiteboard")} />}
     </div>}
   </section>;

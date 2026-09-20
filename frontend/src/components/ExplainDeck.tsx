@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, errorText } from "../lib/api";
-import { FORM_ICON, FORM_LABEL, type Card, type FocusMsg, type HeadsetStatus, type Progress, type TallySummary } from "../lib/types";
+import { FORM_LABEL, type Card, type FocusMsg, type HeadsetStatus, type Progress, type TallySummary } from "../lib/types";
 import { flash } from "../lib/flash";
 import { useFocusSession } from "../lib/focusSession";
 import { useGuidedStep } from "../lib/guide";
 import { usePushToTalk } from "../lib/pushToTalk";
 import ArtifactView from "./ArtifactView";
+import { Badge } from "./Badges";
 import BrainWaves from "./BrainWaves";
 import { libraryHref } from "../views/Library";
 
@@ -214,23 +215,9 @@ export default function ExplainDeck({ active = true, onFocusState }: {
   }
   if (!progress || !tally) return <div className="loading">Getting your moments ready…</div>;
 
-  const doneCount = progress.gaps_closed + progress.gaps_exhausted;
-  const nowOrd = card ? card.gap_ord : progress.gaps_total;
-
   return (
     <div className="lesson">
       <div className="stack">
-        <div className="moment-rail" aria-label={`${doneCount} of ${progress.gaps_total} moments done`}>
-          {Array.from({ length: progress.gaps_total }, (_, i) => (
-            <span key={i} className={"rail-dot" + (i < nowOrd || phase === "done" ? " done" : i === nowOrd ? " now" : "")}>
-              {i + 1}
-            </span>
-          ))}
-          <span className="label-3 t-footnote">
-            {phase === "done" ? `All ${progress.gaps_total} moments reviewed` : card ? `Moment ${card.gap_ord + 1} of ${progress.gaps_total}` : ""}
-          </span>
-        </div>
-
         {drift && card ? (
           <div className="drift-banner" role="status">
             <b>You drifted{drift.at > 0 ? ` after ${drift.at}s` : ""}.</b> Trying it {card.reteach ? FORM_LABEL[card.reteach.form] : "another way"}.
@@ -274,13 +261,7 @@ export default function ExplainDeck({ active = true, onFocusState }: {
             </>
           ) : card.kind === "reteach" && card.reteach ? (
             <div className="reteach">
-              <span className="artifact-kind">
-                <span className="family-icon">{FORM_ICON[card.reteach.form]}</span>
-                {FORM_LABEL[card.reteach.form]}
-                {card.package_source === "offline" ? <span className="sim-tag">OFFLINE</span> : null}
-              </span>
-              {card.reteach.why && !drift ? <p className="why-line">{card.reteach.why}</p> : null}
-              {card.reteach.context ? <p className="context-line">{card.reteach.context}</p> : null}
+              {card.package_source === "offline" ? <Badge tone="warning">offline</Badge> : null}
               <ArtifactView kind={card.reteach.artifact} content={card.reteach.content} step={step} onSteps={onSteps} />
               {card.reteach.said ? (
                 <details className="said">

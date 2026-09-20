@@ -609,10 +609,10 @@ a.linklike { font-size: var(--fs-subhead); }
 .plot .annot circle { fill: var(--label); }
 .plot .annot-text { fill: var(--label); font-size: 12px; font-weight: 800; font-family: var(--font); }
 @keyframes draw { to { stroke-dashoffset: 0; } }
-.timeline { position: relative; height: 112px; margin: 8px 18px 0; }
-.tl-line { position: absolute; left: 0; right: 0; top: 46px; height: 4px; border-radius: 2px; background: var(--line); }
+.timeline { position: relative; height: 112px; margin: 8px 18px 0; padding: 0 60px; box-sizing: border-box; }
+.tl-line { position: absolute; left: 60px; right: 60px; top: 46px; height: 4px; border-radius: 2px; background: var(--line); }
 .tl-line i { display: block; height: 100%; border-radius: 2px; background: var(--brand); transition: width 0.5s var(--ease); }
-.tl-event { position: absolute; top: 0; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; width: 120px; text-align: center; opacity: 0.35; transition: opacity 0.3s; }
+.tl-event { position: absolute; top: 0; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; width: 120px; text-align: center; opacity: 0.5; transition: opacity 0.3s; }
 .tl-event.on { opacity: 1; }
 .tl-when { font-size: var(--fs-caption); font-weight: 800; color: var(--label-3); letter-spacing: 0.01em; height: 16px; }
 .tl-dot { width: 18px; height: 18px; border-radius: 50%; background: var(--surface); border: 3px solid var(--line-2); transition: border-color 0.3s, transform 0.3s var(--spring); }
