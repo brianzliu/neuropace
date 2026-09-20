@@ -23,4 +23,7 @@ export interface Dashboard {
   organization_source: string;
   understanding?: Understanding;
   curriculum: Curriculum;
+  active_class?: { id: string; title: string };
 }
+export interface ClassSummary { id: string; title: string; topic_count: number; is_active: boolean }
+export interface ClassDetail { id: string; learner_id: string; title: string; topics: Curriculum["topics"]; is_active: boolean }

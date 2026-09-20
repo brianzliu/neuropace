@@ -253,14 +253,62 @@ class CurriculumIn(BaseModel):
 
 
 @router.get("/learners/{learner_id}/dashboard")
-async def learner_dashboard(learner_id: str, request: Request, organize: bool = False):
+async def learner_dashboard(learner_id: str, request: Request, organize: bool = False, class_id: str | None = None):
     from ..core.dashboard import dashboard_data, organize_dashboard
 
     db = _db(request)
     if not db.get_learner(learner_id):
         raise HTTPException(404, "unknown learner")
-    data = dashboard_data(db, learner_id)
+    try:
+        data = dashboard_data(db, learner_id, class_id)
+    except KeyError as err:
+        raise HTTPException(404, "unknown class") from err
     return await organize_dashboard(request.app.state.llm, data) if organize else data
+
+
+class ClassIn(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+
+
+@router.get("/learners/{learner_id}/classes")
+def list_classes(learner_id: str, request: Request):
+    if not _db(request).get_learner(learner_id):
+        raise HTTPException(404, "unknown learner")
+    return {"classes": _db(request).list_classes(learner_id)}
+
+
+@router.post("/learners/{learner_id}/classes", status_code=201)
+def create_class(learner_id: str, body: ClassIn, request: Request):
+    if not _db(request).get_learner(learner_id):
+        raise HTTPException(404, "unknown learner")
+    return _db(request).create_class(learner_id, body.title)
+
+
+@router.put("/learners/{learner_id}/classes/{class_id}")
+def save_class(learner_id: str, class_id: str, body: CurriculumIn, request: Request):
+    db = _db(request)
+    saved = db.get_class(class_id)
+    if not db.get_learner(learner_id) or saved is None or saved["learner_id"] != learner_id:
+        raise HTTPException(404, "unknown class")
+    return db.set_class_content(class_id, body.model_dump())
+
+
+@router.post("/learners/{learner_id}/classes/{class_id}/activate")
+def activate_class(learner_id: str, class_id: str, request: Request):
+    db = _db(request)
+    activated = db.activate_class(learner_id, class_id) if db.get_learner(learner_id) else None
+    if activated is None:
+        raise HTTPException(404, "unknown class")
+    return activated
+
+
+@router.delete("/learners/{learner_id}/classes/{class_id}")
+def delete_class(learner_id: str, class_id: str, request: Request):
+    db = _db(request)
+    remaining = db.delete_class(learner_id, class_id) if db.get_learner(learner_id) else None
+    if remaining is None:
+        raise HTTPException(404, "unknown class")
+    return {"classes": remaining}
 
 
 @router.post("/learners/{learner_id}/syllabus/parse")

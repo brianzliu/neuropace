@@ -98,7 +98,7 @@ def _understanding(curriculum: dict, moments: list[dict], quizzes: list[dict]) -
     return {"source": "rules", "topics": rows, "quizzes": quizzes}
 
 
-def dashboard_data(db, learner_id: str) -> dict:
+def dashboard_data(db, learner_id: str, class_id: str | None = None) -> dict:
     sessions = db.list_sessions(learner_id=learner_id)
     concepts = []
     moments: list[dict] = []
@@ -158,7 +158,16 @@ def dashboard_data(db, learner_id: str) -> dict:
             }
         )
     concepts.sort(key=lambda c: c["status"] != "exhausted")
-    curriculum = db.get_curriculum(learner_id)
+    if class_id is not None:
+        resolved = db.get_class(class_id)
+        if resolved is None or resolved["learner_id"] != learner_id:
+            raise KeyError(class_id)
+        curriculum = {"title": resolved["title"], "topics": resolved["topics"]}
+        active = {"id": resolved["id"], "title": resolved["title"]}
+    else:
+        active_row = db.active_class(learner_id)
+        curriculum = {"title": active_row["title"], "topics": active_row["topics"]}
+        active = {"id": active_row["id"], "title": active_row["title"]}
     return {
         "sessions": sessions,
         "concepts": concepts,
@@ -167,6 +176,7 @@ def dashboard_data(db, learner_id: str) -> dict:
         "organization_source": "rules",
         "understanding": _understanding(curriculum, moments, quizzes),
         "curriculum": curriculum,
+        "active_class": active,
     }
 
 
