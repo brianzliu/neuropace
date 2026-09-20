@@ -5,6 +5,7 @@ import { Link, Navigate, useLocation, useNavigate, useOutlet, useParams, useSear
 import { api } from "../lib/api";
 import type { SessionPublic } from "../lib/types";
 import { BackLink } from "../components/BackLink";
+import SessionSwitcher, { sessionTitle } from "../components/SessionSwitcher";
 
 export type LibraryTab = "notes" | "review" | "replay" | "quiz";
 
@@ -42,16 +43,6 @@ function tabFromLocation(pathname: string, paramTab: string | undefined, queryTa
   const segment = pathname.split("/").filter(Boolean)[2];
   if (isTab(segment)) return segment;
   return "notes";
-}
-
-function sessionTitle(session: SessionPublic, titles: Record<string, string>) {
-  if (session.lecture_id && titles[session.lecture_id]) return titles[session.lecture_id];
-  if (session.mode === "office_hours") return "Office Hours";
-  return session.mode === "recorded" ? "Recorded lecture" : "Live session";
-}
-
-function sessionMeta(session: SessionPublic) {
-  return new Date(session.started_at * 1000).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 function useLibraryIndex() {
@@ -107,7 +98,6 @@ export function LibraryFrame({ sessionId, tab, children }: { sessionId: string; 
   }, [sessionId]);
 
   const title = session ? sessionTitle(session, titles) : sessionId ? "Session" : "Library";
-  const known = !!sessions?.some((s) => s.id === sessionId);
   const showQuiz = !session || !!session.lecture_id;
 
   return (
@@ -123,17 +113,13 @@ export function LibraryFrame({ sessionId, tab, children }: { sessionId: string; 
           </div>
           <div className="row" style={{ gap: ".6rem" }}>
             {sessions && sessions.length ? (
-              <label className="small muted">
-                <span className="visually-hidden">Choose session</span>
-                <select value={known ? sessionId : ""} onChange={(e) => { if (e.target.value) nav(libraryHref(e.target.value, tab, inLibrary)); }}>
-                  {!known && sessionId ? <option value="">{title}</option> : null}
-                  {sessions.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {sessionTitle(s, titles)}, {sessionMeta(s)}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <SessionSwitcher
+                sessions={sessions}
+                titles={titles}
+                currentId={sessionId}
+                currentTitle={title}
+                onSelect={(id) => nav(libraryHref(id, tab, inLibrary))}
+              />
             ) : null}
           </div>
         </div>
