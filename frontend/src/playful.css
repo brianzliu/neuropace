@@ -227,6 +227,12 @@ select {
 .concept-box-description { margin: .2rem 0 0; font-size: .86rem; line-height: 1.6; color: var(--text); }
 .concept-box-note { margin: .45rem 0 0; font-size: .74rem; line-height: 1.5; color: var(--muted); }
 .concept-box-note.is-suggested { color: var(--accent); }
+/* Gentle severity: exhausted concepts (every re-teach tried, still open)
+   get a deeper honey tint and warm copy. No red anywhere — harshness
+   turns people away. The note text carries the meaning, never color alone. */
+.concept-box.is-warm { background: color-mix(in srgb, var(--object) 30%, var(--bg-2)); border-color: color-mix(in srgb, var(--object-dark) 55%, var(--line)); }
+.concept-box-note.is-warm-note { color: var(--accent-2); }
+[data-theme="paper"] .concept-box.is-warm { background: color-mix(in srgb, var(--cap) 35%, var(--bg-2)); }
 .concept-box-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .6rem; border-top: 1px solid var(--line); padding-top: .8rem; }
 .concept-source { font-size: .74rem; color: var(--muted); }
 .concept-source span { display: block; font-size: .68rem; color: var(--dim); }

@@ -1,4 +1,4 @@
-import type { Concept } from "../../lib/dashboardTypes";
+import type { Concept, Dashboard } from "../../lib/dashboardTypes";
 import ConceptBox from "./ConceptBox";
 
 interface ReviewQueueProps {
@@ -10,10 +10,20 @@ interface ReviewQueueProps {
   organizationSource?: string;
   /** True while the organize pass is in flight (the first response is deterministic). */
   organizing?: boolean;
+  /** Recent sessions, used only to resolve each concept's calendar date. */
+  sessions?: Dashboard["sessions"];
 }
 
-export default function ReviewQueue({ concepts, closed, organizationSource }: ReviewQueueProps) {
+const dateLabel = (startedAt: number | undefined): string | undefined => {
+  if (!Number.isFinite(startedAt)) return undefined;
+  const date = new Date((startedAt as number) * 1000);
+  if (!Number.isFinite(date.getTime())) return undefined;
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+};
+
+export default function ReviewQueue({ concepts, closed, organizationSource, sessions }: ReviewQueueProps) {
   const organized = organizationSource === "llm" || organizationSource === "cache";
+  const dates = new Map((sessions ?? []).map(s => [s.id, dateLabel(s.started_at)]));
   return (
     <section className="concept-section" aria-label="Concepts to review">
       <div className="dashboard-section-heading">
@@ -26,7 +36,7 @@ export default function ReviewQueue({ concepts, closed, organizationSource }: Re
           <>
             <div className="concept-list">
               {concepts.map((concept, i) => (
-                <ConceptBox key={concept.id} concept={concept} index={i} organized={organized} />
+                <ConceptBox key={concept.id} concept={concept} index={i} organized={organized} dateLabel={dates.get(concept.session_id)} />
               ))}
             </div>
           </>

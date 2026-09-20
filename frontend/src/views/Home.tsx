@@ -81,6 +81,7 @@ export default function Home() {
           summary={data?.summary}
           organizationSource={data?.organization_source}
           organizing={organizing}
+          sessions={data?.sessions}
         />
         <SessionActivity sessions={data?.sessions} />
         <CurriculumSection
