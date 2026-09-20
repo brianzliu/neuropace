@@ -1,3 +1,4 @@
+import GuidedSession from "../components/GuidedSession";
 import { activeLearnerId } from "../lib/activeLearner";
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
@@ -98,7 +99,7 @@ export function LibraryFrame({ sessionId, tab, children }: { sessionId: string; 
         <SessionNavigation sessionId={sessionId} tab={tab} title={title}
           sessions={sessions} titles={titles}
           onSelect={(id) => nav(sessionHref(id, tab))} />
-        <div className="library-body">{metaError ? <div className="panel error">{metaError}</div> : children}</div>
+        <div className="library-body">{metaError ? <div className="panel error">{metaError}</div> : session && !loc.pathname.startsWith("/team/") && !loc.pathname.startsWith("/office-hours/") && session.status !== "running" ? <GuidedSession key={sessionId} sessionId={sessionId} learnerId={session.learner_id} /> : children}</div>
       </div>
     </LibraryContext.Provider>
   );

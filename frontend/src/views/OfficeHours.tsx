@@ -11,7 +11,7 @@ import SessionBack from "../components/BackLink";
 /** Office Hours (docs/PRODUCT.md §5a): an open conversation about a lecture. The agent replies and draws on a
  * shared board; the scrubber replays any earlier point read-only; clicking a board element asks the agent to
  * say more about it. */
-export default function OfficeHours({ embeddedSessionId, originalSessionId, openingPrompt, embedded = false, paused = false }: { embeddedSessionId?: string; originalSessionId?: string; openingPrompt?: string; embedded?: boolean; paused?: boolean } = {}) {
+export default function OfficeHours({ embeddedSessionId, originalSessionId, openingPrompt, embedded = false, paused = false, onTurnComplete }: { embeddedSessionId?: string; originalSessionId?: string; openingPrompt?: string; embedded?: boolean; paused?: boolean; onTurnComplete?: () => void } = {}) {
   const { sessionId: routeSessionId = "" } = useParams();
   const sessionId = embeddedSessionId ?? routeSessionId;
   const [search] = useSearchParams();
@@ -132,6 +132,7 @@ export default function OfficeHours({ embeddedSessionId, originalSessionId, open
           onVoiceClipSent={() => void load()}
           pendingUserText={pendingUserText}
           pendingReplyText={pendingReplyText}
+          onTurnComplete={onTurnComplete}
         />
       </div>
     </div>

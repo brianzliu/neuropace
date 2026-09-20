@@ -1,3 +1,4 @@
+import { useGuidedStep } from "../lib/guide";
 import { useLibrary } from "./Library";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -15,6 +16,7 @@ import type { Flag } from "../lib/types";
 export default function Lecture() {
   const { sessionId = "" } = useParams();
   const library = useLibrary();
+  const guide = useGuidedStep();
   const nav = useNavigate();
   const [data, setData] = useState<NotesResponse | null>(null);
   const [title, setTitle] = useState("Lecture");
@@ -122,7 +124,7 @@ export default function Lecture() {
         </button>
       ) : null}
 
-      {data.words.length ? (
+      {data.words.length && !guide?.decision.target_gap_id ? (
         <details className="moment-row whole" open={total === 0}>
           <summary>
             <span className="m-body">
@@ -145,9 +147,9 @@ export default function Lecture() {
 
       {total > 0 ? (
         <section className="stack">
-          <div className="eyebrow">What you missed</div>
-          {data.gaps.map((g) => (
-            <details key={g.id} className="moment-row">
+          {!guide && <div className="eyebrow">Saved moments</div>}
+          {data.gaps.filter(g => !guide?.decision.target_gap_id || g.id === guide.decision.target_gap_id).map((g) => (
+            <details key={g.id} className="moment-row" open={guide ? true : undefined}>
               <summary>
                 <span className="m-num">{g.ord + 1}</span>
                 <span className="m-body">

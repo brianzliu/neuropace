@@ -186,6 +186,7 @@ export default function OfficeHoursChat({
   onVoiceClipSent,
   pendingUserText,
   pendingReplyText,
+  onTurnComplete,
 }: {
   sessionId: string;
   messages: OHMessage[];
@@ -202,6 +203,7 @@ export default function OfficeHoursChat({
    *  conversation never looks stalled while the board is still being drawn. */
   pendingUserText: string | null;
   pendingReplyText: string | null;
+  onTurnComplete?: () => void;
 }) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
@@ -237,6 +239,7 @@ export default function OfficeHoursChat({
     setText("");
     try {
       const replyText = await onSend(trimmed);
+      onTurnComplete?.();
       await afterReply(replyText);
     } catch (e) {
       setErr(errorText(e));
@@ -252,6 +255,7 @@ export default function OfficeHoursChat({
     setErr(null);
     try {
       const replyText = await onSend(spokenText);
+      onTurnComplete?.();
       await afterReply(replyText);
     } catch (e) {
       setErr(errorText(e));
@@ -267,6 +271,7 @@ export default function OfficeHoursChat({
     try {
       const { reply } = await api.officeHoursVoice(sessionId, blob);
       onVoiceClipSent();
+      onTurnComplete?.();
       await afterReply(reply.text);
     } catch (e) {
       setErr(errorText(e));

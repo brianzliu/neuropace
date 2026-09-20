@@ -20,8 +20,10 @@ from ..config import FORMS
 from ..core import tally as tallymod
 from ..core.gaps import regenerate_packages
 from ..core.lossmap import compute_lossmap
+from ..core.next_step import NextStepIn, next_step
 from ..core.office_hours import OfficeHoursEngine
 from ..core.review import ReviewEngine
+from ..core.review_recommendation import ReviewRecommendationIn, recommend_review
 from ..core.session import SessionRuntime
 from ..core.study import analyze, lossmap_inputs
 from ..doctor import detect_devices, run_doctor
@@ -1041,3 +1043,38 @@ def quiz_post(session_id: str, body: QuizIn, request: Request):
     db.set_quiz_answers(session_id, body.phase, rows)
     score = sum(r["correct"] for r in rows)
     return {"phase": body.phase, "score": score, "total": len(rows), "per_item": rows}
+
+
+# ---------------------------------------------------------------- guided study navigation
+
+
+@router.post("/sessions/{session_id}/next-step")
+async def session_next_step(session_id: str, body: NextStepIn, request: Request):
+    db = _db(request)
+    session = db.get_session(session_id)
+    if not session or session["learner_id"] != body.learner_id:
+        raise HTTPException(404, "unknown session")
+    if session["status"] not in ("ended", "reviewed"):
+        raise HTTPException(409, "end the session first")
+    return await next_step(db, request.app.state.llm, session, body)
+
+
+@router.post("/sessions/{session_id}/review/recommendation")
+async def review_recommendation(session_id: str, body: ReviewRecommendationIn, request: Request):
+    db = _db(request)
+    session = db.get_session(session_id)
+    if not session or session["learner_id"] != body.learner_id:
+        raise HTTPException(404, "unknown session")
+    if session["status"] not in ("ended", "reviewed"):
+        raise HTTPException(409, "end the session first")
+    for linked_id in (body.focus_session_id, body.conversation_session_id):
+        if linked_id:
+            linked = db.get_session(linked_id)
+            if not linked or linked["learner_id"] != body.learner_id:
+                raise HTTPException(404, "unknown session")
+            if linked_id == body.conversation_session_id and (
+                linked["mode"] != "office_hours" or linked.get("lecture_id") != session.get("lecture_id")
+            ):
+                raise HTTPException(400, "conversation must belong to this lecture")
+    runtime = request.app.state.runtimes.get(body.focus_session_id or session_id)
+    return await recommend_review(db, request.app.state.llm, session, body, runtime)
