@@ -5,6 +5,7 @@ import { api, errorText } from "../lib/api";
 import type { NotesResponse } from "../lib/types";
 import { range } from "../lib/format";
 import { Badge } from "../components/Badges";
+import SessionBack from "../components/BackLink";
 import TranscriptPane from "../components/TranscriptPane";
 import type { Flag } from "../lib/types";
 
@@ -74,13 +75,18 @@ export default function Lecture() {
     }
   };
 
-  if (err) return <div className="page narrow"><div className="callout danger">{err}</div></div>;
+  if (err) return <div className="page narrow">{!library ? <div className="page-back"><SessionBack /></div> : null}<div className="callout danger">{err}</div></div>;
   if (!data) return <div className="page narrow"><div className="loading">Loading…</div></div>;
   const running = data.session.status === "running";
   const failed = data.gaps.filter((g) => g.package_source === "failed");
   const total = data.gaps.length;
   return (
     <div className="page narrow">
+      {!library ? (
+        <div className="page-back">
+          <SessionBack />
+        </div>
+      ) : null}
       {!library ? (
         <header className="hero">
           <h1 className="t-large">{title}</h1>

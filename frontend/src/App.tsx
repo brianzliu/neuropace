@@ -59,8 +59,8 @@ export default function App() {
         </Route>
         <Route path="/notes/:sessionId" element={<LegacySession tab="notes" />} />
         <Route path="/review/:sessionId" element={<LegacySession tab="review" />} />
-        <Route path="/replay/:sessionId" element={<Replay />} />
-        <Route path="/quiz/:sessionId" element={<Quiz />} />
+        <Route path="/replay/:sessionId" element={<LegacySession tab="replay" />} />
+        <Route path="/quiz/:sessionId" element={<LegacySession tab="quiz" />} />
         <Route path="/insights" element={<Insights />} />
         <Route path="/you" element={<Navigate to="/insights" replace />} />
         <Route path="/tally/:learnerId" element={<Insights />} />

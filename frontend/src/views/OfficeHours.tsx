@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api, errorText } from "../lib/api";
 import type { OHSnapshot } from "../lib/types";
 import Board from "../components/Board";
 import OfficeHoursChat from "../components/OfficeHoursChat";
 import OHScrubber from "../components/OHScrubber";
+import SessionBack from "../components/BackLink";
 
 /** Office Hours (docs/PRODUCT.md §5a): an open conversation about a lecture. The agent replies and draws on a
  * shared board; the scrubber replays any earlier point read-only; clicking a board element asks the agent to
  * say more about it. */
 export default function OfficeHours() {
   const { sessionId = "" } = useParams();
-  const navigate = useNavigate();
   const [search] = useSearchParams();
   const original = search.get("original");
   const [snap, setSnap] = useState<OHSnapshot | null>(null);
@@ -69,9 +69,7 @@ export default function OfficeHours() {
   return (
     <div className="office-hours">
       <header className="oh-header row between">
-        <button type="button" className="btn btn-sm" onClick={() => navigate(-1)}>
-          ← Done
-        </button>
+        <SessionBack />
         <div className="row">
           {original ? (
             <Link className="btn btn-sm" to={`/restudy/${original}?mode=manual`} title="Switch to a quiz-first self-test, no agent conversation">

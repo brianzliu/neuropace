@@ -1,0 +1,3 @@
+/* One back affordance (BackLink/SessionBack) in the same spot on every session view. */
+.page-back { display: flex; margin-bottom: 16px; }
+.back-link { font-size: 18px; line-height: 1; }

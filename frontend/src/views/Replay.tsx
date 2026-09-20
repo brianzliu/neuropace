@@ -5,6 +5,8 @@ import type { HelloMsg, LectureFull, ServerMsg, SessionPublic } from "../lib/typ
 import { clearCatchup, dismissChip, initialState, openChip, reduce, type SessionState } from "../lib/sessionState";
 import LiveStage from "../components/LiveStage";
 import { Badge } from "../components/Badges";
+import SessionBack from "../components/BackLink";
+import { useLibrary } from "./Library";
 import { mmss } from "../lib/format";
 
 const DEFAULT_CONFIG: HelloMsg["config"] = {
@@ -16,6 +18,7 @@ const DEFAULT_CONFIG: HelloMsg["config"] = {
 /** Plays a session's event log at speed through the same stage as the live view (FR-L14). */
 export default function Replay() {
   const { sessionId = "" } = useParams();
+  const library = useLibrary();
   const [events, setEvents] = useState<ServerMsg[]>([]);
   const [state, setState] = useState<SessionState>(initialState);
   const [speed, setSpeed] = useState(4);
@@ -110,12 +113,14 @@ export default function Replay() {
   if (error) {
     return (
       <div className="page narrow">
+        {!library ? <div className="page-back"><SessionBack /></div> : null}
         <div className="card error-text">{error}</div>
       </div>
     );
   }
   const head = (
     <div className="transport">
+      {!library ? <SessionBack /> : null}
       <Badge tone="purple">replay</Badge>
       <span className="t-title3">{state.hello?.lecture?.title ?? "Session"}</span>
       <span className="mono t-subhead label-2">{mmss(state.t)}</span>

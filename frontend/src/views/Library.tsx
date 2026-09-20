@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Link, Navigate, useLocation, useNavigate, useOutlet, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
 import type { SessionPublic } from "../lib/types";
+import { BackLink } from "../components/BackLink";
 
 export type LibraryTab = "notes" | "review" | "replay" | "quiz";
 
@@ -114,9 +115,7 @@ export function LibraryFrame({ sessionId, tab, children }: { sessionId: string; 
       <div className={"library" + (tab === "replay" ? " library-replay" : "")}>
         <div className="library-head" style={{ display: "flex", flexWrap: "wrap", gap: ".6rem", alignItems: "center", justifyContent: "space-between", marginBottom: ".6rem" }}>
           <div className="row" style={{ gap: ".6rem" }}>
-            <Link to="/lectures" className="icon-button" aria-label="Back to Lectures" title="Back to Lectures">
-              <span aria-hidden="true">←</span>
-            </Link>
+            <BackLink to="/lectures" label="Back to Lectures" />
             <h1 className="library-title" style={{ margin: 0, fontSize: "1.35rem" }}>
               {title}
             </h1>

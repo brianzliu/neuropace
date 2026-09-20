@@ -3,9 +3,12 @@ import { useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import type { QuizGet, QuizResult } from "../lib/types";
 import { Badge } from "../components/Badges";
+import SessionBack from "../components/BackLink";
+import { useLibrary } from "./Library";
 
 export default function Quiz() {
   const { sessionId = "" } = useParams();
+  const library = useLibrary();
   const [data, setData] = useState<QuizGet | null>(null);
   const [phase, setPhase] = useState<"before" | "after">("before");
   const [answers, setAnswers] = useState<Record<string, number>>({});
@@ -25,12 +28,13 @@ export default function Quiz() {
       setBusy(false);
     }
   };
-  if (err) return <div className="page narrow"><div className="card error-text">{err}</div></div>;
+  if (err) return <div className="page narrow">{!library ? <div className="page-back"><SessionBack /></div> : null}<div className="card error-text">{err}</div></div>;
   if (!data) return <div className="page narrow"><div className="loading">Loading…</div></div>;
   const prior = data.answers.filter((a) => a.phase === phase);
   const answered = Object.keys(answers).length;
   return (
     <div className="page narrow">
+      {!library ? <div className="page-back"><SessionBack /></div> : null}
       <div className="page-head">
         <div>
           <h1 className="t-title1">Final quiz</h1>
