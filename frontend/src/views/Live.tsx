@@ -31,7 +31,9 @@ const CAL: { k: CalPhase; label: string }[] = [
 function inField(ev: KeyboardEvent): boolean {
   const el = ev.target as HTMLElement | null;
   const tag = el?.tagName;
-  return tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || tag === "BUTTON" || tag === "A" || !!el?.isContentEditable;
+  if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || !!el?.isContentEditable) return true;
+  // Space is the pad (the arcade button types it as a USB keyboard): it must not re-click whichever button was last focused
+  return (tag === "BUTTON" || tag === "A") && ev.key !== " ";
 }
 
 function micMessage(e: unknown): string {

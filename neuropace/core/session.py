@@ -121,6 +121,7 @@ class SessionRuntime:
         self._raw_last_mono = 0.0  # monotonic time of the last brain-wave chunk (any source)
         self._raw_chunks = 0
         self._last_headset_key: tuple | None = None
+        self._last_totem_connected: bool | None = None
         self.totem = make_totem(
             totem_port, self._on_totem_tap, exclude_port=getattr(self.headset, "port", None)
         )
@@ -192,6 +193,7 @@ class SessionRuntime:
             status="running",
         )
         self.broadcast({"type": "headset", **self.headset_status()})
+        self._last_totem_connected = bool(self.totem.connected)
         self.broadcast({"type": "totem", **self.totem.status(), "pulse": False})
         if self.tick_interval > 0 and not self.drive_manually:
             self._tick_task = asyncio.create_task(self._tick_loop(), name=f"tick-{self.id}")
@@ -219,6 +221,14 @@ class SessionRuntime:
     def _headset_key(self) -> tuple:
         st = self.headset_status()
         return (st["kind"], st["connected"], st["stream"]["live"])
+
+    def _broadcast_totem_if_changed(self) -> None:
+        """A serial button opens ~1.5 s after the session starts (and may drop out); tell the screen when it does."""
+        connected = bool(self.totem.connected)
+        if connected == self._last_totem_connected:
+            return
+        self._last_totem_connected = connected
+        self.broadcast({"type": "totem", **self.totem.status(), "pulse": False})
 
     def _broadcast_headset_if_changed(self) -> None:
         """The student's screen learns about a headset that connects, drops or stalls within a second."""
@@ -772,6 +782,7 @@ class SessionRuntime:
             self.totem.send("FIT 8")
         self._on_detector_events(events, t)
         self._broadcast_headset_if_changed()
+        self._broadcast_totem_if_changed()
         self._maybe_attach_totem(t)
         self._maybe_attach_headset(t)
         if not self.review_only and not self.calibration_pending:
@@ -822,6 +833,7 @@ class SessionRuntime:
         new.send(f"FIT {old.fit}")
         new.send(f"DOT {len(self.flags)}")
         self.totem = new
+        self._last_totem_connected = bool(new.connected)
         self.db.update_session(self.id, totem_kind=new.kind)
         self.notice("info", f"Arduino totem attached on {port}")
         self.broadcast({"type": "totem", **new.status(), "pulse": False})

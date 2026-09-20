@@ -63,6 +63,7 @@ export default function ExplainDeck({ active = true, onFocusState }: {
     if (done || !next) {
       setCard(null);
       setPhase("done");
+      guideRef.current?.reportOutcome("completed");
       return;
     }
     setCard(next);
@@ -239,7 +240,7 @@ export default function ExplainDeck({ active = true, onFocusState }: {
 
         <div className="lesson-card">
           {phase === "done" || !card ? (
-            <DoneSummary sessionId={sessionId} progress={progress} tally={tally} hits={hits} />
+            <DoneSummary sessionId={sessionId} progress={progress} tally={tally} hits={hits} guided={!!guide} />
           ) : card.kind === "question" && card.question ? (
             <>
               <div className="question">{card.question.question}</div>
@@ -414,7 +415,9 @@ function AskMoment({ sessionId, cardId }: { sessionId: string; cardId: string })
   );
 }
 
-function DoneSummary({ sessionId, progress, tally, hits }: { sessionId: string; progress: Progress; tally: TallySummary; hits: number }) {
+/** Inside the guided flow the library shell keeps rendering the guide whatever the tab, so links to
+ * /quiz or /notes would change the URL and nothing else: there, the guide's own footer is the way on. */
+function DoneSummary({ sessionId, progress, tally, hits, guided }: { sessionId: string; progress: Progress; tally: TallySummary; hits: number; guided: boolean }) {
   const best = tally.preferred ?? (tally.rank && tally.rank[0]) ?? null;
   const st = best ? tally.forms[best] : null;
   return (
@@ -443,15 +446,19 @@ function DoneSummary({ sessionId, progress, tally, hits }: { sessionId: string; 
       ) : (
         <p className="sub">NeuroPace is still learning which explanations help you most.</p>
       )}
-      {progress.gaps_exhausted > 0 ? <p className="sub">The tricky ones stay open in Notes with their sources.</p> : null}
-      <div className="row">
-        <Link className="btn btn-primary btn-lg" to={libraryHref(sessionId, "quiz")}>
-          Take the quiz
-        </Link>
-        <Link className="btn btn-plain" to={libraryHref(sessionId, "notes")}>
-          Back to Notes
-        </Link>
-      </div>
+      {progress.gaps_exhausted > 0 ? <p className="sub">The tricky ones stay open in Notes.</p> : null}
+      {guided ? (
+        <p className="sub">Use <strong>Continue</strong> below for your next step, or <strong>Finish for now</strong>.</p>
+      ) : (
+        <div className="row">
+          <Link className="btn btn-primary btn-lg" to={libraryHref(sessionId, "quiz")}>
+            Take the quiz
+          </Link>
+          <Link className="btn btn-plain" to={libraryHref(sessionId, "notes")}>
+            Back to Notes
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
