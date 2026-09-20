@@ -22,11 +22,13 @@ export function errorText(e: unknown): string {
 
 /** Fetch timeout so a dead connection surfaces as an error instead of
  *  hanging every section on "Loading…" forever. Callers may pass their
- *  own signal to override. */
+ *  own signal to override, or a longer budget for model-backed calls. */
 const FETCH_TIMEOUT_MS = 15000;
+/** Budget for the background LLM organize pass, which can take 30s+. */
+const ORGANIZE_TIMEOUT_MS = 90000;
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await backendFetch(path, { headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS), ...init });
+async function request<T>(path: string, init?: RequestInit, timeoutMs = FETCH_TIMEOUT_MS): Promise<T> {
+  const res = await backendFetch(path, { headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(timeoutMs), ...init });
   if (!res.ok) {
     let detail = res.statusText;
     try {
@@ -41,6 +43,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 const get = <T,>(path: string) => request<T>(path);
+const getSlow = <T,>(path: string, ms: number) => request<T>(path, undefined, ms);
 const post = <T,>(path: string, body?: unknown) => request<T>(path, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body) });
 
 export interface SessionCreate {
@@ -61,7 +64,10 @@ export interface SessionCreate {
 export const api = {
   demoMode: () => get<{ enabled: boolean; synthetic: true }>("/api/settings/demo"),
   setDemoMode: (enabled: boolean) => request<{ enabled: boolean; synthetic: true }>("/api/settings/demo", { method: "PUT", body: JSON.stringify({ enabled }) }),
-  dashboard: (id: string, organize = false, classId?: string) => get<import("./dashboardTypes").Dashboard>(`/api/learners/${id}/dashboard?organize=${organize}${classId ? `&class_id=${classId}` : ""}`),
+  dashboard: (id: string, organize = false, classId?: string) => {
+    const path = `/api/learners/${id}/dashboard?organize=${organize}${classId ? `&class_id=${classId}` : ""}`;
+    return organize ? getSlow<import("./dashboardTypes").Dashboard>(path, ORGANIZE_TIMEOUT_MS) : get<import("./dashboardTypes").Dashboard>(path);
+  },
   saveCurriculum: (id: string, body: import("./dashboardTypes").Curriculum) => request<import("./dashboardTypes").Curriculum>(`/api/learners/${id}/curriculum`, { method: "PUT", body: JSON.stringify(body) }),
   classes: (id: string) => get<{ classes: import("./dashboardTypes").ClassSummary[] }>(`/api/learners/${id}/classes`),
   createClass: (id: string, title: string) => post<import("./dashboardTypes").ClassDetail>(`/api/learners/${id}/classes`, { title }),

@@ -44,13 +44,13 @@ export default function Home() {
     writeLocalSetting("learner", learnerId);
     let active = true;
     let loading = false;
-    const load = async (organize = false) => {
+    const load = async (organize = false, loud = true) => {
       if (loading) return;
       loading = true;
       try {
         const fresh = await api.dashboard(learnerId, organize, classId || undefined);
         if (active && version === generation.current) setData(fresh);
-      } catch (e) { if (active) setError(String(e)); }
+      } catch (e) { if (active && loud) setError(String(e)); }
       finally { loading = false; }
     };
     api.classes(learnerId).then(({ classes: list }) => {
@@ -59,7 +59,9 @@ export default function Home() {
     void load().then(async () => {
       if (!active) return;
       setOrganizing(true);
-      await load(true);
+      // Quiet: a slow/failed organize pass keeps the deterministic data
+      // instead of painting the whole dashboard red.
+      await load(true, false);
       if (active) setOrganizing(false);
     });
     const refresh = () => { if (document.visibilityState === "visible") void load(true); };
@@ -113,6 +115,10 @@ export default function Home() {
     } catch (e) { setError(String(e)); throw e; }
   };
   const activeClassId = classId || data?.active_class?.id || classes.find(c => c.is_active)?.id || "";
+  // Office Hours and Restudy-only sessions aren't lectures: they'd otherwise show up here as a
+  // phantom "Live lecture" row stuck on "running" forever, since neither mode ever transitions a
+  // session to "ended" the way a recorded/live capture does. Same filter Lectures.tsx/Library.tsx use.
+  const sessions = data?.sessions.filter(s => s.mode !== "review" && s.mode !== "office_hours");
 
   return <div className="dashboard">
     <div className="dashboard-toolbar">
@@ -130,9 +136,9 @@ export default function Home() {
           summary={data?.summary}
           organizationSource={data?.organization_source}
           organizing={organizing}
-          sessions={data?.sessions}
+          sessions={sessions}
         />
-        <SessionActivity sessions={data?.sessions} />
+        <SessionActivity sessions={sessions} />
         <CurriculumSection
           curriculum={data?.curriculum}
           understanding={data?.understanding}
@@ -146,7 +152,7 @@ export default function Home() {
           onDeleteClass={deleteClass}
         />
       </div>
-      <SessionsSidebar sessions={data?.sessions} concepts={data?.concepts} closed={data?.closed ?? 0} />
+      <SessionsSidebar sessions={sessions} concepts={data?.concepts} closed={data?.closed ?? 0} />
     </div>
   </div>;
 }
