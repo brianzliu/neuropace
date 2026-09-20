@@ -101,11 +101,10 @@ export default function Insights({ learnerId: learnerProp, lectureId: lecturePro
         <div>
 
           <h1>What lands for you.</h1>
-          <p className="muted">Your review preferences are learner-scoped. Lecture overviews pool the room and stay anonymous.</p>
         </div>
       </div>
       {loadError ? <div className="panel error" role="alert">{loadError}</div> : null}
-      <div className="home">
+      <div className="home insights">
         <section className="col" aria-labelledby="review-preferences-heading">
           <div className="dashboard-section-heading">
             <h2 id="review-preferences-heading">My review preferences</h2>
@@ -118,9 +117,6 @@ export default function Insights({ learnerId: learnerProp, lectureId: lecturePro
               </label>
             ) : null}
           </div>
-          <p className="muted small" style={{ margin: 0 }}>
-            We don't believe in learning styles. We test it on you, and show you the data.
-          </p>
           {tallyErr ? <div className="panel error" role="alert">{tallyErr}</div> : null}
           {!learnerId ? (
             <div className="panel muted">Create a profile on the <Link to="/">dashboard</Link> to start your tally.</div>

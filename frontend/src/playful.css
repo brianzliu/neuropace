@@ -538,3 +538,45 @@ img, video, canvas { max-width: 100%; }
 @media (prefers-reduced-motion: reduce) {
   .rescue-fill { transition: none; }
 }
+/* Insights, kid-drawing pass (scoped: Done/Restudy reuse rescue rows and
+   keep their own look). One font system: display for every heading, number,
+   and label; plain sans with tabular numerals for captions, times, scores.
+   No mono anywhere. Charts are crayon: wobbly outlines, hard offset
+   shadows, diagonal shade stripes. All static. */
+.insights h2 { font-family: var(--display); font-weight: 400; text-transform: none; letter-spacing: 0; }
+.insights .mono { font-family: inherit; }
+.insights .stats .stat { border-width: 2px; border-radius: 18px 22px 16px 24px; box-shadow: 0 3px 0 var(--surface-edge); }
+.insights .stats .stat:nth-child(3n+1) { transform: rotate(-1deg); }
+.insights .stats .stat:nth-child(3n+2) { transform: rotate(.7deg); }
+.insights .stats .stat:nth-child(3n) { transform: rotate(-.4deg); }
+.insights .stats .stat .v { font-family: var(--display); font-weight: 400; font-size: 2.2rem; }
+.insights .stats .stat .k { font-family: var(--display); font-weight: 400; font-size: .95rem; text-transform: none; letter-spacing: 0; }
+.insights .tally-spotlight { transform: rotate(-.5deg); }
+.insights .rescue-head { font-family: var(--display); font-weight: 400; font-size: 1.02rem; }
+.insights .rescue-head span:first-child { font-weight: 400; }
+.insights .rescue-row > .small.muted { font-variant-numeric: tabular-nums; }
+.insights .rescue-track { height: 18px; border-width: 2px; border-radius: 255px 18px 225px 18px / 18px 225px 18px 255px; }
+.insights .rescue-fill { background-image: linear-gradient(90deg, var(--object), var(--accent)), repeating-linear-gradient(-55deg, rgba(255,255,255,.22) 0 4px, transparent 4px 8px); }
+.insights .rescue-row.is-best .rescue-fill { background-image: linear-gradient(90deg, var(--cap-dark), var(--object)), repeating-linear-gradient(-55deg, rgba(255,255,255,.22) 0 4px, transparent 4px 8px); }
+.insights .prior-details summary { font-family: var(--display); font-weight: 400; font-size: 1rem; }
+.insights .tally-row .name { font-family: var(--display); font-size: .95rem; }
+.insights .tally-row .small.muted { font-variant-numeric: tabular-nums; }
+.insights .loss-head { display: flex; align-items: flex-start; justify-content: space-between; gap: .6rem; }
+.insights .loss-head h2 { margin: 0 0 .75rem; }
+.insights .toughest { color: var(--bad); font-variant-numeric: tabular-nums; }
+.insights .n-chip { flex-shrink: 0; font-size: .72rem; color: var(--muted); border: 1px dashed var(--line); border-radius: 99px; padding: .15rem .6rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.insights .lossbars { gap: 5px; }
+.insights .lossbars .bar { border: 2px solid var(--line); border-bottom: 0; border-radius: 8px 8px 3px 3px / 14px 14px 3px 3px; background-image: linear-gradient(180deg, var(--accent), var(--accent)), repeating-linear-gradient(-55deg, rgba(255,255,255,.16) 0 4px, transparent 4px 8px); }
+.insights .lossbars .bar.peak { background-image: linear-gradient(180deg, var(--bad), var(--bad)), repeating-linear-gradient(-55deg, rgba(255,255,255,.2) 0 4px, transparent 4px 8px); }
+.insights .lossbars .bar.empty { background: transparent; border-style: dashed; }
+.insights .lossbars + .row span { font-variant-numeric: tabular-nums; }
+.insights .seglist { list-style: none; margin: .9rem 0 0; padding: 0; display: grid; gap: .55rem; }
+.insights .seglist li { display: flex; align-items: center; gap: .7rem; border: 2px solid var(--line); border-radius: 14px 18px 13px 18px; background: var(--bg-2); padding: .55rem .8rem; box-shadow: 0 2px 0 var(--surface-edge); }
+.insights .seglist li.top { border-color: var(--bad); }
+.insights .seg-rank { display: inline-grid; place-items: center; width: 30px; height: 30px; flex-shrink: 0; border-radius: 50% 46% 52% 48% / 48% 52% 46% 52%; background: var(--bg-3); border: 2px solid var(--line); font-family: var(--display); font-size: 1rem; }
+.insights .seglist li.top .seg-rank { background: var(--bad); border-color: var(--bad); color: #fff; }
+.insights .seg-body { display: grid; gap: .1rem; min-width: 0; flex: 1; }
+.insights .seg-title { font-weight: 600; font-size: .86rem; }
+.insights .seg-meta { font-size: .74rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.insights .seg-score { width: 72px; flex-shrink: 0; height: 12px; border-radius: 99px; background: var(--bg-3); border: 1px solid var(--line); overflow: hidden; }
+.insights .seg-score i { display: block; height: 100%; border-radius: 99px; background-image: linear-gradient(90deg, var(--object), var(--bad)), repeating-linear-gradient(-55deg, rgba(255,255,255,.22) 0 3px, transparent 3px 6px); }

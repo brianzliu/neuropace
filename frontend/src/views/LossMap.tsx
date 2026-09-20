@@ -15,9 +15,9 @@ export function LossMapCard({ lm, lecture }: { lm: LossMap; lecture: LectureFull
   const minLoss = Math.min(0, ...bins.map((b) => b.loss ?? 0));
   const span = maxLoss - minLoss || 1;
   const peak = lm.peak;
+  const maxScore = Math.max(0, ...(lm.segments ?? []).map((s) => s.score ?? 0)) || 1;
   return (
     <>
-      <div className="muted">Where the room was lost. Aggregate and anonymous: it grades the lecture, never a student. n = {lm.n} learner{lm.n === 1 ? "" : "s"}.</div>
       {!lm.ready ? (
         <div className="panel waiting-card">
           <h2>Waiting for company</h2>
@@ -26,9 +26,12 @@ export function LossMapCard({ lm, lecture }: { lm: LossMap; lecture: LectureFull
       ) : (
         <>
           <div className="panel">
-            <h2>
-              Pooled loss per {lm.bin_seconds} s{peak ? <span className="muted"> (toughest 40 s: <span className="mono" style={{ color: "var(--bad)" }}>{range(peak.t_start, peak.t_end)}</span>)</span> : null}
-            </h2>
+            <div className="loss-head">
+              <h2>
+                Pooled loss per {lm.bin_seconds} s{peak ? <span className="toughest"> (toughest 40 s: {range(peak.t_start, peak.t_end)})</span> : null}
+              </h2>
+              <span className="n-chip" title={`${lm.n} learners pooled`}>n = {lm.n}</span>
+            </div>
             <div className="lossbars">
               {bins.map((b) => {
                 const inPeak = !!peak && b.t >= peak.t_start && b.t < peak.t_end;
@@ -50,32 +53,29 @@ export function LossMapCard({ lm, lecture }: { lm: LossMap; lecture: LectureFull
                 </button>
               ) : null}
             </div>
-            <table className="segtable">
-              <thead>
-                <tr>
-                  <th>rank</th>
-                  <th>segment</th>
-                  <th>time</th>
-                  <th>loss score</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(lm.segments ?? [])
-                  .slice()
-                  .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99))
-                  .map((s) => (
-                    <tr key={s.id} className={(reveal && planted.has(s.id) ? "planted" : "") + (s.rank === 1 ? " top" : "")}>
-                      <td className="mono">{s.rank ?? "n/a"}</td>
-                      <td>
+            <ol className="seglist">
+              {(lm.segments ?? [])
+                .slice()
+                .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99))
+                .map((s) => (
+                  <li key={s.id} className={(reveal && planted.has(s.id) ? "planted" : "") + (s.rank === 1 ? " top" : "")}>
+                    <span className="seg-rank" aria-hidden="true">{s.rank ?? "–"}</span>
+                    <div className="seg-body">
+                      <span className="seg-title">
                         {s.title}
                         {reveal && planted.has(s.id) ? <span className="badge bad" style={{ marginLeft: 8 }}>planted bad segment</span> : null}
-                      </td>
-                      <td className="mono">{range(s.t_start, s.t_end)}</td>
-                      <td className="mono">{s.score ?? "n/a"}</td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
+                      </span>
+                      <span className="seg-meta">{range(s.t_start, s.t_end)} · loss {s.score ?? "n/a"}</span>
+                    </div>
+                    <span className="seg-score" aria-hidden="true">
+                      <i style={{ width: `${Math.round(((s.score ?? 0) / maxScore) * 100)}%` }} />
+                    </span>
+                    <span className="visually-hidden">
+                      Rank {s.rank ?? "unranked"}: {s.title}, {range(s.t_start, s.t_end)}, loss score {s.score ?? "n/a"}
+                    </span>
+                  </li>
+                ))}
+            </ol>
           </div>
         </>
       )}
@@ -101,7 +101,7 @@ export default function LossMapView() {
   if (err) return <div className="panel error">{err}</div>;
   if (!lm || !lecture) return <div className="panel muted">loading…</div>;
   return (
-    <div className="col">
+    <div className="col insights">
       <div className="row" style={{ justifyContent: "space-between" }}>
         <h1 style={{ margin: 0 }}>Lecture loss map: {lecture.title}</h1>
         <div className="row">
