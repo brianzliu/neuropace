@@ -1,6 +1,7 @@
 import { useLayoutEffect } from "react";
 import { Link, Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
 import LocalConnection from "./components/LocalConnection";
+import SideBlobs from "./components/SideBlobs";
 import TopTabs from "./components/TopTabs";
 import { useFlash } from "./lib/flash";
 import Home from "./views/Home";
@@ -31,6 +32,7 @@ export default function App() {
   const flash = useFlash();
   const compact = /^\/(session|live|restudy|replay)(\/|$)/.test(pathname) || pathname.includes("/replay/") || /^\/library\/[^/]+\/(review|replay)/.test(pathname);
   return <div className={"app" + (compact ? " app-compact" : "")}>
+    <SideBlobs />
     <header className="topbar">
       <Link to="/" className="brand"><span className="brand-mark" aria-hidden="true"><i /><i /><i /></span>NeuroPace</Link>
       {compact ? <Link to="/">Dashboard</Link> : <TopTabs />}

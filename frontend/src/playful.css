@@ -236,6 +236,22 @@ select {
 .concept-box-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .6rem; border-top: 1px solid var(--line); padding-top: .8rem; }
 .concept-source { font-size: .74rem; color: var(--muted); }
 .concept-source span { display: block; font-size: .68rem; color: var(--dim); }
+/* Side blobs (user-directed polish): organic shapes flanking the content in
+   wide-screen margins only. Fixed layer behind everything (content stays
+   above via .topbar/.main stacking), clicks pass through, hidden in compact
+   chrome and below 1250px so small screens never scroll sideways. Tokens
+   only — each theme recolors them automatically. Static shapes, so
+   reduced-motion needs no override. */
+body { overflow-x: clip; }
+.side-blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+.topbar, .main { position: relative; z-index: 1; }
+.side-blob { position: absolute; }
+.side-blob.left-a { left: -95px; top: 14%; width: 240px; height: 320px; background: color-mix(in srgb, var(--object) 42%, transparent); border-radius: 58% 42% 55% 45% / 48% 55% 45% 52%; }
+.side-blob.left-b { left: -60px; top: 58%; width: 150px; height: 190px; background: color-mix(in srgb, var(--note) 55%, transparent); border-radius: 45% 55% 48% 52% / 55% 45% 58% 42%; }
+.side-blob.right-a { right: -100px; top: 22%; width: 250px; height: 300px; background: color-mix(in srgb, var(--note) 48%, transparent); border-radius: 45% 55% 52% 48% / 52% 48% 55% 45%; }
+.side-blob.right-b { right: -55px; top: 66%; width: 140px; height: 170px; background: color-mix(in srgb, var(--object) 50%, transparent); border-radius: 55% 45% 42% 58% / 45% 52% 48% 55%; }
+.app-compact .side-blobs { display: none; }
+@media (max-width: 1250px) { .side-blobs { display: none; } }
 .concept-review { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; min-width: 108px; padding: .5rem 1.15rem; border: 1px solid var(--cap-dark); border-radius: 12px; background: var(--cap); color: var(--cap-text); font-size: .86rem; font-weight: 700; text-decoration: none; box-shadow: 0 3px 0 var(--cap-dark); }
 .concept-review:hover { text-decoration: none; filter: brightness(1.03); }
 .concept-review:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--cap-dark); }
