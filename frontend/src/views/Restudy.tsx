@@ -323,9 +323,9 @@ export default function Restudy() {
   return (
     <div className="page">
       <div className="lesson-top">
-        <Link className="lesson-close" to={library ? libraryHref(sessionId, "notes") : `/lecture/${sessionId}`} title="Back to the lecture">
+        {!library ? <Link className="lesson-close" to={`/lecture/${sessionId}`} title="Back to the lecture">
           ✕
-        </Link>
+        </Link> : null}
         <div className="progress" title={`${progress.gaps_closed} of ${progress.gaps_total} moments done`}>
           <i style={{ width: `${pct}%` }} />
         </div>

@@ -1,3 +1,4 @@
+import { useLibrary } from "./Library";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, errorText } from "../lib/api";
@@ -14,6 +15,7 @@ export default function Artifacts() {
   const [gaps, setGaps] = useState<GapArtifacts[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const sample = sessionId === "sample";
+  const library = useLibrary();
   useEffect(() => {
     if (sample) {
       setGaps([SAMPLE]);
@@ -37,7 +39,7 @@ export default function Artifacts() {
             : "What the model filled for each moment, template by template. The plan names which visual and which doing template the content called for; the other families always exist."}
         </p>
         <div className="row">
-          {!sample ? (
+          {!sample && !library ? (
             <Link className="btn btn-sm" to={`/lecture/${sessionId}`}>
               The lecture
             </Link>
@@ -140,10 +142,10 @@ const SAMPLE: GapArtifacts = {
   t_end: 42,
   span_text: "",
   context_text: "",
+  question: null,
   flag_ids: [],
   status: "open",
   note: { what_was_said: "", key_term: "trilateration", definition: "", connection: "" },
-  question: null,
   package_source: "llm",
   artifacts: {
     summary: "Each satellite broadcasts the time. Your phone measures how late each signal arrives and turns the delay into a distance. Three distances pin you down; a fourth fixes your cheap clock.",

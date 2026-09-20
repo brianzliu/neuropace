@@ -5,6 +5,7 @@ import type { Doctor, LectureFull, SessionPublic } from "../lib/types";
 import { Badge, StatusDot } from "../components/Badges";
 import DeepgramSettings from "../components/DeepgramSettings";
 import ModelSettings from "../components/ModelSettings";
+import DemoModeToggle from "../components/dashboard/DemoModeToggle";
 import { useNavigate } from "react-router-dom";
 
 /** For the team (docs/PRODUCT.md §3): setup readiness, a technical session start, replay, loss map, study quiz. */
@@ -83,6 +84,11 @@ export default function Team() {
             <div className="label-2 t-footnote">Students never see this. Keys live in this backend process only.</div>
             <DeepgramSettings />
             <ModelSettings />
+            <div className="card">
+              <div className="card-header"><span className="card-title">Sample data</span></div>
+              <div className="label-2">Fills the dashboard with a synthetic learner so the demo has moments to review. Never real student data.</div>
+              <DemoModeToggle />
+            </div>
           </div>
 
           <div className="card">

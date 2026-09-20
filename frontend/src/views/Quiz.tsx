@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import { useGuidedStep } from "../lib/guide";
 import { useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import type { QuizGet, QuizResult } from "../lib/types";
 import { Badge } from "../components/Badges";
+import SessionBack from "../components/BackLink";
+import { useLibrary } from "./Library";
 
 /** A stable shuffle of option positions per item and session, so the answer key's position never gives it away
  * (the lecture files list the correct option first) and the order stays the same across the two phases. */
@@ -27,6 +30,8 @@ function permutation(seed: string, n: number): number[] {
 
 export default function Quiz() {
   const { sessionId = "" } = useParams();
+  const library = useLibrary();
+  const guide = useGuidedStep();
   const [data, setData] = useState<QuizGet | null>(null);
   const [phase, setPhase] = useState<"before" | "after">("before");
   const [answers, setAnswers] = useState<Record<string, number>>({});
@@ -39,7 +44,9 @@ export default function Quiz() {
   const submit = async () => {
     setBusy(true);
     try {
-      setResult(await api.submitQuiz(sessionId, phase, answers));
+      const scored = await api.submitQuiz(sessionId, phase, answers);
+      setResult(scored);
+      guide?.reportOutcome(scored.score === scored.total ? "hit" : "miss");
     } catch (e) {
       setErr(String(e));
     } finally {
@@ -47,12 +54,13 @@ export default function Quiz() {
     }
   };
   const orders = useMemo(() => Object.fromEntries((data?.items ?? []).map((it) => [it.id, permutation(sessionId + it.id, it.options.length)])), [data, sessionId]);
-  if (err) return <div className="page narrow"><div className="card error-text">{err}</div></div>;
+  if (err) return <div className="page narrow">{!library ? <div className="page-back"><SessionBack /></div> : null}<div className="card error-text">{err}</div></div>;
   if (!data) return <div className="page narrow"><div className="loading">Loading…</div></div>;
   const prior = data.answers.filter((a) => a.phase === phase);
   const answered = Object.keys(answers).length;
   return (
     <div className="page narrow">
+      {!library ? <div className="page-back"><SessionBack /></div> : null}
       <div className="page-head">
         <div>
           <h1 className="t-title1">Final quiz</h1>

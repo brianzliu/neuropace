@@ -40,9 +40,9 @@ export default function DemoModeToggle() {
         onClick={toggle}
       >
         <span className="demo-toggle-track" aria-hidden="true"><span /></span>
-        <span>{enabled ? "Sample data on" : "Show sample data"}</span>
+        <span>Sample data</span>
       </button>
-      {enabled ? <span className="demo-data-note">Synthetic workspace</span> : null}
+      {enabled ? <span className="demo-data-note">Synthetic</span> : null}
       {error ? <span className="demo-toggle-error" role="alert">{error}</span> : null}
     </div>
   );

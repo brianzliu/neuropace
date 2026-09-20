@@ -6,6 +6,7 @@ import "./session-styles.css";
 import "./styles.css";
 import "./playful.css";
 import "./pocket.css";
+import "./back-link.css";
 
 // A data router so the live screen can block navigation while a lecture is being recorded (useBlocker).
 const router = createBrowserRouter([{ path: "*", element: <App /> }]);

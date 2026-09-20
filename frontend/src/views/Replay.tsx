@@ -1,10 +1,15 @@
+import { useGuidedStep } from "../lib/guide";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import type { HelloMsg, LectureFull, ServerMsg, SessionPublic } from "../lib/types";
 import { clearCatchup, dismissChip, initialState, openChip, reduce, type SessionState } from "../lib/sessionState";
-import LiveStage from "../components/LiveStage";
-import { Badge } from "../components/Badges";
+import TranscriptPane from "../components/TranscriptPane";
+import CatchupOverlay from "../components/CatchupOverlay";
+import Chip from "../components/Chip";
+import "../replay.css";
+import SessionBack from "../components/BackLink";
+import { useLibrary } from "./Library";
 import { mmss } from "../lib/format";
 
 const DEFAULT_CONFIG: HelloMsg["config"] = {
@@ -16,6 +21,12 @@ const DEFAULT_CONFIG: HelloMsg["config"] = {
 /** Plays a session's event log at speed through the same stage as the live view (FR-L14). */
 export default function Replay() {
   const { sessionId = "" } = useParams();
+  const library = useLibrary();
+  const guide = useGuidedStep();
+  const targetTime = guide?.decision.target_time;
+  const guideRef = useRef(guide);
+  guideRef.current = guide;
+  const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState<ServerMsg[]>([]);
   const [state, setState] = useState<SessionState>(initialState);
   const [speed, setSpeed] = useState(4);
@@ -29,6 +40,8 @@ export default function Replay() {
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setError(null);
     (async () => {
       try {
         const [ev, sess] = await Promise.all([api.events(sessionId), api.session(sessionId)]);
@@ -42,15 +55,25 @@ export default function Replay() {
         }
         if (cancelled) return;
         setEvents(ev.events);
-        setState(reduce(initialState, synthHello(sess, lecture)));
+        let snapshot = reduce(initialState, synthHello(sess, lecture));
+        let startIndex = 0;
+        if (targetTime != null) {
+          while (startIndex < ev.events.length && ((ev.events[startIndex] as { t?: number }).t ?? 0) < targetTime) {
+            snapshot = reduce(snapshot, ev.events[startIndex]); startIndex++;
+          }
+        }
+        setIdx(startIndex);
+        setState(snapshot);
       } catch (e) {
-        setError(String(e));
+        if (!cancelled) setError(String(e));
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [sessionId]);
+  }, [sessionId, targetTime]);
 
   const stop = useCallback(() => {
     if (timer.current !== null) window.clearInterval(timer.current);
@@ -77,15 +100,17 @@ export default function Replay() {
         advanced = true;
       }
       if (advanced) setIdx(i);
-      if (i >= events.length) {
+      if (i >= events.length || (guideRef.current && elapsed >= (targetTime ?? startT.current) + 45)) {
+        guideRef.current?.reportOutcome("read");
         if (timer.current !== null) window.clearInterval(timer.current);
         timer.current = null;
         setPlaying(false);
       }
     }, 100);
-  }, [events, idx, speed]);
+  }, [events, idx, speed, targetTime]);
 
   useEffect(() => () => stop(), [stop]);
+  useEffect(() => { if (guide?.paused) stop(); }, [guide?.paused, stop]);
 
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => {
@@ -110,52 +135,52 @@ export default function Replay() {
   if (error) {
     return (
       <div className="page narrow">
+        {!library ? <div className="page-back"><SessionBack /></div> : null}
         <div className="card error-text">{error}</div>
       </div>
     );
   }
-  const head = (
-    <div className="transport">
-      <Badge tone="purple">replay</Badge>
-      <span className="t-title3">{state.hello?.lecture?.title ?? "Session"}</span>
-      <span className="mono t-subhead label-2">{mmss(state.t)}</span>
-      <span className="t-footnote label-2">
-        {idx}/{events.length} events
-      </span>
-      <div className="right row">
-        <div className="segmented sm">
-          {[1, 4, 8].map((s) => (
-            <button key={s} className={speed === s ? "is-active" : ""} disabled={playing} onClick={() => setSpeed(s)}>
-              {s}×
-            </button>
-          ))}
-        </div>
-        <button className="btn" onClick={() => setCycleToken((x) => x + 1)} disabled={!state.catchup}>
-          Other form <span className="kbd">F</span>
-        </button>
-        {playing ? (
-          <button className="btn" onClick={stop}>
-            Pause
-          </button>
-        ) : (
-          <button className="btn btn-primary" onClick={play}>
-            {idx > 0 && idx < events.length ? "Resume" : "Play"}
-          </button>
-        )}
-      </div>
-    </div>
-  );
+  const flags = state.flagOrder.map(id => state.flags[id]).filter(Boolean);
+  const duration = events.reduce((last, event) => Math.max(last, (event as { t?: number }).t ?? 0), 0);
+  const clipStart = targetTime ?? 0;
+  const clipEnd = guide ? Math.min(duration, clipStart + 45) : duration;
+  const elapsed = Math.max(0, Math.min(state.t, clipEnd) - clipStart);
+  const length = Math.max(0, clipEnd - clipStart);
   return (
-    <LiveStage
-      details={true}
-      state={state}
-      onCatchupExpire={() => setState((s) => clearCatchup(s))}
-      onCatchupDismiss={() => setState((s) => clearCatchup(s))}
-      onOpenChip={onOpenChip}
-      onIgnoreChip={onIgnoreChip}
-      cycleToken={cycleToken}
-      head={head}
-    />
+    <section className="lecture-replay" aria-label="Lecture replay">
+      <header className="replay-heading">
+        {!library && !guide ? <SessionBack /> : null}
+        <div>
+          <h2>{guide ? "Back to this moment" : "Replay the lecture"}</h2>
+          <p>{state.hello?.lecture?.title ?? "Recorded session"}{guide && targetTime != null ? ` · from ${mmss(targetTime)}` : ""}</p>
+        </div>
+      </header>
+      <div className="replay-player">
+        <div className="replay-controls">
+          <button className="replay-play" onClick={playing ? stop : play} disabled={loading || !events.length || guide?.paused}>
+            <svg viewBox="0 0 20 20" aria-hidden="true">{playing
+              ? <path d="M6 4v12M14 4v12" stroke="currentColor" strokeWidth="3" />
+              : <path d="M6 3.5 16 10 6 16.5Z" fill="currentColor" />}</svg>
+            {playing ? "Pause" : idx > 0 && idx < events.length ? "Resume" : "Play"}
+          </button>
+          <div className="replay-position">
+            <progress value={elapsed} max={length || 1} aria-label="Replay progress" />
+            <span>{mmss(elapsed)} <span aria-hidden="true">/</span> {mmss(length)}</span>
+          </div>
+          <div className="replay-speed" role="group" aria-label="Playback speed">
+            {[1, 4, 8].map(value => <button key={value} aria-pressed={speed === value} disabled={playing}
+              onClick={() => setSpeed(value)} aria-label={`${value} times speed`}>{value}×</button>)}
+          </div>
+        </div>
+        {loading ? <p className="replay-empty" role="status">Loading the lecture…</p>
+          : !events.length ? <p className="replay-empty">There is no saved playback for this session.</p>
+          : <div className="replay-transcript">{state.words.length || state.interim.length ? <TranscriptPane words={state.words} interim={state.interim} flags={flags} now={state.t} /> : <p className="replay-empty">{playing ? "The transcript will appear as the lecture plays." : "Press Play to follow the lecture transcript."}</p>}</div>}
+      </div>
+      {state.hello?.sim.transcript && <p className="replay-note">Practice lecture · scripted transcript</p>}
+      <CatchupOverlay card={state.catchup} explanation={state.catchup ? state.catchupExplanations[state.catchup.flag_id] : undefined} onExpire={() => setState(s => clearCatchup(s))}
+        onDismiss={() => setState(s => clearCatchup(s))} cycleToken={cycleToken} details={false} />
+      <Chip count={state.chipIds.length} onOpen={onOpenChip} onIgnore={onIgnoreChip} />
+    </section>
   );
 }
 
@@ -169,6 +194,9 @@ function synthHello(sess: SessionPublic, lecture: LectureFull | null): HelloMsg 
       : null,
     config: DEFAULT_CONFIG,
     best_form: sess.best_form ?? "words",
+    // Office Hours sessions have no runtime/event log and are filtered out of every list that links here;
+    // this fallback only avoids widening HelloMsg's mode (an unrelated, /ws/session-only type) for a case
+    // that shouldn't reach Replay in practice.
     mode: sess.mode,
     policy: sess.catchup_policy,
     auto_pause: sess.auto_pause,

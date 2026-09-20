@@ -250,6 +250,7 @@ export interface SessionRow {
   baseline: { mu: number | null; sigma: number | null; stored: boolean; ready?: boolean } | null;
   seed: number | null;
   auto_pause: boolean;
+  summary?: string;
 }
 
 export interface SessionPublic extends SessionRow {

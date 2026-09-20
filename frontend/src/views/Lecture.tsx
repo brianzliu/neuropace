@@ -64,8 +64,10 @@ export default function Lecture() {
   return (
     <div className="page narrow">
       <header className="hero">
-        <div className="eyebrow">{new Date(data.session.started_at * 1000).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</div>
-        <h1 className="t-large">{title}</h1>
+        {!library ? <>
+          <div className="eyebrow">{new Date(data.session.started_at * 1000).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</div>
+          <h1 className="t-large">{title}</h1>
+        </> : null}
         <p className="sub">
           {running ? "This lecture is still going." : total === 0 ? "No moments saved for review." : closed === total ? `All ${total} moments landed. Restudy again any time.` : `${total - closed} of ${total} moment${total === 1 ? "" : "s"} still to restudy.`}
         </p>

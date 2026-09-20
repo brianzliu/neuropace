@@ -497,7 +497,7 @@ export default function Live() {
           {boardPanel ? (
             <details className="panel">
               <summary>
-                {boardPanel === "ready" ? (boardAwaiting ? "Open board explanation — preparing the latest moment…" : "Open board explanation") : boardPanel === "loading" ? "Preparing board explanation…" : "Board explanation unavailable — transcript only"}
+                {boardPanel === "ready" ? (boardAwaiting ? "Open board explanation. Preparing the latest moment…" : "Open board explanation") : boardPanel === "loading" ? "Preparing board explanation…" : "Board explanation unavailable. Transcript only."}
               </summary>
               {boardPanel === "loading" ? <p>Transcript recap; board explanation loading</p> : null}
               {boardPanel === "unavailable" ? <p>Transcript only; board unavailable</p> : null}

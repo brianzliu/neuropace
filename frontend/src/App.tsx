@@ -1,6 +1,7 @@
 import { useLayoutEffect } from "react";
 import { Link, Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
 import LocalConnection from "./components/LocalConnection";
+import SideBlobs from "./components/SideBlobs";
 import TopTabs from "./components/TopTabs";
 import { useFlash } from "./lib/flash";
 import Home from "./views/Home";
@@ -9,30 +10,30 @@ import AdvancedSetup from "./views/AdvancedSetup";
 import Live from "./views/Live";
 import Done from "./views/Done";
 import Lecture from "./views/Lecture";
-import Lectures from "./views/Lectures";
 import Restudy from "./views/Restudy";
-import You from "./views/You";
 import Team from "./views/Team";
 import Replay from "./views/Replay";
 import Quiz from "./views/Quiz";
-import Library from "./views/Library";
+import Library, { SessionRouteFrame } from "./views/Library";
 import Insights from "./views/Insights";
 import LossMap from "./views/LossMap";
 import Artifacts from "./views/Artifacts";
 
 function LegacySession({ tab }: { tab: string }) {
   const { sessionId = "" } = useParams();
-  return <Navigate to={`/library/${sessionId}/${tab}`} replace />;
+  const { search } = useLocation();
+  return <Navigate to={`/library/${encodeURIComponent(sessionId)}/${tab}${search}`} replace />;
 }
 
 export default function App() {
   useLayoutEffect(() => { document.documentElement.dataset.theme = "pocket"; }, []);
   const { pathname } = useLocation();
   const flash = useFlash();
-  const compact = /^\/(session|live|restudy|replay)(\/|$)/.test(pathname) || pathname.includes("/replay/") || /^\/library\/[^/]+\/(review|replay)/.test(pathname);
+  const compact = /^\/(session|live|replay)(\/|$)/.test(pathname) || pathname.includes("/replay/") || /^\/library\/[^/]+\/(review|replay)/.test(pathname);
   return <div className={"app" + (compact ? " app-compact" : "")}>
+    <SideBlobs />
     <header className="topbar">
-      <Link to="/" className="brand"><span className="brand-mark" aria-hidden="true"><i /><i /><i /></span>NeuroPace</Link>
+      <Link to="/" className="brand"><span className="brand-mark" aria-hidden="true"><img src="/brain-logo.png" alt="" /></span>NeuroPace</Link>
       {compact ? <Link to="/">Dashboard</Link> : <TopTabs />}
     </header>
     <main className="main">
@@ -43,29 +44,30 @@ export default function App() {
         <Route path="/session/advanced" element={<AdvancedSetup />} />
         <Route path="/live/:sessionId" element={<Live />} />
         <Route path="/done/:sessionId" element={<Done />} />
-        <Route path="/lecture/:sessionId" element={<Lecture />} />
-        <Route path="/restudy/:sessionId" element={<Restudy />} />
-        <Route path="/lectures" element={<Lectures />} />
+        <Route path="/lecture/:sessionId" element={<SessionRouteFrame tab="notes"><Lecture /></SessionRouteFrame>} />
+        <Route path="/restudy/:sessionId" element={<LegacySession tab="review" />} />
+        <Route path="/lectures" element={<Navigate to="/" replace />} />
         <Route path="/library" element={<Library />} />
         <Route path="/library/:sessionId" element={<Library />}>
           <Route path="notes" element={<Lecture />} />
           <Route path="review" element={<Restudy />} />
           <Route path="replay" element={<Replay />} />
           <Route path="quiz" element={<Quiz />} />
+          <Route path="artifacts" element={<Artifacts />} />
         </Route>
         <Route path="/notes/:sessionId" element={<LegacySession tab="notes" />} />
         <Route path="/review/:sessionId" element={<LegacySession tab="review" />} />
-        <Route path="/replay/:sessionId" element={<Replay />} />
-        <Route path="/quiz/:sessionId" element={<Quiz />} />
+        <Route path="/replay/:sessionId" element={<LegacySession tab="replay" />} />
+        <Route path="/quiz/:sessionId" element={<LegacySession tab="quiz" />} />
         <Route path="/insights" element={<Insights />} />
-        <Route path="/you" element={<You />} />
+        <Route path="/you" element={<Navigate to="/insights" replace />} />
         <Route path="/tally/:learnerId" element={<Insights />} />
-        <Route path="/lossmap/:lectureId" element={<LossMap />} />
+        <Route path="/lossmap/:lectureId" element={<Insights />} />
         <Route path="/team" element={<Team />} />
-        <Route path="/team/replay/:sessionId" element={<Replay />} />
+        <Route path="/team/replay/:sessionId" element={<SessionRouteFrame tab="replay"><Replay /></SessionRouteFrame>} />
         <Route path="/team/lossmap/:lectureId" element={<LossMap />} />
-        <Route path="/team/quiz/:sessionId" element={<Quiz />} />
-        <Route path="/team/artifacts/:sessionId" element={<Artifacts />} />
+        <Route path="/team/quiz/:sessionId" element={<SessionRouteFrame tab="quiz"><Quiz /></SessionRouteFrame>} />
+        <Route path="/team/artifacts/:sessionId" element={<SessionRouteFrame tab="artifacts"><Artifacts /></SessionRouteFrame>} />
         <Route path="*" element={<div className="panel">Page not found. <Link to="/">Dashboard</Link></div>} />
       </Routes></LocalConnection>
     </main>
