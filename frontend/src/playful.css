@@ -219,8 +219,8 @@ select {
 .organize-source { flex-shrink: 0; display: inline-flex; align-items: center; min-height: 26px; padding: .2rem .65rem; border: 1px solid var(--line); border-radius: 99px; background: var(--bg-2); color: var(--muted); font-size: .68rem; font-weight: 700; letter-spacing: .03em; }
 .organize-source.is-suggested { border-color: var(--accent); color: var(--accent); }
 .organize-source.is-organizing { border-style: dashed; }
-.concept-list { display: grid; gap: 1rem; }
-.concept-box { display: flex; flex-direction: column; gap: .75rem; padding: 1.15rem 1.25rem 1rem; border: 1px solid var(--line); border-bottom: 4px solid var(--surface-edge); border-radius: var(--radius); background: color-mix(in srgb, var(--object) 16%, var(--bg-2)); box-shadow: 0 8px 20px var(--shadow); }
+.concept-list { display: grid; gap: 1rem; max-width: 860px; }
+.concept-box { display: flex; flex-direction: column; gap: .55rem; padding: 1rem 1.25rem .95rem; border: 1px solid var(--line); border-bottom: 4px solid var(--surface-edge); border-radius: var(--radius); background: color-mix(in srgb, var(--object) 16%, var(--bg-2)); box-shadow: 0 8px 20px var(--shadow); }
 .concept-box-top { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: .8rem; align-items: start; }
 .concept-box-index { background: var(--bg-3); border-radius: 50%; width: 30px; height: 30px; display: grid; place-items: center; font-size: .75rem; color: var(--muted); }
 .concept-box h3 { margin: .2rem 0 .25rem; font-size: 1.08rem; font-weight: 500; }
@@ -233,7 +233,7 @@ select {
 .concept-box.is-warm { background: color-mix(in srgb, var(--object) 30%, var(--bg-2)); border-color: color-mix(in srgb, var(--object-dark) 55%, var(--line)); }
 .concept-box-note.is-warm-note { color: var(--accent-2); }
 [data-theme="paper"] .concept-box.is-warm { background: color-mix(in srgb, var(--cap) 35%, var(--bg-2)); }
-.concept-box-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .6rem; border-top: 1px solid var(--line); padding-top: .8rem; }
+.concept-box-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .6rem; padding-top: .3rem; }
 .concept-source { font-size: .74rem; color: var(--muted); }
 .concept-source span { display: block; font-size: .68rem; color: var(--dim); }
 /* Side blobs (user-directed polish): organic shapes flanking the content in
