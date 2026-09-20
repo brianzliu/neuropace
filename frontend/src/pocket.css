@@ -64,10 +64,10 @@ a { font-weight: 500; }
 .activity-view-toggle button { border: 0; background: transparent; color: var(--muted); font-size: .75rem; font-weight: 600; padding: .35rem .8rem; border-radius: 99px; min-height: 32px; cursor: pointer; }
 .activity-view-toggle button[aria-pressed="true"] { background: var(--bg-3); color: var(--text); box-shadow: 0 2px 0 var(--surface-edge); }
 .activity-sub { margin: .25rem 0 0; }
-.activity-grid { display: flex; gap: 4px; overflow-x: auto; padding-top: 1rem; }
-.activity-week { display: grid; gap: 4px; align-content: start; }
-.activity-month { font-size: .65rem; color: var(--muted); min-height: 1.2em; }
-.grid-cell { width: 14px; height: 14px; border-radius: 4px; background: var(--bg-3); border: 1px solid var(--line); }
+.activity-grid { display: flex; gap: 6px; padding-top: 1rem; }
+.activity-week { flex: 1 1 0; min-width: 0; display: grid; gap: 6px; align-content: start; }
+.activity-month { font-size: .65rem; color: var(--muted); min-height: 1.2em; white-space: nowrap; overflow: hidden; }
+.grid-cell { width: 100%; height: auto; aspect-ratio: 1 / 1; border-radius: 4px; background: var(--bg-3); border: 1px solid var(--line); transform: none; }
 .grid-cell.l1 { background: color-mix(in srgb, var(--good) 35%, var(--bg-3)); border-color: transparent; }
 .grid-cell.l2 { background: color-mix(in srgb, var(--good) 65%, var(--bg-3)); border-color: transparent; }
 .grid-cell.l3 { background: var(--good); border-color: transparent; }

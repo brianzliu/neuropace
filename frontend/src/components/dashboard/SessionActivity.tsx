@@ -93,9 +93,8 @@ export default function SessionActivity({ sessions }: { sessions: Dashboard["ses
         <button type="button" aria-pressed={view === "grid"} onClick={() => switchView("grid")}>Grid</button>
       </div>
     </div>
-    {streak > 1 && <p className="activity-sub">{pluralSessions(total)} this week</p>}
     {view === "bars" ? (
-      <div className="activity-chart" role="img" aria-label={`Sessions recorded over the last seven days. ${days.map(day => `${day.date.toLocaleDateString()}: ${day.count}`).join(". ")}`}>
+      <div className="activity-chart" role="img" aria-label={`Sessions recorded over the last seven days, including practice. ${days.map(day => `${day.date.toLocaleDateString()}: ${day.count}`).join(". ")}`}>
         {days.map(day => <div className="activity-day" key={dateKey(day.date)} aria-hidden="true">
           <span className="activity-count">{day.count || ""}</span>
           <div className="activity-track"><div className="activity-bar" style={{height: `${day.count / maximum * 100}%`}} /></div>
@@ -104,7 +103,7 @@ export default function SessionActivity({ sessions }: { sessions: Dashboard["ses
       </div>
     ) : (
       <>
-        <div className="activity-grid" role="img" aria-label={`Sessions recorded per day over the last ${GRID_WEEKS} weeks. ${pluralSessions(gridTotal)} in total. Most active day: ${bestDayName}.`}>
+        <div className="activity-grid" role="img" aria-label={`Sessions recorded per day over the last ${GRID_WEEKS} weeks, including practice. ${pluralSessions(gridTotal)} in total. Most active day: ${bestDayName}.`}>
           {weeks.map((week, wi) => {
             const first = week.find(date => date >= gridStart && date.getDay() === 0) ?? week[0];
             const prev = wi === 0 ? null : weeks[wi - 1][0];
@@ -135,6 +134,5 @@ export default function SessionActivity({ sessions }: { sessions: Dashboard["ses
         </div>
       </>
     )}
-    <p className="activity-note"><span>Sessions recorded</span><span>{view === "grid" ? `Last ${GRID_WEEKS} weeks` : "Last 7 days"}, including practice</span></p>
   </section>;
 }
