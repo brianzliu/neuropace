@@ -26,6 +26,9 @@ export function errorText(e: unknown): string {
 const FETCH_TIMEOUT_MS = 15000;
 /** Budget for the background LLM organize pass, which can take 30s+. */
 const ORGANIZE_TIMEOUT_MS = 90000;
+/** Budget for Office Hours model turns, which legitimately take 15s+ (measured).
+ *  The default 15s budget aborted these mid-generation. */
+const MODEL_TIMEOUT_MS = 120000;
 
 async function request<T>(path: string, init?: RequestInit, timeoutMs = FETCH_TIMEOUT_MS): Promise<T> {
   const res = await backendFetch(path, { headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(timeoutMs), ...init });
@@ -45,6 +48,7 @@ async function request<T>(path: string, init?: RequestInit, timeoutMs = FETCH_TI
 const get = <T,>(path: string) => request<T>(path);
 const getSlow = <T,>(path: string, ms: number) => request<T>(path, undefined, ms);
 const post = <T,>(path: string, body?: unknown) => request<T>(path, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body) });
+const postSlow = <T,>(path: string, body: unknown, ms: number) => request<T>(path, { method: "POST", body: JSON.stringify(body) }, ms);
 
 export interface SessionCreate {
   learner_id?: string | null; // omitted: this device's single learner
@@ -118,9 +122,9 @@ export const api = {
   submitQuiz: (id: string, phase: "before" | "after", answers: Record<string, number>) => post<QuizResult>(`/api/sessions/${id}/quiz`, { phase, answers }),
   officeHoursSnapshot: (id: string, uptoOrd?: number) =>
     get<OHSnapshot>(`/api/sessions/${id}/office_hours${uptoOrd != null ? `?upto_ord=${uptoOrd}` : ""}`),
-  officeHoursSend: (id: string, text: string) => post<OHMessage>(`/api/sessions/${id}/office_hours/message`, { text }),
+  officeHoursSend: (id: string, text: string) => postSlow<OHMessage>(`/api/sessions/${id}/office_hours/message`, { text }, MODEL_TIMEOUT_MS),
   officeHoursExpand: (id: string, elementId: string) =>
-    post<OHMessage>(`/api/sessions/${id}/office_hours/expand`, { element_id: elementId }),
+    postSlow<OHMessage>(`/api/sessions/${id}/office_hours/expand`, { element_id: elementId }, MODEL_TIMEOUT_MS),
   officeHoursVoice: async (id: string, blob: Blob): Promise<{ text: string; reply: OHMessage }> => {
     const body = new FormData();
     body.append("file", blob, "clip.webm");

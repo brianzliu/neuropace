@@ -15,6 +15,7 @@ export default function OfficeHours() {
   const [search] = useSearchParams();
   const original = search.get("original");
   const [snap, setSnap] = useState<OHSnapshot | null>(null);
+  const [generating, setGenerating] = useState(false);
   const [scrubOrd, setScrubOrd] = useState<number | null>(null); // null = live (now)
   const [voiceOn, setVoiceOn] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -34,9 +35,12 @@ export default function OfficeHours() {
         const s = await api.officeHoursSnapshot(sessionId);
         // A fresh session opened from Review (original set): kick off the same job Private tutoring used
         // to do — walk through what was missed — instead of a blank board waiting on the student to type.
+        // The first turn takes 15s+, so say so instead of a bare spinner.
         if (s.messages.length === 0 && original) {
+          setGenerating(true);
           await api.officeHoursSend(sessionId, "What did I miss in this lecture? Walk me through it.");
           setSnap(await api.officeHoursSnapshot(sessionId));
+          setGenerating(false);
         } else {
           setSnap(s);
         }
@@ -53,7 +57,7 @@ export default function OfficeHours() {
   }, [scrubOrd]);
 
   if (err) return <div className="page narrow"><div className="callout danger">{err}</div></div>;
-  if (!snap) return <div className="page narrow"><div className="loading">Loading…</div></div>;
+  if (!snap) return <div className="page narrow"><div className="loading">{generating ? "Walking through what you missed…" : "Loading…"}</div></div>;
 
   const live = scrubOrd == null;
 
