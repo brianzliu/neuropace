@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1900" height="900" viewBox="0 0 1900 900">
+<defs>
+<marker id="mEf" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1,1 L11,6 L1,11 Z" fill="#d9532b"/></marker>
+<marker id="mEn" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1,1 L11,6 L1,11 Z" fill="#1f8a8a"/></marker>
+<marker id="mCal" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1,1 L11,6 L1,11 Z" fill="#5a4fcf"/></marker>
+<marker id="mInk" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1,1 L11,6 L1,11 Z" fill="#5b6270"/></marker>
+</defs>
+
+<rect x="90" y="120" width="320" height="120" rx="22" fill="#eef0f4" stroke="#c9cdd6" stroke-width="2"/>
+<text x="120" y="202" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="64" font-weight="600" fill="#1c1f26">θ</text>
+<text x="195" y="172" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="28" font-weight="600" fill="#1c1f26">theta</text>
+<text x="195" y="206" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="22" fill="#5b6270">4 – 8 Hz</text>
+<polyline points="312.0,180.0 312.7,179.1 313.3,178.1 314.0,177.2 314.7,176.3 315.3,175.4 316.0,174.6 316.7,173.7 317.3,172.9 318.0,172.2 318.7,171.5 319.3,170.9 320.0,170.3 320.7,169.8 321.3,169.3 322.0,168.9 322.7,168.6 323.3,168.3 324.0,168.1 324.7,168.0 325.3,168.0 326.0,168.0 326.7,168.1 327.3,168.3 328.0,168.6 328.7,168.9 329.3,169.3 330.0,169.8 330.7,170.3 331.3,170.9 332.0,171.5 332.7,172.2 333.3,172.9 334.0,173.7 334.7,174.6 335.3,175.4 336.0,176.3 336.7,177.2 337.3,178.1 338.0,179.1 338.7,180.0 339.3,180.9 340.0,181.9 340.7,182.8 341.3,183.7 342.0,184.6 342.7,185.4 343.3,186.3 344.0,187.1 344.7,187.8 345.3,188.5 346.0,189.1 346.7,189.7 347.3,190.2 348.0,190.7 348.7,191.1 349.3,191.4 350.0,191.7 350.7,191.9 351.3,192.0 352.0,192.0 352.7,192.0 353.3,191.9 354.0,191.7 354.7,191.4 355.3,191.1 356.0,190.7 356.7,190.2 357.3,189.7 358.0,189.1 358.7,188.5 359.3,187.8 360.0,187.1 360.7,186.3 361.3,185.4 362.0,184.6 362.7,183.7 363.3,182.8 364.0,181.9 364.7,180.9 365.3,180.0 366.0,179.1 366.7,178.1 367.3,177.2 368.0,176.3 368.7,175.4 369.3,174.6 370.0,173.7 370.7,172.9 371.3,172.2 372.0,171.5 372.7,170.9 373.3,170.3 374.0,169.8 374.7,169.3 375.3,168.9 376.0,168.6 376.7,168.3 377.3,168.1 378.0,168.0 378.7,168.0 379.3,168.0 380.0,168.1 380.7,168.3 381.3,168.6 382.0,168.9 382.7,169.3 383.3,169.8 384.0,170.3 384.7,170.9 385.3,171.5 386.0,172.2 386.7,172.9 387.3,173.7 388.0,174.6 388.7,175.4 389.3,176.3 390.0,177.2 390.7,178.1 391.3,179.1 392.0,180.0" fill="none" stroke="#5b6270" stroke-width="3" stroke-linecap="round" opacity="0.85"/>
+
+
+<rect x="90" y="290" width="320" height="120" rx="22" fill="#eef0f4" stroke="#c9cdd6" stroke-width="2"/>
+<text x="120" y="372" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="64" font-weight="600" fill="#1c1f26">α</text>
+<text x="195" y="342" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="28" font-weight="600" fill="#1c1f26">alpha</text>
+<text x="195" y="376" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="22" fill="#5b6270">8 – 12 Hz</text>
+<polyline points="312.0,350.0 312.7,348.1 313.3,346.3 314.0,344.6 314.7,342.9 315.3,341.5 316.0,340.3 316.7,339.3 317.3,338.6 318.0,338.1 318.7,338.0 319.3,338.1 320.0,338.6 320.7,339.3 321.3,340.3 322.0,341.5 322.7,342.9 323.3,344.6 324.0,346.3 324.7,348.1 325.3,350.0 326.0,351.9 326.7,353.7 327.3,355.4 328.0,357.1 328.7,358.5 329.3,359.7 330.0,360.7 330.7,361.4 331.3,361.9 332.0,362.0 332.7,361.9 333.3,361.4 334.0,360.7 334.7,359.7 335.3,358.5 336.0,357.1 336.7,355.4 337.3,353.7 338.0,351.9 338.7,350.0 339.3,348.1 340.0,346.3 340.7,344.6 341.3,342.9 342.0,341.5 342.7,340.3 343.3,339.3 344.0,338.6 344.7,338.1 345.3,338.0 346.0,338.1 346.7,338.6 347.3,339.3 348.0,340.3 348.7,341.5 349.3,342.9 350.0,344.6 350.7,346.3 351.3,348.1 352.0,350.0 352.7,351.9 353.3,353.7 354.0,355.4 354.7,357.1 355.3,358.5 356.0,359.7 356.7,360.7 357.3,361.4 358.0,361.9 358.7,362.0 359.3,361.9 360.0,361.4 360.7,360.7 361.3,359.7 362.0,358.5 362.7,357.1 363.3,355.4 364.0,353.7 364.7,351.9 365.3,350.0 366.0,348.1 366.7,346.3 367.3,344.6 368.0,342.9 368.7,341.5 369.3,340.3 370.0,339.3 370.7,338.6 371.3,338.1 372.0,338.0 372.7,338.1 373.3,338.6 374.0,339.3 374.7,340.3 375.3,341.5 376.0,342.9 376.7,344.6 377.3,346.3 378.0,348.1 378.7,350.0 379.3,351.9 380.0,353.7 380.7,355.4 381.3,357.1 382.0,358.5 382.7,359.7 383.3,360.7 384.0,361.4 384.7,361.9 385.3,362.0 386.0,361.9 386.7,361.4 387.3,360.7 388.0,359.7 388.7,358.5 389.3,357.1 390.0,355.4 390.7,353.7 391.3,351.9 392.0,350.0" fill="none" stroke="#5b6270" stroke-width="3" stroke-linecap="round" opacity="0.85"/>
+
+
+<rect x="90" y="460" width="320" height="120" rx="22" fill="#eef0f4" stroke="#c9cdd6" stroke-width="2"/>
+<text x="120" y="542" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="64" font-weight="600" fill="#1c1f26">β</text>
+<text x="195" y="512" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="28" font-weight="600" fill="#1c1f26">beta</text>
+<text x="195" y="546" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="22" fill="#5b6270">12 – 30 Hz</text>
+<polyline points="312.0,520.0 312.7,516.6 313.3,513.5 314.0,510.9 314.7,509.0 315.3,508.1 316.0,508.1 316.7,509.2 317.3,511.1 318.0,513.7 318.7,516.9 319.3,520.3 320.0,523.7 320.7,526.8 321.3,529.3 322.0,531.1 322.7,531.9 323.3,531.8 324.0,530.7 324.7,528.7 325.3,526.0 326.0,522.8 326.7,519.4 327.3,516.0 328.0,512.9 328.7,510.5 329.3,508.8 330.0,508.0 330.7,508.3 331.3,509.5 332.0,511.5 332.7,514.3 333.3,517.5 334.0,520.9 334.7,524.3 335.3,527.3 336.0,529.7 336.7,531.3 337.3,532.0 338.0,531.7 338.7,530.4 339.3,528.3 340.0,525.4 340.7,522.2 341.3,518.7 342.0,515.4 342.7,512.4 343.3,510.1 344.0,508.6 344.7,508.0 345.3,508.4 346.0,509.8 346.7,512.0 347.3,514.8 348.0,518.1 348.7,521.6 349.3,524.9 350.0,527.8 350.7,530.1 351.3,531.5 352.0,532.0 352.7,531.5 353.3,530.1 354.0,527.8 354.7,524.9 355.3,521.6 356.0,518.1 356.7,514.8 357.3,512.0 358.0,509.8 358.7,508.4 359.3,508.0 360.0,508.6 360.7,510.1 361.3,512.4 362.0,515.4 362.7,518.7 363.3,522.2 364.0,525.4 364.7,528.3 365.3,530.4 366.0,531.7 366.7,532.0 367.3,531.3 368.0,529.7 368.7,527.3 369.3,524.3 370.0,520.9 370.7,517.5 371.3,514.3 372.0,511.5 372.7,509.5 373.3,508.3 374.0,508.0 374.7,508.8 375.3,510.5 376.0,512.9 376.7,516.0 377.3,519.4 378.0,522.8 378.7,526.0 379.3,528.7 380.0,530.7 380.7,531.8 381.3,531.9 382.0,531.1 382.7,529.3 383.3,526.8 384.0,523.7 384.7,520.3 385.3,516.9 386.0,513.7 386.7,511.1 387.3,509.2 388.0,508.1 388.7,508.1 389.3,509.0 390.0,510.9 390.7,513.5 391.3,516.6 392.0,520.0" fill="none" stroke="#5b6270" stroke-width="3" stroke-linecap="round" opacity="0.85"/>
+
+<path d="M412,180 C664.9,180 721.1,155.0 974,155.0" fill="none" stroke="#d9532b" stroke-width="9" stroke-linecap="round" marker-end="url(#mEf)"/>
+<path d="M412,350 C664.9,350 721.1,235.0 974,235.0" fill="none" stroke="#d9532b" stroke-width="9" stroke-linecap="round" marker-end="url(#mEf)"/>
+<path d="M412,520 C664.9,520 721.1,515.0 974,515.0" fill="none" stroke="#1f8a8a" stroke-width="5" stroke-linecap="round" marker-end="url(#mEn)"/>
+<path d="M412,350 C664.9,350 721.1,435.0 974,435.0" fill="none" stroke="#1f8a8a" stroke-width="4" stroke-linecap="round" marker-end="url(#mEn)" stroke-dasharray="14 12"/>
+<rect x="450" y="127.9" width="70" height="35" rx="18" fill="#f6f7f9" stroke="#d9532b" stroke-width="2"/><text x="461" y="155" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="26" font-weight="600" fill="#d9532b">θ ↑</text>
+<rect x="450" y="385.9" width="70" height="35" rx="18" fill="#f6f7f9" stroke="#d9532b" stroke-width="2"/><text x="461" y="413" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="26" font-weight="600" fill="#d9532b">α ↓</text>
+<rect x="720" y="381.3" width="117" height="30" rx="15" fill="#f6f7f9" stroke="#1f8a8a" stroke-width="2"/><text x="731" y="404" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="22" font-weight="600" fill="#1f8a8a">α + θ ↓</text>
+<rect x="450" y="555.9" width="70" height="35" rx="18" fill="#f6f7f9" stroke="#1f8a8a" stroke-width="2"/><text x="461" y="583" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="26" font-weight="600" fill="#1f8a8a">β ↑</text>
+
+<rect x="980" y="90" width="740" height="210" rx="26" fill="#eef0f4" stroke="#d9532b" stroke-width="6"/>
+<text x="1014" y="146" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="36" font-weight="700" fill="#d9532b" letter-spacing="2">EFFORT</text>
+<text x="1014" y="202" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="44" font-weight="500" fill="#1c1f26">log θ  −  log α</text>
+<text x="1014" y="244" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="24" fill="#5b6270">frontal theta up, alpha down  →  working hard</text>
+<text x="1014" y="278" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="21" font-weight="600" fill="#d9532b">PRIMARY  ·  measured +0.27 relaxed → +0.55 concentrating</text>
+
+
+<rect x="980" y="370" width="740" height="210" rx="26" fill="#eef0f4" stroke="#1f8a8a" stroke-width="3"/>
+<text x="1014" y="426" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="36" font-weight="700" fill="#1f8a8a" letter-spacing="2">ENGAGEMENT</text>
+<text x="1014" y="482" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="44" font-weight="500" fill="#1c1f26">log β  −  log(α + θ)</text>
+<text x="1014" y="524" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="24" fill="#5b6270">Pope engagement index  →  alertness</text>
+<text x="1014" y="558" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="21" font-weight="600" fill="#1f8a8a">SECONDARY  ·  corroborates, never leads  ·  forehead β is part muscle</text>
+
+<path d="M1130,584 L1130,672" stroke="#5a4fcf" stroke-width="6" stroke-linecap="round" marker-end="url(#mCal)"/>
+<rect x="1152" y="623.0" width="208" height="27" rx="14" fill="#f6f7f9" stroke="#5a4fcf" stroke-width="2"/><text x="1163" y="644" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="600" fill="#5a4fcf">raw, per second</text>
+<rect x="700" y="680" width="600" height="150" rx="26" fill="#eef0f4" stroke="#5a4fcf" stroke-width="4"/>
+<text x="730" y="730" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="30" font-weight="700" fill="#5a4fcf" letter-spacing="1">30 s PERSONAL CALIBRATION</text>
+<text x="730" y="770" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="22" fill="#5b6270">Fp1 band powers are not comparable between people,</text>
+<text x="730" y="802" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="22" fill="#5b6270">so every wearer gets their own scale.</text>
+<path d="M1306,755.0 L1350,755.0" stroke="#5a4fcf" stroke-width="6" stroke-linecap="round" marker-end="url(#mCal)"/>
+<rect x="1360" y="680" width="480" height="150" rx="26" fill="#eef0f4" stroke="#5a4fcf" stroke-width="4"/>
+<text x="1390" y="730" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="30" font-weight="700" fill="#5a4fcf" letter-spacing="1">z-SCORE</text>
+<text x="1390" y="780" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="32" font-weight="500" fill="#1c1f26">easy ≈ −1   ·   hard ≈ +1</text>
+<text x="1390" y="812" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="21" fill="#5b6270">5 s EMA · this is what the tutor reads</text>
+<text x="90" y="720" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="22" fill="#5b6270">MindWave Mobile 2 · one dry electrode at Fp1</text>
+<text x="90" y="752" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="22" fill="#5b6270">512 Hz raw → blink mask → Welch PSD</text>
+<text x="90" y="784" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="22" fill="#5b6270">one FeatureFrame per second</text>
+<text x="90" y="816" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="22" fill="#5b6270">NeuroSky eSense scores are never used</text>
+</svg>

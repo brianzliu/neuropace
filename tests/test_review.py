@@ -67,6 +67,7 @@ def _teach_then_ask(eng, card):
 
 def test_teach_first_then_check_and_three_hits_end_the_lesson(tmp_path):
     s, db, lr, sess = _setup(tmp_path, n_gaps=5, catchup_form="analogy")
+    s.review_stop_streak = 3  # opt-in study rule; off by default
     eng = ReviewEngine(db, s, sess["id"], lr["id"])
     st = eng.start()
     card = st["card"]
@@ -85,6 +86,20 @@ def test_teach_first_then_check_and_three_hits_end_the_lesson(tmp_path):
     assert sum(v["attempts"] for v in tally.values()) == 3 and sum(v["rescues"] for v in tally.values()) == 3
     for f in credited:
         assert tally[f]["rescues"] >= 1
+
+
+def test_by_default_review_runs_through_every_moment(tmp_path):
+    s, db, lr, sess = _setup(tmp_path, n_gaps=5)
+    assert s.review_stop_streak == 0
+    eng = ReviewEngine(db, s, sess["id"], lr["id"])
+    card = eng.start()["card"]
+    hits = 0
+    while card is not None:
+        q = _teach_then_ask(eng, card)
+        r = eng.answer(q["id"], _correct_choice(db, q))
+        hits += 1
+        card = r["next"]
+    assert hits == 5 and r["done"] and r["progress"]["gaps_closed"] == 5
 
 
 def test_miss_reteaches_in_the_next_family_then_a_hit_credits_it(tmp_path):

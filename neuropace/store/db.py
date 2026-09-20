@@ -94,6 +94,8 @@ class DB:
                 self.conn.execute("ALTER TABLE cards ADD COLUMN artifact_kind TEXT")
             if "focus_ratio" not in self._columns("cards"):
                 self.conn.execute("ALTER TABLE cards ADD COLUMN focus_ratio REAL")
+            if "parent_session_id" not in self._columns("sessions"):
+                self.conn.execute("ALTER TABLE sessions ADD COLUMN parent_session_id TEXT")
             rows = self.conn.execute("SELECT learner_id, form, rescues, attempts FROM tally").fetchall()
             merged: dict[tuple[str, str], list[int]] = {}
             legacy = False
@@ -254,7 +256,7 @@ class DB:
         sid = kw.get("id") or new_id("sess")
         self._x(
             "INSERT INTO sessions(id,learner_id,lecture_id,mode,catchup_policy,headset_kind,totem_kind,transcript_kind,best_form,"
-            "status,started_at,baseline_json,seed,auto_pause) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "status,started_at,baseline_json,seed,auto_pause,parent_session_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (
                 sid,
                 kw["learner_id"],
@@ -270,6 +272,7 @@ class DB:
                 _j(kw.get("baseline")),
                 kw.get("seed"),
                 1 if kw.get("auto_pause", True) else 0,
+                kw.get("parent_session_id"),
             ),
         )
         return self.get_session(sid)  # type: ignore[return-value]
@@ -296,6 +299,14 @@ class DB:
             sql += " WHERE " + " AND ".join(conds)
         sql += " ORDER BY started_at DESC"
         return [self.get_session(r["id"]) for r in self._q(sql, tuple(params))]  # type: ignore[misc]
+
+    def child_session(self, parent_id: str, mode: str) -> dict | None:
+        """The one session of `mode` opened from `parent_id` (the whiteboard for a lecture), if any."""
+        r = self._one(
+            "SELECT id FROM sessions WHERE parent_session_id=? AND mode=? ORDER BY started_at DESC LIMIT 1",
+            (parent_id, mode),
+        )
+        return self.get_session(r["id"]) if r else None
 
     def update_session(self, sid: str, **fields: Any) -> None:
         if "baseline" in fields:

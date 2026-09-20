@@ -141,11 +141,9 @@ const SAMPLE: GapArtifacts = {
   t_start: 0,
   t_end: 42,
   span_text: "",
-  context_text: "",
   flag_ids: [],
   status: "open",
   note: { what_was_said: "", key_term: "trilateration", definition: "", connection: "" },
-  question: null,
   package_source: "llm",
   artifacts: {
     summary: "Each satellite broadcasts the time. Your phone measures how late each signal arrives and turns the delay into a distance. Three distances pin you down; a fourth fixes your cheap clock.",

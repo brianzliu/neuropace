@@ -4,7 +4,7 @@ import type {
   Devices,
   GapArtifacts,
   BoardElement, Doctor, EventsResponse, LectureFull, Learner, LossMap, ManimContent, NotesResponse, OHMessage, OHSnapshot, QuizGet, QuizResult, RegenerateResponse, ReviewAnswer,
-  ReviewNext, ReviewStart, SessionPublic, TallySummary, GapPublic,
+  ReviewNext, ReviewStart, SessionPublic, TallySummary, GapPublic, ScholarResponse, JargonResponse,
 } from "./types";
 
 /** One increment of an Office Hours turn as it streams in — see office_hours_turn_stream (backend). */
@@ -110,8 +110,13 @@ export const api = {
   simHeadset: (id: string, state: string) => post<unknown>(`/api/sessions/${id}/sim/headset`, { state }),
   events: (id: string) => get<EventsResponse>(`/api/sessions/${id}/events`),
   notes: (id: string) => get<NotesResponse>(`/api/sessions/${id}/notes`),
+  /** Scholarly sources for a session's gaps (scholar sidecar). First call fetches from OpenAlex and can take a few seconds. */
+  /** Jargon-dense stretches of a session's transcript, scored against OpenAlex (scholar sidecar). */
+  jargon: (id: string) => get<JargonResponse>(`/api/sessions/${id}/scholar/jargon`),
+  scholar: (id: string, refresh = false) => getSlow<ScholarResponse>(`/api/sessions/${id}/scholar${refresh ? "?refresh=1" : ""}`, 45000),
   regenerate: (id: string) => post<RegenerateResponse>(`/api/sessions/${id}/regenerate`),
-  reviewStart: (id: string, mode: "tutor" | "manual" = "tutor") => post<ReviewStart>(`/api/sessions/${id}/review/start`, { mode }),
+  reviewStart: (id: string) => post<ReviewStart>(`/api/sessions/${id}/review/start`, { mode: "tutor" }),
+  reviewAsk: (id: string, card_id: string, text: string) => postSlow<{ reply: string; source: string }>(`/api/sessions/${id}/review/ask`, { card_id, text }, MODEL_TIMEOUT_MS),
   reviewState: (id: string) => get<ReviewStart>(`/api/sessions/${id}/review`),
   reviewAnswer: (id: string, card_id: string, choice: number, focus_ratio?: number | null) =>
     post<ReviewAnswer>(`/api/sessions/${id}/review/answer`, { card_id, choice, focus_ratio: focus_ratio ?? null }),
@@ -122,6 +127,8 @@ export const api = {
     post<ReviewNext>(`/api/sessions/${id}/review/advance`, { card_id, focus_ratio: focus_ratio ?? null }),
   quiz: (id: string) => get<QuizGet>(`/api/sessions/${id}/quiz`),
   submitQuiz: (id: string, phase: "before" | "after", answers: Record<string, number>) => post<QuizResult>(`/api/sessions/${id}/quiz`, { phase, answers }),
+  /** The lecture's one whiteboard conversation: found or created once, never one per click. */
+  officeHoursOpen: (id: string) => post<SessionPublic>(`/api/sessions/${id}/office_hours/open`),
   officeHoursSnapshot: (id: string, uptoOrd?: number) =>
     get<OHSnapshot>(`/api/sessions/${id}/office_hours${uptoOrd != null ? `?upto_ord=${uptoOrd}` : ""}`),
   officeHoursSend: (id: string, text: string) => postSlow<OHMessage>(`/api/sessions/${id}/office_hours/message`, { text }, MODEL_TIMEOUT_MS),
@@ -168,6 +175,23 @@ export const api = {
   },
   officeHoursExpand: (id: string, elementId: string) =>
     postSlow<OHMessage>(`/api/sessions/${id}/office_hours/expand`, { element_id: elementId }, MODEL_TIMEOUT_MS),
+  /** Hold-to-talk for a text box: the clip's words back, nothing else. */
+  transcribe: async (blob: Blob): Promise<{ text: string }> => {
+    const body = new FormData();
+    body.append("file", blob, "clip.webm");
+    const res = await backendFetch("/api/transcribe", { method: "POST", body });
+    if (!res.ok) {
+      let detail = res.statusText;
+      try {
+        const j = await res.json();
+        detail = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail ?? j);
+      } catch {
+        // keep statusText
+      }
+      throw new ApiError(res.status, detail);
+    }
+    return (await res.json()) as { text: string };
+  },
   officeHoursVoice: async (id: string, blob: Blob): Promise<{ text: string; reply: OHMessage }> => {
     const body = new FormData();
     body.append("file", blob, "clip.webm");

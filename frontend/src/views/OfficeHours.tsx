@@ -1,32 +1,23 @@
-import { useLibrary } from "./Library";
 import { useEffect, useRef, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api, errorText } from "../lib/api";
 import type { OHSnapshot } from "../lib/types";
 import Board from "../components/Board";
 import OfficeHoursChat from "../components/OfficeHoursChat";
-import OHScrubber from "../components/OHScrubber";
-import SessionBack from "../components/BackLink";
 
-/** Office Hours (docs/PRODUCT.md §5a): an open conversation about a lecture. The agent replies and draws on a
- * shared board; the scrubber replays any earlier point read-only; clicking a board element asks the agent to
- * say more about it. */
-export default function OfficeHours() {
-  const { sessionId = "" } = useParams();
-  const [search] = useSearchParams();
-  const original = search.get("original");
-  const library = useLibrary();
+/** Whiteboard (docs/PRODUCT.md §5a), Review's second mode: an open conversation about a lecture. The agent
+ * replies and draws on a shared board; clicking a board element asks it to say more. sessionId is the
+ * office_hours session, original the lecture session it is about. */
+export default function OfficeHours({ sessionId, original }: { sessionId: string; original: string | null }) {
   const [snap, setSnap] = useState<OHSnapshot | null>(null);
-  const [scrubOrd, setScrubOrd] = useState<number | null>(null); // null = live (now)
   const [voiceOn, setVoiceOn] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [pendingUserText, setPendingUserText] = useState<string | null>(null);
   const [pendingReplyText, setPendingReplyText] = useState<string | null>(null);
   const kickedOff = useRef(false);
 
-  const load = async (uptoOrd?: number) => {
+  const load = async () => {
     try {
-      const s = await api.officeHoursSnapshot(sessionId, uptoOrd);
+      const s = await api.officeHoursSnapshot(sessionId);
       setSnap(s);
     } catch (e) {
       setErr(errorText(e));
@@ -80,15 +71,8 @@ export default function OfficeHours() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
-  useEffect(() => {
-    if (scrubOrd != null) void load(scrubOrd);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scrubOrd]);
-
   if (err) return <div className="page narrow"><div className="callout danger">{err}</div></div>;
   if (!snap) return <div className="page narrow"><div className="loading">Loading…</div></div>;
-
-  const live = scrubOrd == null;
 
   const expand = async (elementId: string) => {
     try {
@@ -101,32 +85,23 @@ export default function OfficeHours() {
 
   return (
     <div className="office-hours">
-      <header className="oh-header row between">
-        {!library && <SessionBack />}
-        <div className="row">
-          {original ? (
-            <Link className="btn btn-sm" to={`/restudy/${original}?mode=manual`} title="Switch to a quiz-first self-test with no agent conversation">
-              Skip to quiz
-            </Link>
-          ) : null}
-          <button
-            type="button"
-            className="btn btn-sm"
-            onClick={() => setVoiceOn((v) => !v)}
-            title="Whether the tutor's replies are read aloud"
-          >
-            {voiceOn ? "🔊 Read aloud: on" : "🔈 Read aloud: off"}
-          </button>
-        </div>
-      </header>
-      <OHScrubber maxOrd={snap.ord} ord={scrubOrd ?? snap.ord} live={live} onChange={setScrubOrd} />
+      <div className="oh-toolbar row">
+        <button
+          type="button"
+          className="btn btn-sm"
+          onClick={() => setVoiceOn((v) => !v)}
+          title="Whether the tutor's replies are read aloud"
+        >
+          {voiceOn ? "🔊 Read aloud: on" : "🔈 Read aloud: off"}
+        </button>
+      </div>
       <div className="oh-layout">
-        <Board elements={snap.board} onExpand={live ? expand : () => undefined} />
+        <Board elements={snap.board} onExpand={expand} />
         <OfficeHoursChat
           sessionId={sessionId}
           messages={snap.messages}
           voiceOn={voiceOn}
-          disabled={!live}
+          disabled={false}
           onSend={sendStream}
           onVoiceClipSent={() => void load()}
           pendingUserText={pendingUserText}

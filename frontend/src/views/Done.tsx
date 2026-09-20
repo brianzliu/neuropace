@@ -1,17 +1,14 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { api, errorText } from "../lib/api";
+import { Link, useParams } from "react-router-dom";
+import { api } from "../lib/api";
 import type { SessionPublic } from "../lib/types";
+import { sessionHref } from "../components/SessionNavigation";
 
-/** Lecture complete (docs/PRODUCT.md §6): the numbers, then straight into Office Hours (or later). Review
- * on my own is a corner toggle once inside Office Hours, same entry point as the Review tab (ReviewEntry). */
+/** Lecture complete (docs/PRODUCT.md §6): the numbers, then straight into Review (or later). */
 export default function Done() {
   const { sessionId = "" } = useParams();
-  const navigate = useNavigate();
   const [sess, setSess] = useState<SessionPublic | null>(null);
   const [title, setTitle] = useState("Lecture");
-  const [starting, setStarting] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
   useEffect(() => {
     api
       .session(sessionId)
@@ -21,23 +18,6 @@ export default function Done() {
       })
       .catch(() => undefined);
   }, [sessionId]);
-  const startReview = async () => {
-    if (!sess) return;
-    setStarting(true);
-    setErr(null);
-    try {
-      const oh = await api.createSession({
-        mode: "office_hours",
-        lecture_id: sess.lecture_id ?? undefined,
-        learner_id: sess.learner_id,
-      });
-      navigate(`/office-hours/${oh.id}?original=${sessionId}`);
-    } catch (e) {
-      setErr(errorText(e));
-    } finally {
-      setStarting(false);
-    }
-  };
   if (!sess) return <div className="page narrow"><div className="loading">Wrapping up…</div></div>;
   const taps = sess.flags.filter((f) => f.source === "tap" || f.source === "key").length;
   return (
@@ -64,11 +44,10 @@ export default function Done() {
         </div>
         <p className="sub">{sess.gaps ? "Each moment explained your way, then one quick question. About five minutes." : sess.words ? "No moments were saved for restudy this time." : "No transcript was captured. Check your microphone before starting another lecture."}</p>        {sess.gaps ? (
           <>
-            <button className="btn btn-primary btn-lg" onClick={() => void startReview()} disabled={starting}>
-              {starting ? "Opening…" : "Review"}
-            </button>
-            {err ? <div className="callout danger label-3">{err}</div> : null}
-            <Link className="linklike" to={`/lecture/${sessionId}`}>
+            <Link className="btn btn-primary btn-lg" to={sessionHref(sessionId, "review")}>
+              Review
+            </Link>
+            <Link className="linklike" to={sessionHref(sessionId, "notes")}>
               Later
             </Link>
           </>

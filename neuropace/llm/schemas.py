@@ -594,6 +594,12 @@ class RemoveElement(Strict):
     element_id: str
 
 
+class AskReply(Strict):
+    """One answer to one question about the moment on screen (Review's Ask box)."""
+
+    reply: str
+
+
 class OfficeHoursTurn(Strict):
     """One agent turn (docs/PRODUCT.md §5a): a reply plus the board changes that go with it."""
 

@@ -105,12 +105,10 @@ export function LibraryFrame({ sessionId, tab, children }: { sessionId: string; 
 }
 
 /** Adds the same shell to legacy/team routes; sample renderers have no lecture to navigate. */
-export function SessionRouteFrame({ tab, children, useOriginal = false }: { tab: LibraryTab; children: ReactNode; useOriginal?: boolean }) {
+export function SessionRouteFrame({ tab, children }: { tab: LibraryTab; children: ReactNode }) {
   const { sessionId = "" } = useParams();
-  const [search] = useSearchParams();
-  const lectureSessionId = useOriginal ? search.get("original") : sessionId;
-  if (!lectureSessionId || lectureSessionId === "sample") return <>{children}</>;
-  return <LibraryFrame sessionId={lectureSessionId} tab={tab}>{children}</LibraryFrame>;
+  if (!sessionId || sessionId === "sample") return <>{children}</>;
+  return <LibraryFrame sessionId={sessionId} tab={tab}>{children}</LibraryFrame>;
 }
 
 export default function Library() {

@@ -93,13 +93,24 @@ _MANIM_FIELD_SHAPE = (
 )
 
 
+ASK_INSTRUCTIONS = (
+    "A student is reviewing ONE moment of a lecture they missed and asks a single question about it. You get the "
+    "missed span, the transcript just before it, the note written for it and the explanation the student is "
+    "looking at right now. Answer the question directly in at most 90 words, in second person, plain text. "
+    "Stay on this moment: if the question is about something else, say so in one line and point back to the span. "
+    + GROUNDING
+)
+
+
 def office_hours_instructions(manim_enabled: bool) -> str:
     """OFFICE_HOURS_INSTRUCTIONS with the manim kind mentioned only when neuropace/manim_render.py reports it
     installed (docs/PRODUCT.md §5a) -- the model is never told about a kind it cannot actually render. The
     board's toolkit is deliberately just shape/arrow/label (+ manim): the ten restudy templates (diagram,
     chart, plot, ...) render as busy, self-contained widgets built for a full-width lesson card, not a shared
     whiteboard, so they are not offered here even though BOARD_CONTENT_KINDS still accepts them if ever sent."""
-    return OFFICE_HOURS_INSTRUCTIONS.replace("@@MANIM_FIELD_SHAPE@@", _MANIM_FIELD_SHAPE if manim_enabled else "")
+    return OFFICE_HOURS_INSTRUCTIONS.replace(
+        "@@MANIM_FIELD_SHAPE@@", _MANIM_FIELD_SHAPE if manim_enabled else ""
+    )
 
 
 TEMPLATE_INSTRUCTIONS: dict[str, str] = {

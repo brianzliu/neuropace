@@ -16,7 +16,6 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from .. import __version__
-from ..config import FORMS
 from ..core import tally as tallymod
 from ..core.gaps import regenerate_packages
 from ..core.lossmap import compute_lossmap
@@ -26,7 +25,6 @@ from ..core.session import SessionRuntime
 from ..core.study import analyze, lossmap_inputs
 from ..doctor import detect_devices, run_doctor
 from ..ids import new_id
-from ..llm.artifacts import package_artifact_kinds
 from ..signal.headset import headset_port_key, resolve_headset
 from ..transcribe.scripted import script_from_text
 
@@ -732,32 +730,21 @@ def session_events(session_id: str, request: Request):
 
 
 def _gap_public(g: dict) -> dict:
+    """What the notes page shows for one missed moment. The check question and the generated artifacts stay
+    server-side: review hands them out card by card, and /artifacts is the team's preview of the rest."""
     pkg = g.get("package") or {}
-    q = dict(pkg.get("question", {}))
-    q.pop("correct_index", None)
-    q.pop("explanation", None)
     return {
         "id": g["id"],
         "ord": g["ord"],
         "t_start": g["t_start"],
         "t_end": g["t_end"],
         "span_text": g["span_text"],
-        "context_text": g.get("context_text", ""),
         "flag_ids": g.get("flag_ids", []),
         "status": g["status"],
         "note": pkg.get("note"),
         "summary": (pkg.get("artifacts") or {}).get("summary"),
-        "artifacts_available": sorted(
-            k
-            for k, v in (pkg.get("artifacts") or {}).items()
-            if v and k != "plan" and not (isinstance(v, dict) and v.get("applicable") is False)
-        ),
-        "plan": (pkg.get("artifacts") or {}).get("plan"),
-        "kinds": package_artifact_kinds(pkg) if pkg.get("artifacts") else None,
-        "question": q,
         "package_source": g.get("package_source"),
         "error": pkg.get("error"),
-        "forms_available": [f for f in FORMS if (pkg.get("forms") or {}).get(f)],
     }
 
 
@@ -767,11 +754,9 @@ def session_notes(session_id: str, request: Request):
     sess = db.get_session(session_id)
     if not sess:
         raise HTTPException(404, "unknown session")
-    gaps = db.get_gaps(session_id)
     return {
         "session": _session_public(request, sess),
-        "gaps": [_gap_public(g) for g in gaps],
-        "words": db.get_words(session_id),
+        "gaps": [_gap_public(g) for g in db.get_gaps(session_id)],
     }
 
 
@@ -902,7 +887,74 @@ def review_advance(session_id: str, body: CardIn, request: Request):
         raise HTTPException(400, str(e)) from e
 
 
+class AskIn(BaseModel):
+    card_id: str
+    text: str
+
+
+@router.post("/sessions/{session_id}/review/ask")
+async def review_ask(session_id: str, body: AskIn, request: Request):
+    """One question about the card on screen, one answer; nothing is remembered between asks."""
+    eng = _review(request, session_id)
+    text = " ".join((body.text or "").split())
+    if not text:
+        raise HTTPException(400, "empty question")
+    card = _db(request).get_card(body.card_id)
+    if card is None or card["session_id"] != session_id:
+        raise HTTPException(400, "unknown card")
+    gap = next((g for g in eng.gaps if g["id"] == card["gap_id"]), None)
+    if gap is None:
+        raise HTTPException(400, "unknown card")
+    pkg = gap.get("package") or {}
+    shown = ""
+    presented = eng._present(card)
+    if presented and presented.get("reteach"):
+        shown = json.dumps(presented["reteach"].get("content") or {}, ensure_ascii=False)[:1500]
+    reply, source = await request.app.state.llm.review_ask(
+        text, gap.get("span_text") or "", gap.get("context_text") or "", pkg.get("note") or {}, shown
+    )
+    if reply is None:
+        return {
+            "reply": "I couldn't reach the model just now. Here is what was said: "
+            + (gap.get("span_text") or "")[:400],
+            "source": "offline",
+        }
+    return {"reply": reply, "source": source}
+
+
 # ---------------------------------------------------------------- office hours (docs/PRODUCT.md §5a)
+
+
+@router.post("/sessions/{session_id}/office_hours/open")
+def office_hours_open(session_id: str, request: Request):
+    """The one whiteboard conversation for a lecture session: found if it exists, created once otherwise."""
+    app = request.app
+    s, db = _s(request), _db(request)
+    sess = db.get_session(session_id)
+    if not sess:
+        raise HTTPException(404, "unknown session")
+    if sess["mode"] == "office_hours":
+        return _session_public(request, sess)
+    existing = db.child_session(session_id, "office_hours")
+    if existing:
+        return _session_public(request, existing)
+    if not app.state.llm.enabled and not s.allow_offline_llm:
+        raise HTTPException(400, "The whiteboard needs an OpenAI, OpenRouter or Gemini API key.")
+    lecture = db.get_lecture(sess["lecture_id"], full=True) if sess.get("lecture_id") else None
+    oh = db.create_session(
+        learner_id=sess["learner_id"],
+        lecture_id=sess.get("lecture_id"),
+        mode="office_hours",
+        catchup_policy=sess.get("catchup_policy") or "always",
+        seed=int(time.time() * 1000) % 2_000_000_000,
+        parent_session_id=session_id,
+    )
+    app.state.office_hours[oh["id"]] = OfficeHoursEngine(
+        db, s, app.state.llm, oh["id"], sess["learner_id"], lecture
+    )
+    return _session_public(request, oh)
+
+
 def _office_hours(request: Request, session_id: str) -> OfficeHoursEngine:
     app = request.app
     eng = app.state.office_hours.get(session_id)
@@ -965,10 +1017,8 @@ async def office_hours_expand(session_id: str, body: OHExpandIn, request: Reques
         raise HTTPException(400, str(e)) from e
 
 
-@router.post("/sessions/{session_id}/office_hours/voice")
-async def office_hours_voice(session_id: str, request: Request, file: UploadFile = File(...)):
-    """Push-to-talk (docs/PRODUCT.md §5a): one bounded clip in, transcribed, run through the same turn path
-    as typed chat. No streaming, no barge-in: releasing the button ends the clip."""
+async def _transcribe_clip(request: Request, file: UploadFile) -> str:
+    """One bounded push-to-talk clip in, its text out (Deepgram prerecorded)."""
     import mimetypes
     import tempfile
 
@@ -977,7 +1027,6 @@ async def office_hours_voice(session_id: str, request: Request, file: UploadFile
     s = _s(request)
     if not s.deepgram_api_key:
         raise HTTPException(400, "push-to-talk needs DEEPGRAM_API_KEY; type your question instead")
-    eng = _office_hours(request, session_id)
     content = await file.read(20_000_001)
     if len(content) > 20_000_000:
         raise HTTPException(413, "Keep a push-to-talk clip under 20 MB")
@@ -992,6 +1041,21 @@ async def office_hours_voice(session_id: str, request: Request, file: UploadFile
     text = " ".join(w.w for w in words).strip()
     if not text:
         raise HTTPException(400, "Could not hear anything in that clip; try again")
+    return text
+
+
+@router.post("/transcribe")
+async def transcribe_clip(request: Request, file: UploadFile = File(...)):
+    """Hold-to-talk for any text box (Review's Ask): the clip's words, nothing else."""
+    return {"text": await _transcribe_clip(request, file)}
+
+
+@router.post("/sessions/{session_id}/office_hours/voice")
+async def office_hours_voice(session_id: str, request: Request, file: UploadFile = File(...)):
+    """Push-to-talk (docs/PRODUCT.md §5a): one bounded clip in, transcribed, run through the same turn path
+    as typed chat. No streaming, no barge-in: releasing the button ends the clip."""
+    eng = _office_hours(request, session_id)
+    text = await _transcribe_clip(request, file)
     try:
         reply = await eng.send_message(text)
     except ValueError as e:

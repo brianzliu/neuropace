@@ -11,8 +11,7 @@ import Live from "./views/Live";
 import Done from "./views/Done";
 import Lecture from "./views/Lecture";
 import Lectures from "./views/Lectures";
-import Restudy from "./views/Restudy";
-import ReviewEntry from "./views/ReviewEntry";
+import Review from "./views/Review";
 import Team from "./views/Team";
 import Replay from "./views/Replay";
 import Quiz from "./views/Quiz";
@@ -20,7 +19,6 @@ import Library, { SessionRouteFrame } from "./views/Library";
 import Insights from "./views/Insights";
 import LossMap from "./views/LossMap";
 import Artifacts from "./views/Artifacts";
-import OfficeHours from "./views/OfficeHours";
 
 function LegacySession({ tab }: { tab: string }) {
   const { sessionId = "" } = useParams();
@@ -31,7 +29,7 @@ export default function App() {
   useLayoutEffect(() => { document.documentElement.dataset.theme = "pocket"; }, []);
   const { pathname } = useLocation();
   const flash = useFlash();
-  const compact = /^\/(session|live|restudy|replay|office-hours)(\/|$)/.test(pathname) || pathname.includes("/replay/") || /^\/library\/[^/]+\/(review|replay)/.test(pathname);
+  const compact = /^\/(session|live|replay)(\/|$)/.test(pathname) || pathname.includes("/replay/") || /^\/library\/[^/]+\/(review|replay)/.test(pathname);
   return <div className={"app" + (compact ? " app-compact" : "")}>
     <SideBlobs />
     <header className="topbar">
@@ -47,13 +45,12 @@ export default function App() {
         <Route path="/live/:sessionId" element={<Live />} />
         <Route path="/done/:sessionId" element={<Done />} />
         <Route path="/lecture/:sessionId" element={<SessionRouteFrame tab="notes"><Lecture /></SessionRouteFrame>} />
-        <Route path="/restudy/:sessionId" element={<SessionRouteFrame tab="review"><Restudy /></SessionRouteFrame>} />
-        <Route path="/office-hours/:sessionId" element={<SessionRouteFrame tab="review" useOriginal><OfficeHours /></SessionRouteFrame>} />
+        <Route path="/restudy/:sessionId" element={<LegacySession tab="review" />} />
         <Route path="/lectures" element={<Lectures />} />
         <Route path="/library" element={<Library />} />
         <Route path="/library/:sessionId" element={<Library />}>
           <Route path="notes" element={<Lecture />} />
-          <Route path="review" element={<ReviewEntry />} />
+          <Route path="review" element={<Review />} />
           <Route path="replay" element={<Replay />} />
           <Route path="quiz" element={<Quiz />} />
           <Route path="artifacts" element={<Artifacts />} />

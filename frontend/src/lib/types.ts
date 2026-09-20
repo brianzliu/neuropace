@@ -338,18 +338,12 @@ export interface GapPublic {
   t_start: number;
   t_end: number;
   span_text: string;
-  context_text: string;
   flag_ids: string[];
   status: "open" | "closed" | "exhausted";
   note: GapNote | null;
-  question: { question: string; options: string[] } | null;
   package_source: PackageSource | null;
   error?: string | null;
   summary?: string | null;
-  artifacts_available?: string[];
-  forms_available?: Form[];
-  plan?: Plan | null;
-  kinds?: Record<Form, ArtifactKind> | null;
 }
 
 export interface RegenerateResponse {
@@ -360,7 +354,6 @@ export interface RegenerateResponse {
 export interface NotesResponse {
   session: SessionPublic;
   gaps: GapPublic[];
-  words: Word[];
 }
 
 export interface SceneNode {
@@ -686,4 +679,74 @@ export interface LectureFull extends LectureLite {
 export interface EventsResponse {
   session_id: string;
   events: (ServerMsg & { t?: number; wall?: number })[];
+}
+
+// ---- scholar sidecar (neuropace/scholar): OpenAlex references under gap notes ----
+export type ScholarSource = "openalex" | "cache" | "unavailable" | "disabled" | "empty" | "local";
+
+export interface ScholarTopic {
+  id: string;
+  name: string;
+  score: number | null;
+  subfield: string;
+  field: string;
+  domain: string;
+  path: string;
+}
+
+export interface ScholarRef {
+  id: string;
+  title: string;
+  year: number | null;
+  cited_by: number;
+  doi: string | null;
+  kind: string;
+  venue: string | null;
+  authors: string[];
+  more_authors: number;
+  url: string;
+  why: string;
+}
+
+export interface ScholarGap {
+  gap_id: string;
+  query: string;
+  source: ScholarSource;
+  topics: ScholarTopic[];
+  items: ScholarRef[];
+  error: string | null;
+}
+
+export interface ScholarResponse {
+  session_id: string;
+  lecture_id: string | null;
+  topics: { source: ScholarSource; topics: ScholarTopic[] };
+  budget: { limit: number | null; remaining: number | null; reset_seconds: number | null; remaining_usd: number | null };
+  gaps: ScholarGap[];
+  attribution: string;
+}
+
+export interface JargonTerm {
+  term: string;
+  spec: number;
+  field: string | null;
+  known: boolean;
+}
+
+export interface JargonSpan {
+  t_start: number;
+  t_end: number;
+  peak_z: number;
+  terms: JargonTerm[];
+}
+
+export interface JargonResponse {
+  table: { available: boolean; works_used?: number; terms?: number; dev_sized?: boolean };
+  window?: number;
+  step?: number;
+  windows: { t0: number; t1: number; score: number | null; z: number | null; top: JargonTerm[] }[];
+  spans: JargonSpan[];
+  fields: { field: string; share: number }[];
+  segments: { id: string | null; title: string | null; t_start: number; t_end: number; planted_bad: boolean; mean_score: number | null; rank?: number }[];
+  attribution?: string;
 }

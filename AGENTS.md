@@ -79,6 +79,18 @@ loaded alongside `.env`, ignored by git, and must never be bundled. Flux uses `/
 Aura compatibility uses `/v1/speak`. `npm test` in `frontend/` includes playback failure and
 cancellation checks. Browser voice failures show Retry voice and leave the explanation readable.
 
+Scholarly sources under gap notes come from `neuropace/scholar/` (OpenAlex; see its README). It is a
+sidecar: read-only over the store, its own `data/scholar.db`, one `include_router` line in `api/app.py`,
+and `frontend/src/components/ScholarSources.tsx` in the notes view. `OPENALEX_API_KEY` (free account,
+$1/day metered) and `OPENALEX_MAILTO` are optional; `NEUROPACE_SCHOLAR=off` disables it. The bundled
+`neuropace/scholar/data/openalex_topics.json` is rebuilt from the AWS Open Data snapshot by
+`uv run python scripts/fetch_openalex_topics.py`. Sources are labelled by origin (`openalex`, `cache`,
+`local`, `unavailable`); never present the offline topic label or an empty result as an API answer.
+`neuropace/scholar/jargon.py` scores transcript windows against `term_specificity.json.gz` (built from a
+`works` slice by `scripts/build_jargon_table.py`, stdlib-only so it runs on a bare EC2 box); the bundled
+table (641k works, 59k terms) took 2.5 min to build locally; `/api/scholar/status` reports its size. Jargon spans are shown beside sensor flags, not
+merged into gaps. `tests/test_scholar.py` asserts the practice lecture's planted segment 3 ranks first.
+
 For local raw-data audits, use `uv run --group monitor python -m scripts.audit_eeg_calibration
 <local-trial-directory> --plots`. The audit reconstructs logged features from 512 Hz raw
 samples and labels focused-only replay as exploratory, not a new live validation. Raw and

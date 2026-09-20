@@ -115,6 +115,10 @@ def create_app(
     app.state.force_all = force_all
     app.include_router(routes.router, prefix="/api")
     app.include_router(ws.router)
+    # scholarly sources sidecar (neuropace/scholar): read-only over the store, its own cache file
+    from ..scholar import router as scholar_router
+
+    app.include_router(scholar_router, prefix="/api")
 
     @app.get("/api/bridge/check")
     def bridge_check():

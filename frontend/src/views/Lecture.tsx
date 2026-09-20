@@ -1,40 +1,28 @@
-import { useLibrary } from "./Library";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, errorText } from "../lib/api";
 import type { NotesResponse } from "../lib/types";
 import { range } from "../lib/format";
 import { Badge } from "../components/Badges";
-import SessionBack from "../components/BackLink";
-import TranscriptPane from "../components/TranscriptPane";
-import type { Flag } from "../lib/types";
+import { JargonSpans, ScholarStrip, ScholarTopicLine, useJargon, useScholar } from "../components/ScholarSources";
 
-/** One lecture: the transcript and the moments you missed. Starting a review happens from the Review tab
- * (ReviewEntry, which goes straight to Office Hours) when this page is inside the library shell; standalone
- * (no shell, e.g. right after a lecture ends) it offers that same entry point itself. */
+/** One lecture's notes: the moments you missed. Always rendered inside the library shell, which carries the
+ * title, the session switcher and the Review tab (Explain deck or Whiteboard). */
 export default function Lecture() {
   const { sessionId = "" } = useParams();
-  const library = useLibrary();
   const nav = useNavigate();
   const [data, setData] = useState<NotesResponse | null>(null);
-  const [title, setTitle] = useState("Lecture");
   const [err, setErr] = useState<string | null>(null);
   const [ending, setEnding] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
-  const [startingOfficeHours, setStartingOfficeHours] = useState(false);
+  const ended = Boolean(data && data.session.status !== "running");
+  // scholarly sources load after the notes and never block them (scholar sidecar)
+  const scholar = useScholar(sessionId, ended && data!.gaps.length > 0);
+  const jargon = useJargon(sessionId, ended);
 
-  const load = () =>
-    api
-      .notes(sessionId)
-      .then((d) => {
-        setData(d);
-        if (d.session.lecture_id) api.lecture(d.session.lecture_id).then((l) => setTitle(l.title)).catch(() => undefined);
-        else setTitle("Live lecture");
-      })
-      .catch((e) => setErr(errorText(e)));
   useEffect(() => {
-    void load();
-  }, [sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
+    api.notes(sessionId).then(setData).catch((e) => setErr(errorText(e)));
+  }, [sessionId]);
 
   const regenerate = async () => {
     setRegenerating(true);
@@ -45,22 +33,6 @@ export default function Lecture() {
       setErr(errorText(e));
     } finally {
       setRegenerating(false);
-    }
-  };
-  const startOfficeHours = async () => {
-    if (!data) return;
-    setStartingOfficeHours(true);
-    try {
-      const sess = await api.createSession({
-        mode: "office_hours",
-        lecture_id: data.session.lecture_id ?? undefined,
-        learner_id: data.session.learner_id,
-      });
-      nav(`/office-hours/${sess.id}?original=${sessionId}`);
-    } catch (e) {
-      setErr(errorText(e));
-    } finally {
-      setStartingOfficeHours(false);
     }
   };
   const endNow = async () => {
@@ -75,25 +47,12 @@ export default function Lecture() {
     }
   };
 
-  if (err) return <div className="page narrow">{!library ? <div className="page-back"><SessionBack /></div> : null}<div className="callout danger">{err}</div></div>;
+  if (err) return <div className="page narrow"><div className="callout danger">{err}</div></div>;
   if (!data) return <div className="page narrow"><div className="loading">Loading…</div></div>;
-  const running = data.session.status === "running";
-  const failed = data.gaps.filter((g) => g.package_source === "failed");
-  const total = data.gaps.length;
+  const failed = data.gaps.some((g) => g.package_source === "failed");
   return (
     <div className="page narrow">
-      {!library ? (
-        <div className="page-back">
-          <SessionBack />
-        </div>
-      ) : null}
-      {!library ? (
-        <header className="hero">
-          <h1 className="t-large">{title}</h1>
-        </header>
-      ) : null}
-
-      {running ? (
+      {!ended ? (
         <div className="start">
           <Link className="btn btn-primary btn-lg btn-block" to={`/live/${sessionId}`}>
             Back to the lecture
@@ -103,49 +62,18 @@ export default function Lecture() {
           </button>
         </div>
       ) : null}
-
-      {!running && !library ? (
-        <div className="start">
-          <button className="btn btn-primary btn-lg btn-block" onClick={() => void startOfficeHours()} disabled={startingOfficeHours || failed.length > 0}>
-            {startingOfficeHours ? "Opening…" : "Review"}
-          </button>
-          {failed.length ? (
-            <button className="linklike" onClick={() => void regenerate()} disabled={regenerating}>
-              {regenerating ? "Writing…" : "Some notes aren't written yet. Try again"}
-            </button>
-          ) : null}
-        </div>
-      ) : null}
-      {!running && library && failed.length ? (
+      {ended && failed ? (
         <button className="linklike" onClick={() => void regenerate()} disabled={regenerating}>
           {regenerating ? "Writing…" : "Some notes aren't written yet. Try again"}
         </button>
       ) : null}
 
-      {data.words.length ? (
-        <details className="moment-row whole" open={total === 0}>
-          <summary>
-            <span className="m-body">
-              <span className="m-summary">The whole lecture</span>
-              <span className="m-meta">{data.words.length} words{total ? ` · the ${total} moment${total === 1 ? "" : "s"} you missed are highlighted` : ""}</span>
-            </span>
-          </summary>
-          <div className="m-detail">
-            <TranscriptPane
-              words={data.words}
-              interim={[]}
-              now={-1}
-              autoScroll={false}
-              className="reading"
-              flags={data.gaps.map((g): Flag => ({ id: g.id, source: "eeg", t_trigger: g.t_end, t_start: g.t_start, t_end: g.t_end, catchup_shown: null, catchup_form: null, opened: false }))}
-            />
-          </div>
-        </details>
-      ) : null}
+      {ended ? <JargonSpans data={jargon.data} /> : null}
 
-      {total > 0 ? (
+      {data.gaps.length > 0 ? (
         <section className="stack">
           <div className="eyebrow">What you missed</div>
+          <ScholarTopicLine data={scholar.data} />
           {data.gaps.map((g) => (
             <details key={g.id} className="moment-row">
               <summary>
@@ -177,6 +105,7 @@ export default function Lecture() {
                   <div className="k">What was said</div>
                   <div className="label-2">{g.span_text}</div>
                 </div>
+                <ScholarStrip gap={scholar.byGap.get(g.id)} loading={scholar.loading} />
               </div>
             </details>
           ))}

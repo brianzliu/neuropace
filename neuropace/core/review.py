@@ -71,8 +71,12 @@ class ReviewEngine:
         if pending:
             self.current = pending[-1]
         gaps_open = [g for g in self.gaps if g["status"] == "open"]
-        if self.streak >= self.s.review_stop_streak or not gaps_open:
+        if self._streak_reached() or not gaps_open:
             self.done = not pending
+
+    def _streak_reached(self) -> bool:
+        stop = self.s.review_stop_streak
+        return stop > 0 and self.streak >= stop
 
     def _gap(self, gid: str) -> dict:
         return next(g for g in self.gaps if g["id"] == gid)
@@ -216,7 +220,7 @@ class ReviewEngine:
         }
 
     def _finish_if_needed(self) -> None:
-        if self.streak >= self.s.review_stop_streak or self._next_open_gap() is None:
+        if self._streak_reached() or self._next_open_gap() is None:
             self.done = True
             self.current = None
 

@@ -129,7 +129,7 @@ class Settings:
     # tally and review
     tally_prior_pseudocount: float = 2.0
     tally_enough_attempts: int = 12
-    review_stop_streak: int = 3
+    review_stop_streak: int = 0  # 0 = review ends when every moment landed or ran out of forms
 
     # loss map
     lossmap_bin_seconds: float = 10.0

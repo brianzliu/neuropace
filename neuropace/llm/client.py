@@ -18,6 +18,7 @@ from ..manim_render import manim_available
 from ..store.db import DB
 from . import fallback
 from .prompts import (
+    ASK_INSTRUCTIONS,
     CORE_INSTRUCTIONS,
     PROMPT_VERSION,
     RECAP_INSTRUCTIONS,
@@ -27,6 +28,7 @@ from .prompts import (
 from .schemas import (
     TEMPLATES,
     AddElement,
+    AskReply,
     GapCore,
     OfficeHoursTurn,
     RecapForms,
@@ -168,10 +170,36 @@ class LLMClient:
         for attempt in range(attempts):
             if attempt:
                 await asyncio.sleep(2.0 * attempt)
-            obj, source = await self._structured(task, instructions, payload, model_cls, timeout, max_tokens, use_cache)
+            obj, source = await self._structured(
+                task, instructions, payload, model_cls, timeout, max_tokens, use_cache
+            )
             if obj is not None or time.monotonic() < self._quota_blocked_until:
                 break
         return obj, source
+
+    async def review_ask(
+        self, question: str, span_text: str, context_text: str, note: dict, shown: str
+    ) -> tuple[str | None, str]:
+        """One question about the moment on screen, one answer (Review's Ask box). No history: each ask is
+        grounded in the span, its note and the explanation the student is looking at, nothing else."""
+        payload = {
+            "question": question,
+            "missed_span": span_text,
+            "context_before": context_text,
+            "note": note,
+            "explanation_on_screen": shown,
+        }
+        obj, source = await self._with_retries(
+            "review_ask",
+            ASK_INSTRUCTIONS,
+            payload,
+            AskReply,
+            400,
+            use_cache=False,
+            timeout=20.0,
+            max_attempts=2 if self.enabled else 1,
+        )
+        return (obj.reply if obj else None), source
 
     async def office_hours_turn(
         self, history: list[dict], board_summary: list[dict], user_text: str, lecture_transcript: str = ""
@@ -235,7 +263,12 @@ class LLMClient:
         if not self.enabled or self._client is None or time.monotonic() < self._quota_blocked_until:
             return
         await self._rate_limit()
-        fmt = {"type": "json_schema", "name": "OfficeHoursTurn", "schema": strict_schema(OfficeHoursTurn), "strict": True}
+        fmt = {
+            "type": "json_schema",
+            "name": "OfficeHoursTurn",
+            "schema": strict_schema(OfficeHoursTurn),
+            "strict": True,
+        }
         user_input = json.dumps(payload, ensure_ascii=False)
         kwargs: dict[str, Any] = {
             "model": self.model,
@@ -295,7 +328,9 @@ class LLMClient:
                         try:
                             op = _BOARD_OP_ADAPTER.validate_python(obj)
                         except ValidationError as e:
-                            log.info("office_hours_turn_stream: dropping invalid op mid-stream: %s", str(e)[:200])
+                            log.info(
+                                "office_hours_turn_stream: dropping invalid op mid-stream: %s", str(e)[:200]
+                            )
                         else:
                             yield {"type": "op", "op": op}
                     ops_pos = pos
