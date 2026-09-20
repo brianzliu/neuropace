@@ -20,6 +20,7 @@ import Library from "./views/Library";
 import Insights from "./views/Insights";
 import LossMap from "./views/LossMap";
 import Artifacts from "./views/Artifacts";
+import OfficeHours from "./views/OfficeHours";
 
 function LegacySession({ tab }: { tab: string }) {
   const { sessionId = "" } = useParams();
@@ -30,7 +31,7 @@ export default function App() {
   useLayoutEffect(() => { document.documentElement.dataset.theme = "pocket"; }, []);
   const { pathname } = useLocation();
   const flash = useFlash();
-  const compact = /^\/(session|live|restudy|replay)(\/|$)/.test(pathname) || pathname.includes("/replay/") || /^\/library\/[^/]+\/(review|replay)/.test(pathname);
+  const compact = /^\/(session|live|restudy|replay|office-hours)(\/|$)/.test(pathname) || pathname.includes("/replay/") || /^\/library\/[^/]+\/(review|replay)/.test(pathname);
   return <div className={"app" + (compact ? " app-compact" : "")}>
     <SideBlobs />
     <header className="topbar">
@@ -47,6 +48,7 @@ export default function App() {
         <Route path="/done/:sessionId" element={<Done />} />
         <Route path="/lecture/:sessionId" element={<Lecture />} />
         <Route path="/restudy/:sessionId" element={<Restudy />} />
+        <Route path="/office-hours/:sessionId" element={<OfficeHours />} />
         <Route path="/lectures" element={<Lectures />} />
         <Route path="/library" element={<Library />} />
         <Route path="/library/:sessionId" element={<Library />}>

@@ -16,7 +16,7 @@ export default function Lectures() {
     void activeLearnerId().then(learner_id => Promise.all([api.sessions({ learner_id }), api.lectures()]))
       .then(([s, l]) => {
         if (!active) return;
-        setSessions(s.sessions.filter(x => x.mode !== "review"));
+        setSessions(s.sessions.filter(x => x.mode !== "review" && x.mode !== "office_hours"));
         setLectures(l.lectures);
         setLoaded(true);
       }).catch(e => { if (active) setError(String(e)); });

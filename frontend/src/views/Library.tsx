@@ -45,6 +45,7 @@ function tabFromLocation(pathname: string, paramTab: string | undefined, queryTa
 
 function sessionTitle(session: SessionPublic, titles: Record<string, string>) {
   if (session.lecture_id && titles[session.lecture_id]) return titles[session.lecture_id];
+  if (session.mode === "office_hours") return "Office Hours";
   return session.mode === "recorded" ? "Recorded lecture" : "Live session";
 }
 
@@ -67,7 +68,7 @@ function useLibraryIndex() {
           api.lectures().catch(() => ({ lectures: [] as { id: string; title: string }[] })),
         ]);
         if (cancelled) return;
-        setSessions(listed.sessions.filter(s => s.mode !== "review"));
+        setSessions(listed.sessions.filter(s => s.mode !== "review" && s.mode !== "office_hours"));
         setTitles(Object.fromEntries(lectures.lectures.map((l) => [l.id, l.title])));
       } catch {
         if (!cancelled) setSessions([]);

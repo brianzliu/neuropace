@@ -29,10 +29,10 @@ function ActionIcon({ children }: { children: ReactNode }) {
 }
 
 const ACTIONS = [
-  { to: (id: string) => `/notes/${id}`, name: "Notes", paths: (<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></>) },
-  { to: (id: string) => `/review/${id}`, name: "Review", paths: (<><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></>) },
-  { to: (id: string) => `/quiz/${id}`, name: "Quiz", paths: (<><rect x="8" y="2" width="8" height="4" rx="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="m9 14 2 2 4-4" /></>) },
-  { to: (id: string) => `/replay/${id}`, name: "Replay", paths: (<><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></>) },
+  { to: (id: string) => `/notes/${id}`, name: "Notes", tone: "tone-notes", paths: (<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></>) },
+  { to: (id: string) => `/review/${id}`, name: "Review", tone: "tone-review", paths: (<><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></>) },
+  { to: (id: string) => `/quiz/${id}`, name: "Quiz", tone: "tone-quiz", paths: (<><rect x="8" y="2" width="8" height="4" rx="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="m9 14 2 2 4-4" /></>) },
+  { to: (id: string) => `/replay/${id}`, name: "Replay", tone: "tone-replay", paths: (<><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></>) },
 ] as const;
 export default function SessionsSidebar({ sessions, concepts, closed }: SessionsSidebarProps) {
   return (
@@ -75,7 +75,7 @@ export default function SessionsSidebar({ sessions, concepts, closed }: Sessions
                 ACTIONS.map(action => (
                   <Link
                     key={action.name}
-                    className="icon-button"
+                    className={`icon-button ${action.tone}`}
                     to={action.to(session.id)}
                     aria-label={`${action.name} for ${session.title}`}
                     title={`${action.name} for ${session.title}`}

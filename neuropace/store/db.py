@@ -48,6 +48,14 @@ CREATE TABLE IF NOT EXISTS quiz_answers(
   session_id TEXT NOT NULL, item_id TEXT NOT NULL, phase TEXT NOT NULL, choice INTEGER, correct INTEGER,
   PRIMARY KEY(session_id, item_id, phase));
 CREATE TABLE IF NOT EXISTS llm_cache(key TEXT PRIMARY KEY, task TEXT, model TEXT, output_json TEXT, created_at REAL);
+CREATE TABLE IF NOT EXISTS oh_messages(
+  id TEXT PRIMARY KEY, session_id TEXT NOT NULL, ord INTEGER NOT NULL, role TEXT NOT NULL,
+  text TEXT NOT NULL, related_element_ids_json TEXT, source TEXT, created_at REAL NOT NULL);
+CREATE INDEX IF NOT EXISTS ix_oh_messages ON oh_messages(session_id, ord);
+CREATE TABLE IF NOT EXISTS oh_board_ops(
+  id TEXT PRIMARY KEY, session_id TEXT NOT NULL, ord INTEGER NOT NULL, op TEXT NOT NULL,
+  element_id TEXT NOT NULL, payload_json TEXT, created_at REAL NOT NULL);
+CREATE INDEX IF NOT EXISTS ix_oh_board_ops ON oh_board_ops(session_id, ord);
 """
 
 
@@ -572,3 +580,83 @@ class DB:
             "INSERT OR REPLACE INTO llm_cache(key,task,model,output_json,created_at) VALUES(?,?,?,?,?)",
             (key, task, model, _j(output), time.time()),
         )
+
+    # ---- office hours (chat + board, event-sourced: ord is one counter shared by both tables per session) ----
+    def oh_add_message(
+        self,
+        sid: str,
+        ord: int,
+        role: str,
+        text: str,
+        related_element_ids: list[str] | None = None,
+        source: str | None = None,
+    ) -> dict:
+        mid = new_id("ohm")
+        created_at = time.time()
+        self._x(
+            "INSERT INTO oh_messages(id,session_id,ord,role,text,related_element_ids_json,source,created_at)"
+            " VALUES(?,?,?,?,?,?,?,?)",
+            (mid, sid, ord, role, text, _j(related_element_ids), source, created_at),
+        )
+        return {
+            "id": mid,
+            "session_id": sid,
+            "ord": ord,
+            "role": role,
+            "text": text,
+            "related_element_ids": related_element_ids,
+            "source": source,
+            "created_at": created_at,
+        }
+
+    def oh_get_messages(self, sid: str, upto_ord: int | None = None) -> list[dict]:
+        sql = "SELECT * FROM oh_messages WHERE session_id=?"
+        params: list[Any] = [sid]
+        if upto_ord is not None:
+            sql += " AND ord<=?"
+            params.append(upto_ord)
+        sql += " ORDER BY ord"
+        out = []
+        for r in self._q(sql, tuple(params)):
+            d = dict(r)
+            d["related_element_ids"] = _uj(d.pop("related_element_ids_json"))
+            out.append(d)
+        return out
+
+    def oh_add_board_op(self, sid: str, ord: int, op: str, element_id: str, payload: dict | None) -> dict:
+        oid = new_id("ohop")
+        created_at = time.time()
+        self._x(
+            "INSERT INTO oh_board_ops(id,session_id,ord,op,element_id,payload_json,created_at) VALUES(?,?,?,?,?,?,?)",
+            (oid, sid, ord, op, element_id, _j(payload), created_at),
+        )
+        return {
+            "id": oid,
+            "session_id": sid,
+            "ord": ord,
+            "op": op,
+            "element_id": element_id,
+            "payload": payload,
+            "created_at": created_at,
+        }
+
+    def oh_get_board_ops(self, sid: str, upto_ord: int | None = None) -> list[dict]:
+        sql = "SELECT * FROM oh_board_ops WHERE session_id=?"
+        params: list[Any] = [sid]
+        if upto_ord is not None:
+            sql += " AND ord<=?"
+            params.append(upto_ord)
+        sql += " ORDER BY ord"
+        out = []
+        for r in self._q(sql, tuple(params)):
+            d = dict(r)
+            d["payload"] = _uj(d.pop("payload_json"))
+            out.append(d)
+        return out
+
+    def oh_next_ord(self, sid: str) -> int:
+        """MAX(ord)+1 across both tables for this session: the restart-safe next write position."""
+        a = self._one("SELECT MAX(ord) AS m FROM oh_messages WHERE session_id=?", (sid,))
+        b = self._one("SELECT MAX(ord) AS m FROM oh_board_ops WHERE session_id=?", (sid,))
+        hi = max(a["m"] if a and a["m"] is not None else -1, b["m"] if b and b["m"] is not None else -1)
+        return hi + 1

@@ -3,7 +3,7 @@ import type {
   Profile,
   Devices,
   GapArtifacts,
-  Doctor, EventsResponse, LectureFull, Learner, LossMap, NotesResponse, QuizGet, QuizResult, RegenerateResponse, ReviewAnswer,
+  Doctor, EventsResponse, LectureFull, Learner, LossMap, NotesResponse, OHMessage, OHSnapshot, QuizGet, QuizResult, RegenerateResponse, ReviewAnswer,
   ReviewNext, ReviewStart, SessionPublic, TallySummary, GapPublic,
 } from "./types";
 
@@ -42,7 +42,7 @@ export interface SessionCreate {
   learner_id?: string | null; // omitted: this device's single learner
   learner_name?: string | null; // study participant, optional
   lecture_id?: string | null;
-  mode: "live" | "recorded" | "review";
+  mode: "live" | "recorded" | "review" | "office_hours";
   catchup_policy?: "always" | "randomized";
   baseline_seconds?: number;
   use_stored_baseline?: boolean;
@@ -99,4 +99,25 @@ export const api = {
     post<ReviewNext>(`/api/sessions/${id}/review/advance`, { card_id, focus_ratio: focus_ratio ?? null }),
   quiz: (id: string) => get<QuizGet>(`/api/sessions/${id}/quiz`),
   submitQuiz: (id: string, phase: "before" | "after", answers: Record<string, number>) => post<QuizResult>(`/api/sessions/${id}/quiz`, { phase, answers }),
+  officeHoursSnapshot: (id: string, uptoOrd?: number) =>
+    get<OHSnapshot>(`/api/sessions/${id}/office_hours${uptoOrd != null ? `?upto_ord=${uptoOrd}` : ""}`),
+  officeHoursSend: (id: string, text: string) => post<OHMessage>(`/api/sessions/${id}/office_hours/message`, { text }),
+  officeHoursExpand: (id: string, elementId: string) =>
+    post<OHMessage>(`/api/sessions/${id}/office_hours/expand`, { element_id: elementId }),
+  officeHoursVoice: async (id: string, blob: Blob): Promise<{ text: string; reply: OHMessage }> => {
+    const body = new FormData();
+    body.append("file", blob, "clip.webm");
+    const res = await backendFetch(`/api/sessions/${id}/office_hours/voice`, { method: "POST", body });
+    if (!res.ok) {
+      let detail = res.statusText;
+      try {
+        const j = await res.json();
+        detail = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail ?? j);
+      } catch {
+        // keep statusText
+      }
+      throw new ApiError(res.status, detail);
+    }
+    return (await res.json()) as { text: string; reply: OHMessage };
+  },
 };

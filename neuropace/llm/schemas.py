@@ -420,6 +420,105 @@ def pick_artifact(artifacts: dict, family: str) -> tuple[str, dict | str]:
     return "words", _words_content(artifacts)
 
 
+# ---------------------------------------------------------------- office hours board (docs/PRODUCT.md §5a)
+# The board is the same template catalogue above, plus three small annotation primitives, each placed at a
+# position on a shared canvas. The model never lays out the canvas itself: every op is validated the same way
+# every other template is (Strict, hand-written shape checks), then the position envelope is bounds-checked
+# separately from content so a bad number can't push an element off the visible board.
+
+
+class WordsCard(Strict):
+    """The 'words' family isn't in TEMPLATES (it lives on GapCore) but the board treats it as a tenth kind."""
+
+    summary: str
+    key_idea: KeyIdea
+
+
+class ShapeContent(Strict):
+    shape: Literal["rect", "ellipse"]
+    label: str
+
+
+class ArrowContent(Strict):
+    """Connects two existing element ids; drawn resolved from their current positions, not its own."""
+
+    from_id: str
+    to_id: str
+    label: str
+
+
+class LabelContent(Strict):
+    text: str
+
+
+BOARD_CONTENT_KINDS: dict[str, type[Strict]] = {
+    **TEMPLATES,
+    "words": WordsCard,
+    "shape": ShapeContent,
+    "arrow": ArrowContent,
+    "label": LabelContent,
+}
+
+
+class BoardEnvelope(Strict):
+    """Position/size on the shared board. Wraps a content model; never part of the content models themselves."""
+
+    x: float
+    y: float
+    w: float
+    h: float
+    z: int = 0
+
+    @model_validator(mode="after")
+    def _bounds(self) -> BoardEnvelope:
+        self.x = min(max(self.x, 0.0), 4000.0)
+        self.y = min(max(self.y, 0.0), 3000.0)
+        self.w = min(max(self.w, 40.0), 2000.0)
+        self.h = min(max(self.h, 40.0), 2000.0)
+        return self
+
+
+class AddElement(Strict):
+    op: Literal["add"]
+    element_id: str
+    kind: str
+    envelope: BoardEnvelope
+    # a JSON-encoded BOARD_CONTENT_KINDS[kind] object: strict structured-output schemas can't express "the shape
+    # of this field depends on a sibling field", so it travels as a string and is re-validated in Python
+    # immediately after the outer object parses (see office_hours.py) — the same "loose outside, strict inside"
+    # shape Plan.visual already uses above.
+    content_json: str
+
+
+class UpdateElement(Strict):
+    """A shallow-merge patch: only the keys that changed, so moving an element doesn't restate its content."""
+
+    op: Literal["update"]
+    element_id: str
+    envelope: BoardEnvelope | None = None
+    content_json: str | None = None
+
+
+class RemoveElement(Strict):
+    op: Literal["remove"]
+    element_id: str
+
+
+class OfficeHoursTurn(Strict):
+    """One agent turn (docs/PRODUCT.md §5a): a reply plus the board changes that go with it."""
+
+    reply_text: str
+    board_ops: list[AddElement | UpdateElement | RemoveElement]
+
+    @model_validator(mode="after")
+    def _shape(self) -> OfficeHoursTurn:
+        self.reply_text = " ".join(self.reply_text.split())
+        if not self.reply_text:
+            raise ValueError("reply_text empty")
+        self.board_ops = self.board_ops[:6]
+        return self
+
+
 def strict_schema(model: type[BaseModel]) -> dict[str, Any]:
     """JSON schema with additionalProperties=false and all properties required, recursively."""
     schema = model.model_json_schema()

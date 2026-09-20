@@ -20,6 +20,7 @@ from ..config import FORMS
 from ..core import tally as tallymod
 from ..core.gaps import regenerate_packages
 from ..core.lossmap import compute_lossmap
+from ..core.office_hours import OfficeHoursEngine
 from ..core.review import ReviewEngine
 from ..core.session import SessionRuntime
 from ..core.study import analyze, lossmap_inputs
@@ -510,8 +511,8 @@ async def create_session(body: SessionIn, request: Request):
     lecture = db.get_lecture(body.lecture_id, full=True) if body.lecture_id else None
     if body.lecture_id and not lecture:
         raise HTTPException(404, "unknown lecture")
-    if body.mode not in ("live", "recorded", "review"):
-        raise HTTPException(400, "mode must be live, recorded or review")
+    if body.mode not in ("live", "recorded", "review", "office_hours"):
+        raise HTTPException(400, "mode must be live, recorded, review or office_hours")
     if not app.state.llm.enabled and not s.allow_offline_llm:
         raise HTTPException(
             400,
@@ -519,6 +520,22 @@ async def create_session(body: SessionIn, request: Request):
             "Add a key on the Start session screen or to .env and restart "
             "(NEUROPACE_ALLOW_OFFLINE_LLM=1 is for automated tests only).",
         )
+    if body.mode == "office_hours":
+        # an open conversation, not a lecture capture: no headset/totem/transcript, so skip that machinery
+        # entirely (docs/PRODUCT.md §5a).
+        seed = body.seed if body.seed is not None else int(time.time() * 1000) % 2_000_000_000
+        sess = db.create_session(
+            learner_id=learner["id"],
+            lecture_id=(lecture or {}).get("id"),
+            mode="office_hours",
+            catchup_policy=body.catchup_policy,
+            seed=seed,
+            auto_pause=body.auto_pause,
+        )
+        app.state.office_hours[sess["id"]] = OfficeHoursEngine(
+            db, s, app.state.llm, sess["id"], learner["id"], lecture
+        )
+        return _session_public(request, db.get_session(sess["id"]))  # type: ignore[arg-type]
     if body.catchup_policy not in ("always", "randomized"):
         raise HTTPException(400, "catchup_policy must be always or randomized")
     # transcript kind
@@ -870,6 +887,86 @@ def review_advance(session_id: str, body: CardIn, request: Request):
         return eng.advance(body.card_id, body.focus_ratio)
     except ValueError as e:
         raise HTTPException(400, str(e)) from e
+
+
+# ---------------------------------------------------------------- office hours (docs/PRODUCT.md §5a)
+def _office_hours(request: Request, session_id: str) -> OfficeHoursEngine:
+    app = request.app
+    eng = app.state.office_hours.get(session_id)
+    if eng is None:
+        db = _db(request)
+        sess = db.get_session(session_id)
+        if not sess or sess["mode"] != "office_hours":
+            raise HTTPException(404, "unknown office hours session")
+        lecture = db.get_lecture(sess["lecture_id"]) if sess.get("lecture_id") else None
+        eng = OfficeHoursEngine(db, _s(request), app.state.llm, session_id, sess["learner_id"], lecture)
+        app.state.office_hours[session_id] = eng
+    return eng
+
+
+@router.get("/sessions/{session_id}/office_hours")
+def office_hours_state(session_id: str, request: Request, upto_ord: int | None = None):
+    return _office_hours(request, session_id).snapshot(upto_ord)
+
+
+class OHMessageIn(BaseModel):
+    text: str
+
+
+@router.post("/sessions/{session_id}/office_hours/message")
+async def office_hours_message(session_id: str, body: OHMessageIn, request: Request):
+    eng = _office_hours(request, session_id)
+    try:
+        return await eng.send_message(body.text)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+
+
+class OHExpandIn(BaseModel):
+    element_id: str
+
+
+@router.post("/sessions/{session_id}/office_hours/expand")
+async def office_hours_expand(session_id: str, body: OHExpandIn, request: Request):
+    eng = _office_hours(request, session_id)
+    try:
+        return await eng.expand_element(body.element_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+
+
+@router.post("/sessions/{session_id}/office_hours/voice")
+async def office_hours_voice(session_id: str, request: Request, file: UploadFile = File(...)):
+    """Push-to-talk (docs/PRODUCT.md §5a): one bounded clip in, transcribed, run through the same turn path
+    as typed chat. No streaming, no barge-in: releasing the button ends the clip."""
+    import mimetypes
+    import tempfile
+
+    from ..transcribe.deepgram_prerecorded import transcribe_file
+
+    s = _s(request)
+    if not s.deepgram_api_key:
+        raise HTTPException(400, "push-to-talk needs DEEPGRAM_API_KEY; type your question instead")
+    eng = _office_hours(request, session_id)
+    content = await file.read(20_000_001)
+    if len(content) > 20_000_000:
+        raise HTTPException(413, "Keep a push-to-talk clip under 20 MB")
+    suffix = mimetypes.guess_extension(file.content_type or "") or Path(file.filename or "").suffix or ".webm"
+    with tempfile.NamedTemporaryFile(suffix=suffix) as tmp:
+        tmp.write(content)
+        tmp.flush()
+        try:
+            words = await transcribe_file(tmp.name, s.deepgram_api_key, s.deepgram_model)
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(502, f"transcription failed: {e}") from e
+    text = " ".join(w.w for w in words).strip()
+    if not text:
+        raise HTTPException(400, "Could not hear anything in that clip; try again")
+    try:
+        reply = await eng.send_message(text)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    return {"text": text, "reply": reply}
 
 
 # ---------------------------------------------------------------- quiz (study)

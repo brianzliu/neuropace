@@ -291,7 +291,15 @@ body { overflow-x: clip; }
 .session-status.is-other i { background: var(--dim); }
 /* Session icon actions (Agent 2): compact tactile buttons, one wrapped row.
    Real links keep the global :focus-visible outline; 44px touch targets. */
-.session-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.session-actions { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+.session-actions .icon-button { width: 100%; min-height: 54px; }
+.session-actions .live-open { grid-column: 1 / -1; justify-content: center; }
+/* One hue per action, carried by the icon so the pads stay clean.
+   Theme tokens remap every hue in Paper and Orbit automatically. */
+.icon-button.tone-notes svg { color: var(--accent); }
+.icon-button.tone-review svg { color: var(--accent-2); }
+.icon-button.tone-quiz svg { color: var(--good); }
+.icon-button.tone-replay svg { color: var(--warn); }
 .icon-button { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: .65rem .8rem; border: 1px solid var(--line); border-radius: 14px; background: var(--bg-2); color: var(--text); text-decoration: none; box-shadow: 0 3px 0 var(--surface-edge); }
 .icon-button:hover { background: var(--bg-3); border-color: var(--surface-edge); text-decoration: none; transform: translateY(-1px); }
 .icon-button:active { transform: translateY(2px); box-shadow: 0 0 0 var(--surface-edge); }
@@ -313,8 +321,6 @@ body { overflow-x: clip; }
 /* Curriculum stages: one segmented bar plus grouped topic rows, estimated
    from saved moments + review outcomes. Every stage is named in text too,
    never color-alone; no motion is added, so reduced-motion needs no guard. */
-.understanding-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: .6rem 1rem; margin-top: .9rem; }
-.understanding-head .coverage-note { flex: 1 1 260px; margin: 0; }
 .stage-bar { display: flex; height: 14px; margin-top: .9rem; border: 1px solid var(--line); border-radius: 99px; overflow: hidden; background: var(--bg-2); }
 .stage-seg { flex: 0 1 0; min-width: 8px; }
 .stage-seg.is-review, .stage-legend .is-review i { background: var(--warn); }
@@ -330,17 +336,49 @@ body { overflow-x: clip; }
 .stage-heading { display: flex; align-items: center; gap: .5rem; font-family: var(--display); font-size: 1rem; font-weight: 400; margin: 0 0 .45rem; }
 .stage-heading > span { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 .35rem; border-radius: 99px; background: var(--bg-3); color: var(--muted); font-size: .7rem; font-weight: 700; }
 .stage-heading.is-review { color: var(--warn); }
+.stage-heading.is-beginner { color: var(--object); }
 .stage-heading.is-intermediate { color: var(--accent); }
 .stage-heading.is-advanced { color: var(--good); }
 .stage-heading.is-no_evidence { color: var(--muted); }
-.stage-topics { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
-.stage-topic { border: 1px solid var(--line); border-left: 4px solid var(--surface-edge); border-radius: 12px; background: var(--bg-2); padding: .65rem .85rem; }
-.stage-topic b { display: block; font-size: .88rem; font-weight: 600; }
-.stage-topic p { margin: .2rem 0 0; font-size: .76rem; line-height: 1.5; color: var(--muted); }
-.stage-group.is-review .stage-topic { border-left-color: var(--warn); }
-.stage-group.is-beginner .stage-topic { border-left-color: var(--object); }
-.stage-group.is-intermediate .stage-topic { border-left-color: var(--accent); }
-.stage-group.is-advanced .stage-topic { border-left-color: var(--good); }
+.stage-heading i { width: 10px; height: 10px; flex-shrink: 0; border-radius: 50%; background: var(--dim); }
+.stage-heading.is-review i { background: var(--warn); }
+.stage-heading.is-beginner i { background: var(--object); }
+.stage-heading.is-intermediate i { background: var(--accent); }
+.stage-heading.is-advanced i { background: var(--good); }
+.stage-heading.is-no_evidence i { background: var(--dim); }
+.stage-topics { list-style: none; margin: 0; padding: 0; display: grid; gap: .7rem; }
+/* Sticker cards: stage-tinted wash, chunky stage-color base, title dot.
+   no_evidence stays a dashed empty slot. The generic fallback reason is
+   hidden in markup (the group heading already says it); specific and
+   model-written reasons still show. */
+.stage-topic { border: 2px solid var(--line); border-radius: 16px; background: var(--bg-2); padding: .8rem .95rem; box-shadow: 0 3px 0 var(--surface-edge); }
+.stage-topic > b { display: flex; align-items: center; gap: .5rem; font-size: .9rem; font-weight: 650; }
+.stage-topic > b::before { content: ""; width: 10px; height: 10px; flex-shrink: 0; border-radius: 50%; background: var(--dim); }
+.stage-topic p { margin: .45rem 0 0; font-size: .76rem; line-height: 1.5; color: var(--muted); }
+.stage-group.is-review .stage-topic { background: color-mix(in srgb, var(--warn) 10%, var(--bg-2)); border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); box-shadow: 0 3px 0 color-mix(in srgb, var(--warn) 55%, transparent); }
+.stage-group.is-review .stage-topic > b::before { background: var(--warn); }
+.stage-group.is-beginner .stage-topic { background: color-mix(in srgb, var(--object) 10%, var(--bg-2)); border-color: color-mix(in srgb, var(--object) 45%, var(--line)); box-shadow: 0 3px 0 color-mix(in srgb, var(--object) 55%, transparent); }
+.stage-group.is-beginner .stage-topic > b::before { background: var(--object); }
+.stage-group.is-intermediate .stage-topic { background: color-mix(in srgb, var(--accent) 10%, var(--bg-2)); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); box-shadow: 0 3px 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+.stage-group.is-intermediate .stage-topic > b::before { background: var(--accent); }
+.stage-group.is-advanced .stage-topic { background: color-mix(in srgb, var(--good) 10%, var(--bg-2)); border-color: color-mix(in srgb, var(--good) 45%, var(--line)); box-shadow: 0 3px 0 color-mix(in srgb, var(--good) 55%, transparent); }
+.stage-group.is-advanced .stage-topic > b::before { background: var(--good); }
+.stage-group.is-no_evidence .stage-topic { border-style: dashed; box-shadow: none; background: transparent; }
+/* Evidence dots: one dot per saved moment behind the stage. Exact counts
+   live in the img label; color never stands alone. */
+.evidence-dots { display: flex; gap: 4px; margin-top: .5rem; }
+.evidence-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); }
+.evidence-dots .is-resolved { background: var(--good); }
+.evidence-dots .is-open { background: var(--accent); }
+.evidence-dots .is-exhausted { background: var(--warn); }
+/* Class tabs: one pill per class plus a dashed new-class slot. */
+.class-tabs { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .8rem; }
+.class-tab { display: inline-flex; align-items: center; gap: .45rem; min-height: 36px; padding: .35rem .8rem; border-radius: 99px; border: 1px solid var(--line); background: var(--bg-2); color: var(--muted); font-size: .78rem; font-weight: 600; cursor: pointer; }
+.class-tab > span { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 .3rem; border-radius: 99px; background: var(--bg-3); font-size: .68rem; }
+.class-tab[aria-pressed="true"] { color: var(--text); background: var(--bg-3); border-color: var(--surface-edge); box-shadow: 0 2px 0 var(--surface-edge); }
+.class-tab.is-new { border-style: dashed; }
+.class-create { display: inline-flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
+.class-create input { font: inherit; font-size: .8rem; width: 150px; padding: .4rem .6rem; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 10px; }
 /* Footnote captions (no middots): two short stacked lines, honest + muted. */
 .coverage-note, .activity-note { display: grid; gap: .15rem; margin: .6rem 0 0; font-size: .78rem; line-height: 1.5; color: var(--muted); }
 .coverage-note span:last-child, .activity-note span:last-child { color: var(--dim); }

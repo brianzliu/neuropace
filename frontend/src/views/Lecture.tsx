@@ -18,6 +18,7 @@ export default function Lecture() {
   const [err, setErr] = useState<string | null>(null);
   const [ending, setEnding] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [startingOfficeHours, setStartingOfficeHours] = useState(false);
 
   const load = () =>
     api
@@ -41,6 +42,22 @@ export default function Lecture() {
       setErr(errorText(e));
     } finally {
       setRegenerating(false);
+    }
+  };
+  const startOfficeHours = async () => {
+    if (!data) return;
+    setStartingOfficeHours(true);
+    try {
+      const sess = await api.createSession({
+        mode: "office_hours",
+        lecture_id: data.session.lecture_id ?? undefined,
+        learner_id: data.session.learner_id,
+      });
+      nav(`/office-hours/${sess.id}`);
+    } catch (e) {
+      setErr(errorText(e));
+    } finally {
+      setStartingOfficeHours(false);
     }
   };
   const endNow = async () => {
@@ -93,6 +110,15 @@ export default function Lecture() {
               {regenerating ? "Writing…" : "Try writing them again"}
             </button>
           ) : null}
+        </div>
+      ) : null}
+
+      {!running ? (
+        <div className="start">
+          <button className="btn btn-block" onClick={() => void startOfficeHours()} disabled={startingOfficeHours}>
+            {startingOfficeHours ? "Opening…" : "Office Hours"}
+          </button>
+          <div className="start-note">Ask about anything from this lecture and watch the answer get drawn out on a board.</div>
         </div>
       ) : null}
 

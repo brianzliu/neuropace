@@ -148,6 +148,22 @@ function playUrl(url: string, gen: () => boolean): Promise<void> {
   });
 }
 
+/** One-off playback for Office Hours (docs/PRODUCT.md §5a): fetch and play a whole reply, no beat stepping. */
+export async function speak(text: string): Promise<void> {
+  const url = await fetchBeat(text);
+  if (!url) return;
+  await new Promise<void>((resolve) => {
+    const a = new Audio(url);
+    const done = () => {
+      URL.revokeObjectURL(url);
+      resolve();
+    };
+    a.onended = done;
+    a.onerror = done;
+    void a.play().catch(done);
+  });
+}
+
 /** The tutor voice for restudy: sentence-sized beats from /api/tts, one prefetched ahead, cancellable. */
 export function useTutor(supported: boolean): Tutor {
   const [enabled, setEnabledState] = useState<boolean>(() => {

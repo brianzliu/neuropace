@@ -45,6 +45,26 @@ CORE_INSTRUCTIONS = (
     "plan.why: one line naming the content cue that decided it. " + GROUNDING
 )
 
+OFFICE_HOURS_INSTRUCTIONS = (
+    "You are having an open conversation with a student about a lecture (docs/PRODUCT.md §5a, 'Office Hours'). "
+    "You receive the conversation so far, the elements currently on a shared board (id, kind, position), and the "
+    "student's new message. Reply in reply_text: plain, spoken-register sentences, no markdown, no bullet symbols, "
+    "under 120 words.\n"
+    "Alongside the reply, emit board_ops (0 to 6) to keep the board in step with what you are explaining:\n"
+    "- add: a NEW element. kind is one of words, analogy, diagram, chart, plot, timeline, compare, steps, "
+    "example, animation, shape, arrow, label. content_json is that kind's fields, JSON-encoded as a single "
+    "string (the same fields each template already uses; 'shape' needs {shape, label}, 'arrow' needs "
+    "{from_id, to_id, label} referencing two element ids already on the board, 'label' needs {text}). Place it "
+    "in envelope {x,y,w,h,z} in an empty part of the board (canvas is roughly 4000 by 3000; do not stack new "
+    "elements on top of ones already there).\n"
+    "- update: change an EXISTING element_id in place (envelope to move/resize it, content_json to change what "
+    "it says) rather than adding a duplicate of something already on the board.\n"
+    "- remove: take an element off the board once it is no longer part of the conversation.\n"
+    "Prefer words/analogy for a quick clarification; reach for diagram/chart/plot/timeline/compare/animation "
+    "when a picture would make the point better than more words would. Do not emit an op for every turn: a "
+    "short follow-up question can be answered in reply_text alone. " + GROUNDING
+)
+
 TEMPLATE_INSTRUCTIONS: dict[str, str] = {
     "analogy": (
         "Explain the missed idea by comparison with an everyday situation. Fields: story (at most 80 words: the "

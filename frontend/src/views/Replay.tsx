@@ -169,7 +169,10 @@ function synthHello(sess: SessionPublic, lecture: LectureFull | null): HelloMsg 
       : null,
     config: DEFAULT_CONFIG,
     best_form: sess.best_form ?? "words",
-    mode: sess.mode,
+    // Office Hours sessions have no runtime/event log and are filtered out of every list that links here;
+    // this fallback only avoids widening HelloMsg's mode (an unrelated, /ws/session-only type) for a case
+    // that shouldn't reach Replay in practice.
+    mode: sess.mode === "office_hours" ? "live" : sess.mode,
     policy: sess.catchup_policy,
     auto_pause: sess.auto_pause,
     transcript_kind: sess.transcript_kind ?? "scripted",

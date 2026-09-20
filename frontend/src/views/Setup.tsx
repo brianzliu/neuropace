@@ -32,7 +32,7 @@ export default function Setup() {
     Promise.allSettled([api.lectures(), api.learner(learnerId).then(l => api.sessions({learner_id: l.id}))]).then(([lectures, sessions]) => {
       if (!alive) return;
       if (lectures.status === "fulfilled") setPractice(lectures.value.lectures.find(l => l.kind === "scripted") ?? null);
-      if (sessions.status === "fulfilled") setRunning(sessions.value.sessions.find(s => s.status === "running" && s.mode !== "review") ?? null);
+      if (sessions.status === "fulfilled") setRunning(sessions.value.sessions.find(s => s.status === "running" && s.mode !== "review" && s.mode !== "office_hours") ?? null);
     });
     return () => { alive = false; };
   }, []);
