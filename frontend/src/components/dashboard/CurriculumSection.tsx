@@ -26,7 +26,7 @@ const STAGE_LABEL: Record<UnderstandingStage, string> = {
  * estimate"); they never set completion, review outcomes, or grades. The
  * stored checkbox field is legacy only and is no longer shown or toggled.
  */
-export default function CurriculumSection({ curriculum, understanding, organizing, learnerId, onSave }: CurriculumSectionProps) {
+export default function CurriculumSection({ curriculum, understanding, learnerId, onSave }: CurriculumSectionProps) {
   const topics = curriculum?.topics ?? [];
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -98,8 +98,6 @@ export default function CurriculumSection({ curriculum, understanding, organizin
   const counts = Object.fromEntries(
     STAGE_ORDER.map((stage) => [stage, rows.filter((row) => row.stage === stage).length]),
   ) as Record<UnderstandingStage, number>;
-  const organized = understanding?.source === "llm" || understanding?.source === "cache";
-  const sourceLabel = organizing ? "Organizing…" : organized ? "Model reading" : "Rules estimate";
   const barLabel = STAGE_ORDER.filter((stage) => counts[stage] > 0)
     .map((stage) => `${counts[stage]} ${STAGE_LABEL[stage].toLowerCase()}`)
     .join(", ");
@@ -190,9 +188,6 @@ export default function CurriculumSection({ curriculum, understanding, organizin
               <span>Estimated from your saved moments and review results.</span>
               <span>Not a grade — your own review changes it.</span>
             </p>
-            <span className={"organize-source" + (organized ? " is-suggested" : organizing ? " is-organizing" : "")}>
-              {sourceLabel}
-            </span>
           </div>
           <div className="stage-bar" role="img" aria-label={barLabel}>
             {STAGE_ORDER.filter((stage) => counts[stage] > 0).map((stage) => (
