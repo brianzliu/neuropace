@@ -1,6 +1,7 @@
 import { useState } from "react";
 import ArtifactView, { stepsOf } from "./ArtifactView";
-import type { ArrowContent, ArtifactKind, BoardElement, LabelContent, ReteachContent, ShapeContent } from "../lib/types";
+import ManimView from "./ManimView";
+import type { ArrowContent, ArtifactKind, BoardElement, LabelContent, ManimContent, ReteachContent, ShapeContent } from "../lib/types";
 
 const BOARD_W = 4000;
 const BOARD_H = 3000;
@@ -86,6 +87,9 @@ function BoardElementContent({ el }: { el: BoardElement }) {
   if (el.kind === "label") {
     const c = el.content as LabelContent;
     return <div className="oh-label">{c.text}</div>;
+  }
+  if (el.kind === "manim") {
+    return <ManimView c={el.content as ManimContent} />;
   }
   const kind = el.kind as ArtifactKind;
   const content = el.content as ReteachContent;

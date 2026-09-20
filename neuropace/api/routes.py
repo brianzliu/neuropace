@@ -76,6 +76,39 @@ async def tts(body: TTSIn, request: Request):
     )
 
 
+class ManimRenderIn(BaseModel):
+    title: str
+    caption: str
+    scene_name: str
+    script: str
+
+
+@router.post("/manim/render")
+async def manim_render_route(body: ManimRenderIn, request: Request):
+    """A math animation for Office Hours' "manim" board kind (docs/PRODUCT.md §5a), rendered on first
+    request and disk-cached after (same shape as /tts). Optional end to end: 503s when manim isn't
+    installed on this server, so a board that used it just falls back to its caption text."""
+    from pydantic import ValidationError
+
+    from ..llm.schemas import ManimAnimation
+    from ..manim_render import ManimUnavailable
+    from ..manim_render import render as render_manim
+
+    try:
+        validated = ManimAnimation(
+            title=body.title, caption=body.caption, scene_name=body.scene_name, script=body.script
+        )
+    except ValidationError as e:
+        raise HTTPException(400, str(e)) from e
+    try:
+        video = await render_manim(_s(request), validated.script, validated.scene_name)
+    except ManimUnavailable as e:
+        raise HTTPException(503, str(e)) from e
+    return Response(
+        content=video, media_type="video/mp4", headers={"Cache-Control": "private, max-age=86400"}
+    )
+
+
 @router.get("/devices")
 async def devices(request: Request):
     """Headset and pad detection only (no network calls): cheap enough for the Listen screen to poll."""

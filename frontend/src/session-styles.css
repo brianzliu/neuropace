@@ -666,6 +666,8 @@ a.linklike { font-size: var(--fs-subhead); }
 .oh-shape-rect { border: 2px solid var(--label-2); border-radius: 8px; }
 .oh-shape-ellipse { border: 2px solid var(--label-2); border-radius: 999px; }
 .oh-label { font-weight: 700; padding: 6px; }
+.oh-manim-video { width: 100%; border-radius: 8px; background: #000; }
+.oh-manim-fallback { padding: 10px; text-align: center; }
 
 .oh-chat { display: flex; flex-direction: column; border: 2px solid var(--line); border-radius: var(--r-lg); background: var(--surface); min-height: 360px; overflow: hidden; }
 .oh-chat-list { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }

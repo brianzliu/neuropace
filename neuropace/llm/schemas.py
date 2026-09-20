@@ -6,6 +6,7 @@ Strict mode rules: every field required, additionalProperties false, no array-le
 
 from __future__ import annotations
 
+import re
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, model_validator
@@ -451,12 +452,92 @@ class LabelContent(Strict):
     text: str
 
 
+MANIM_MAX_CHARS = 4000
+_MANIM_IMPORT_ALLOW = re.compile(
+    r"^(from\s+manim\s+import\s+.+|import\s+manim(\s+as\s+\w+)?"
+    r"|import\s+numpy(\s+as\s+\w+)?|from\s+numpy\s+import\s+.+"
+    r"|import\s+math|from\s+math\s+import\s+.+"
+    r"|import\s+random|from\s+random\s+import\s+.+)\s*$"
+)
+_MANIM_FORBIDDEN = (
+    "import os",
+    "os.",
+    "import sys",
+    "sys.",
+    "subprocess",
+    "socket",
+    "open(",
+    "eval(",
+    "exec(",
+    "__import__",
+    "requests",
+    "urllib",
+    "shutil",
+    "pathlib",
+    "input(",
+    "compile(",
+    "globals(",
+    "locals(",
+    "getattr(",
+    "setattr(",
+    "delattr(",
+    "ctypes",
+    "pickle",
+    "ftplib",
+    "ssl",
+    "http.client",
+    "webbrowser",
+    "__subclasses__",
+    "__globals__",
+    "__builtins__",
+)
+
+
+class ManimAnimation(Strict):
+    """A math animation rendered by Manim Community (optional: neuropace/manim_render.py, needs
+    `uv sync --group manim`), for content an SVG snippet can't do justice to: equations, function graphs,
+    geometric constructions, vector/calculus diagrams. `script` is executed as a subprocess (manim_render.py
+    sandboxes further), so validation here is the first and most important line of defense: an import
+    allowlist, one recognizable Scene class, and a forbidden-pattern scan in the spirit of Animation above."""
+
+    title: str
+    caption: str
+    scene_name: str
+    script: str
+
+    @model_validator(mode="after")
+    def _shape(self) -> ManimAnimation:
+        script = self.script.strip()
+        if len(script) > MANIM_MAX_CHARS:
+            raise ValueError(f"manim script over {MANIM_MAX_CHARS} chars")
+        name = self.scene_name.strip()
+        if not name.isidentifier():
+            raise ValueError("scene_name must be a valid identifier")
+        for line in script.splitlines():
+            stripped = line.strip()
+            if stripped.startswith(("import ", "from ")) and not _MANIM_IMPORT_ALLOW.match(stripped):
+                raise ValueError(f"disallowed import: {stripped!r}")
+        low = script.lower()
+        for bad in _MANIM_FORBIDDEN:
+            if bad in low:
+                raise ValueError(f"manim script must not use {bad!r}")
+        m = re.search(rf"class\s+{re.escape(name)}\s*\(\s*([\w.]+)", script)
+        if not m or "Scene" not in m.group(1):
+            raise ValueError(f"script must define exactly one Scene subclass named {name!r}")
+        if "def construct(self" not in script:
+            raise ValueError("script must define construct(self)")
+        self.scene_name = name
+        self.caption = " ".join(self.caption.split())
+        return self
+
+
 BOARD_CONTENT_KINDS: dict[str, type[Strict]] = {
     **TEMPLATES,
     "words": WordsCard,
     "shape": ShapeContent,
     "arrow": ArrowContent,
     "label": LabelContent,
+    "manim": ManimAnimation,
 }
 
 

@@ -11,14 +11,15 @@ from typing import Any, TypeVar
 from pydantic import BaseModel, ValidationError
 
 from ..config import Settings
+from ..manim_render import manim_available
 from ..store.db import DB
 from . import fallback
 from .prompts import (
     CORE_INSTRUCTIONS,
-    OFFICE_HOURS_INSTRUCTIONS,
     PROMPT_VERSION,
     RECAP_INSTRUCTIONS,
     TEMPLATE_INSTRUCTIONS,
+    office_hours_instructions,
 )
 from .schemas import TEMPLATES, GapCore, OfficeHoursTurn, RecapForms, Strict, strict_schema
 
@@ -151,8 +152,9 @@ class LLMClient:
             "board": board_summary,
             "message": user_text,
         }
+        instructions = office_hours_instructions(manim_available())
         return await self._with_retries(
-            "office_hours_turn", OFFICE_HOURS_INSTRUCTIONS, payload, OfficeHoursTurn, 2200, use_cache=False
+            "office_hours_turn", instructions, payload, OfficeHoursTurn, 2200, use_cache=False
         )
 
     async def board_explanation(self, transcript: str, frames: list[dict]) -> tuple[str, str]:

@@ -55,7 +55,7 @@ OFFICE_HOURS_INSTRUCTIONS = (
     "symbols, under 120 words.\n"
     "Alongside the reply, emit board_ops (0 to 6) to keep the board in step with what you are explaining:\n"
     "- add: a NEW element. kind is one of words, analogy, diagram, chart, plot, timeline, compare, steps, "
-    "example, animation, shape, arrow, label. content_json is that kind's fields, JSON-encoded as a single "
+    "example, animation, shape, arrow, label@@MANIM_KIND@@. content_json is that kind's fields, JSON-encoded as a single "
     "string (the same fields each template already uses; 'shape' needs {shape, label}, 'arrow' needs "
     "{from_id, to_id, label} referencing two element ids already on the board, 'label' needs {text}). Place it "
     "in envelope {x,y,w,h,z} in an empty part of the board (canvas is roughly 4000 by 3000; do not stack new "
@@ -79,6 +79,7 @@ OFFICE_HOURS_INSTRUCTIONS = (
     "  shape: {shape:'rect'|'ellipse', label}\n"
     "  arrow: {from_id, to_id, label} (from_id/to_id must be element ids already on the board)\n"
     "  label: {text}\n"
+    "@@MANIM_FIELD_SHAPE@@"
     "Prefer words/analogy for a quick clarification; reach for diagram/chart/plot/timeline/compare/animation "
     "when a picture would make the point better than more words would. Do not emit an op for every turn: a "
     "short follow-up question with nothing new to show can be answered in reply_text alone. But if reply_text "
@@ -90,6 +91,32 @@ OFFICE_HOURS_INSTRUCTIONS = (
     "plainly when you are answering from general knowledge instead. Plain text only, no markdown, no bullet "
     "symbols."
 )
+
+_MANIM_KIND_SUFFIX = ", manim"
+_MANIM_FIELD_SHAPE = (
+    "  manim: {title, caption, scene_name, script} -- a rendered math animation (Manim Community); use this "
+    "ONLY for real mathematical content (an equation, a function's graph, a geometric construction, a vector "
+    "or calculus diagram, a proof) where the shapes and motion of the math itself are the point. For anything "
+    "else -- a general process, a system, a comparison -- use diagram/chart/plot/timeline/compare/animation "
+    "instead; manim is slower to render and is not a substitute for those. script must contain exactly "
+    "'from manim import *' for its manim import, only numpy/math/random besides that, exactly one "
+    "'class {scene_name}(Scene):' (or a Scene subclass) defining construct(self), under 4000 characters, no "
+    "other imports, no file or network access.\n"
+)
+
+
+def office_hours_instructions(manim_enabled: bool) -> str:
+    """OFFICE_HOURS_INSTRUCTIONS with the manim kind mentioned only when neuropace/manim_render.py reports it
+    installed (docs/PRODUCT.md §5a) -- the model is never told about a kind it cannot actually render."""
+    text = OFFICE_HOURS_INSTRUCTIONS
+    if manim_enabled:
+        text = text.replace("@@MANIM_KIND@@", _MANIM_KIND_SUFFIX).replace(
+            "@@MANIM_FIELD_SHAPE@@", _MANIM_FIELD_SHAPE
+        )
+    else:
+        text = text.replace("@@MANIM_KIND@@", "").replace("@@MANIM_FIELD_SHAPE@@", "")
+    return text
+
 
 TEMPLATE_INSTRUCTIONS: dict[str, str] = {
     "analogy": (

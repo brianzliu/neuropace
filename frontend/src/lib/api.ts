@@ -3,7 +3,7 @@ import type {
   Profile,
   Devices,
   GapArtifacts,
-  Doctor, EventsResponse, LectureFull, Learner, LossMap, NotesResponse, OHMessage, OHSnapshot, QuizGet, QuizResult, RegenerateResponse, ReviewAnswer,
+  Doctor, EventsResponse, LectureFull, Learner, LossMap, ManimContent, NotesResponse, OHMessage, OHSnapshot, QuizGet, QuizResult, RegenerateResponse, ReviewAnswer,
   ReviewNext, ReviewStart, SessionPublic, TallySummary, GapPublic,
 } from "./types";
 
@@ -128,5 +128,19 @@ export const api = {
       throw new ApiError(res.status, detail);
     }
     return (await res.json()) as { text: string; reply: OHMessage };
+  },
+  renderManim: async (content: ManimContent): Promise<Blob> => {
+    const res = await backendFetch("/api/manim/render", { headers: { "Content-Type": "application/json" }, method: "POST", body: JSON.stringify(content) });
+    if (!res.ok) {
+      let detail = res.statusText;
+      try {
+        const j = await res.json();
+        detail = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail ?? j);
+      } catch {
+        // keep statusText
+      }
+      throw new ApiError(res.status, detail);
+    }
+    return res.blob();
   },
 };
