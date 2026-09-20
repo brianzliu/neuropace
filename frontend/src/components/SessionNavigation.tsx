@@ -1,16 +1,14 @@
 import { Link } from "react-router-dom";
 import type { SessionPublic } from "../lib/types";
+import { SESSION_ICONS, SessionIconArt } from "../lib/sessionIcons";
 import { BackLink } from "./BackLink";
 import SessionSwitcher from "./SessionSwitcher";
 
 export type SessionTab = "notes" | "review" | "quiz" | "replay" | "artifacts";
-const sections: { id: SessionTab; label: string }[] = [
-  { id: "notes", label: "Notes" },
-  { id: "review", label: "Review" },
-  { id: "quiz", label: "Quiz" },
-  { id: "replay", label: "Replay" },
-  { id: "artifacts", label: "Explanations" },
-];
+const sections = (["notes", "review", "quiz", "replay", "artifacts"] as const).map((id) => ({
+  id,
+  label: SESSION_ICONS[id].name,
+}));
 
 export function sessionHref(sessionId: string, tab: SessionTab) {
   return `/library/${encodeURIComponent(sessionId)}/${tab}`;
@@ -43,7 +41,10 @@ export default function SessionNavigation({ sessionId, tab, title, sessions, tit
         to={sessionHref(sessionId, section.id)}
         className={`library-tab${tab === section.id ? " active" : ""}`}
         aria-current={tab === section.id ? "page" : undefined}
-      >{section.label}</Link>)}
+      >
+        <SessionIconArt kind={section.id} />
+        {section.label}
+      </Link>)}
     </nav>
   </header>;
 }

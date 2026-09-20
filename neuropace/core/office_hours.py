@@ -10,6 +10,7 @@ as §4, plus small shape/arrow/label annotations). State is event-sourced in oh_
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncIterator
 
 from pydantic import ValidationError
 
@@ -124,6 +125,45 @@ class OfficeHoursEngine:
             )
         applied_ids = self._apply_ops(turn.board_ops)
         return self._append_message("agent", turn.reply_text, related_element_ids=applied_ids, source=source)
+
+    async def send_message_stream(self, text: str) -> AsyncIterator[dict]:
+        """Same turn as send_message, but applies (and persists) each board op the moment the model finishes
+        it instead of waiting for the whole reply — the whiteboard fills in live instead of popping in all at
+        once. Yields {"type": "reply", "text": ...} once, {"type": "board", "board": [...]} after each applied
+        op, and finally {"type": "done", "message": ...} with the same persisted agent message send_message
+        would have produced."""
+        text = " ".join((text or "").split())
+        if not text:
+            raise ValueError("empty message")
+        self._append_message("user", text)
+        history = [{"role": m["role"], "text": m["text"]} for m in self.messages]
+        board_summary = [
+            {"id": eid, "kind": el.get("kind"), "envelope": el.get("envelope")}
+            for eid, el in self.board.items()
+        ]
+        reply_text = ""
+        source = "offline"
+        applied_ids: list[str] = []
+        async for event in self.llm.office_hours_turn_stream(history, board_summary, text, self._transcript):
+            if event["type"] == "reply":
+                reply_text = " ".join(event["text"].split())
+                if len(reply_text.split()) < 2:
+                    reply_text = ""
+                    continue
+                source = "llm"
+                yield {"type": "reply", "text": reply_text}
+            elif event["type"] == "op":
+                applied_ids.extend(self._apply_ops([event["op"]]))
+                yield {"type": "board", "board": list(self.board.values())}
+        if not reply_text:
+            msg = self._append_message(
+                "agent",
+                "Sorry, I couldn't reach the model just now. Try asking again in a moment.",
+                source="failed",
+            )
+        else:
+            msg = self._append_message("agent", reply_text, related_element_ids=applied_ids, source=source)
+        yield {"type": "done", "message": msg}
 
     async def expand_element(self, element_id: str) -> dict:
         """Click-to-expand: synthesizes a user turn asking about this element, then runs the normal turn path

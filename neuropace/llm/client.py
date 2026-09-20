@@ -6,10 +6,12 @@ import asyncio
 import hashlib
 import json
 import logging
+import re
 import time
+from collections.abc import AsyncIterator
 from typing import Any, TypeVar
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from ..config import Settings
 from ..manim_render import manim_available
@@ -22,7 +24,21 @@ from .prompts import (
     TEMPLATE_INSTRUCTIONS,
     office_hours_instructions,
 )
-from .schemas import TEMPLATES, GapCore, OfficeHoursTurn, RecapForms, Strict, strict_schema
+from .schemas import (
+    TEMPLATES,
+    AddElement,
+    GapCore,
+    OfficeHoursTurn,
+    RecapForms,
+    RemoveElement,
+    Strict,
+    UpdateElement,
+    strict_schema,
+)
+
+_BOARD_OP_ADAPTER: TypeAdapter[AddElement | UpdateElement | RemoveElement] = TypeAdapter(
+    AddElement | UpdateElement | RemoveElement
+)
 
 log = logging.getLogger(__name__)
 T = TypeVar("T", bound=BaseModel)
@@ -180,6 +196,114 @@ class LLMClient:
             timeout=20.0,
             max_attempts=2 if self.enabled else 1,
         )
+
+    async def office_hours_turn_stream(
+        self, history: list[dict], board_summary: list[dict], user_text: str, lecture_transcript: str = ""
+    ) -> AsyncIterator[dict]:
+        """Same call as office_hours_turn, but yields the reply and each board op as soon as it finishes
+        generating instead of waiting for the whole structured turn. OfficeHoursTurn declares reply_text
+        before board_ops, so the model emits the reply first — it's usually readable well before the board
+        is done. Only the OpenAI provider streams the Responses API directly; other providers fall back to
+        one non-streaming call and replay its pieces as a completed "stream" (still correct, just not early).
+        Yields: {"type": "reply", "text": str} once, then {"type": "op", "op": AddElement|UpdateElement|
+        RemoveElement} per board element, in order. Emits nothing on failure/offline (the engine's fallback
+        message covers that case, same as office_hours_turn's None return)."""
+        payload = {
+            "lecture_transcript": lecture_transcript,
+            "history": history[-20:],
+            "board": board_summary,
+            "message": user_text,
+        }
+        instructions = office_hours_instructions(manim_available())
+        if self.provider != "openai":
+            turn, _source = await self._with_retries(
+                "office_hours_turn",
+                instructions,
+                payload,
+                OfficeHoursTurn,
+                2200,
+                use_cache=False,
+                timeout=20.0,
+                max_attempts=2 if self.enabled else 1,
+            )
+            if turn is None:
+                return
+            yield {"type": "reply", "text": turn.reply_text}
+            for op in turn.board_ops:
+                yield {"type": "op", "op": op}
+            return
+        if not self.enabled or self._client is None or time.monotonic() < self._quota_blocked_until:
+            return
+        await self._rate_limit()
+        fmt = {"type": "json_schema", "name": "OfficeHoursTurn", "schema": strict_schema(OfficeHoursTurn), "strict": True}
+        user_input = json.dumps(payload, ensure_ascii=False)
+        kwargs: dict[str, Any] = {
+            "model": self.model,
+            "instructions": instructions,
+            "input": user_input,
+            "text": {"format": fmt},
+            "max_output_tokens": 2200,
+            "stream": True,
+        }
+        if self._use_reasoning:
+            kwargs["reasoning"] = {"effort": "minimal"}
+        self.stats["calls"] += 1
+        buf = ""
+        reply_emitted = False
+        ops_pos: int | None = None
+        decoder = json.JSONDecoder()
+        try:
+            stream = await asyncio.wait_for(self._client.responses.create(**kwargs), timeout=20.0)
+            async for event in stream:
+                if getattr(event, "type", "") != "response.output_text.delta":
+                    continue
+                buf += event.delta
+                if not reply_emitted:
+                    m = re.search(r'"reply_text"\s*:\s*"', buf)
+                    if m:
+                        i = m.end()
+                        while i < len(buf):
+                            if buf[i] == "\\":
+                                i += 2
+                                continue
+                            if buf[i] == '"':
+                                raw = buf[m.end() : i]
+                                try:
+                                    text_val = json.loads('"' + raw + '"')
+                                except ValueError:
+                                    text_val = raw
+                                reply_emitted = True
+                                yield {"type": "reply", "text": " ".join(text_val.split())}
+                                break
+                            i += 1
+                if ops_pos is None:
+                    m2 = re.search(r'"board_ops"\s*:\s*\[', buf)
+                    if m2:
+                        ops_pos = m2.end()
+                if ops_pos is not None:
+                    pos = ops_pos
+                    while True:
+                        while pos < len(buf) and buf[pos] in " \t\n\r,":
+                            pos += 1
+                        if pos >= len(buf) or buf[pos] != "{":
+                            break
+                        try:
+                            obj, end = decoder.raw_decode(buf, pos)
+                        except ValueError:
+                            break
+                        pos = end
+                        try:
+                            op = _BOARD_OP_ADAPTER.validate_python(obj)
+                        except ValidationError as e:
+                            log.info("office_hours_turn_stream: dropping invalid op mid-stream: %s", str(e)[:200])
+                        else:
+                            yield {"type": "op", "op": op}
+                    ops_pos = pos
+        except Exception as e:  # noqa: BLE001
+            self.stats["errors"] += 1
+            self.last_error = str(e)[:300]
+            log.warning("office_hours_turn_stream failed: %s", e)
+            return
 
     async def board_explanation(self, transcript: str, frames: list[dict]) -> tuple[str, str]:
         fallback_text = (

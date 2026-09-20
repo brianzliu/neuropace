@@ -323,13 +323,13 @@ body { overflow-x: clip; }
 .icon-button:hover { background: var(--bg-3); border-color: var(--surface-edge); text-decoration: none; transform: translateY(-1px); }
 .icon-button:active { transform: translateY(0); box-shadow: 0 1px 3px color-mix(in srgb, var(--surface-edge) 70%, transparent); }
 .icon-button svg { width: 26px; height: 26px; display: block; }
-/* Generated action art covers the SVG fallback when the file loads; a
-   missing file removes itself and the stroke icon shows instead. */
+/* Generated action art is the default look; the stroke SVG stays hidden (not just covered,
+   so the two can never both paint at once) unless the art file actually fails to load, in
+   which case the img removes itself and .no-art reveals the stroke fallback. */
 .action-art { position: relative; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; }
+.action-art svg { display: none; }
 .action-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
-/* Either/or: once the generated art loads, the stroke fallback hides so
-   the two never overlap. A failed image removes itself instead. */
-.action-art.has-art svg { display: none; }
+.action-art.no-art svg { display: block; }
 .live-open { display: inline-flex; align-items: center; gap: .5rem; min-height: 44px; padding: .5rem 1rem; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-2); box-shadow: 0 2px 8px color-mix(in srgb, var(--surface-edge) 70%, transparent); }
 .live-open:hover { background: var(--bg-3); text-decoration: none; }
 .sidebar-note { background: var(--note); color: var(--note-ink); border-radius: 5px 5px 24px 5px; padding: 1.5rem; transform: rotate(2deg); margin: 2rem .25rem; box-shadow: 0 6px 16px color-mix(in srgb, var(--surface-edge) 70%, transparent); }
@@ -390,7 +390,9 @@ textarea { font: inherit; width: 100%; padding: .8rem; background: var(--bg); co
 /* Library sub-tabs (per-session Notes · Review · Replay · Quiz): same
    pattern, smaller. */
 .sub-tabs, .library-tabs { display: flex; align-items: center; gap: .4rem; overflow-x: auto; scrollbar-width: thin; padding: .2rem .1rem; -webkit-overflow-scrolling: touch; }
-.sub-tabs a, .library-tab { flex-shrink: 0; display: inline-flex; align-items: center; min-height: 40px; padding: .45rem .85rem; border-radius: var(--r-capsule, 8px); border: 1px solid transparent; font-size: .8rem; font-weight: 600; color: var(--muted); text-decoration: none; white-space: nowrap; }
+.sub-tabs a, .library-tab { flex-shrink: 0; display: inline-flex; align-items: center; gap: .4rem; min-height: 40px; padding: .45rem .85rem; border-radius: var(--r-capsule, 8px); border: 1px solid transparent; font-size: .8rem; font-weight: 600; color: var(--muted); text-decoration: none; white-space: nowrap; }
+.library-tab .action-art { width: 20px; height: 20px; }
+.library-tab .action-art svg { width: 18px; height: 18px; }
 .sub-tabs a:hover, .library-tab:hover { color: var(--text); background: var(--bg-3); text-decoration: none; }
 .sub-tabs a[aria-current="page"], .library-tab.active, .library-tab[aria-current="page"] { color: var(--text); background: var(--bg-2); border-color: var(--line); box-shadow: 0 2px 8px color-mix(in srgb, var(--surface-edge) 70%, transparent); }
 /* Library sections reuse dashboard type so the shell reads as family. */

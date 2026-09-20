@@ -163,13 +163,26 @@ export default function OfficeHoursChat({
   messages,
   voiceOn,
   disabled,
-  onSent,
+  onSend,
+  onVoiceClipSent,
+  pendingUserText,
+  pendingReplyText,
 }: {
   sessionId: string;
   messages: OHMessage[];
   voiceOn: boolean;
   disabled: boolean;
-  onSent: () => void;
+  /** Sends one turn and streams the board in live; resolves with the reply text once it's known
+   *  (well before the board finishes drawing) so voice playback can start right away. */
+  onSend: (text: string) => Promise<string>;
+  /** Push-to-talk still transcribes+replies in one non-streaming call server-side (deliberately —
+   *  releasing the button ends the clip, so there's nothing to stream mid-clip); this just tells
+   *  the parent to pull the resulting board/message once it lands. */
+  onVoiceClipSent: () => void;
+  /** The turn in flight, echoed back immediately (before the server confirms it) so the
+   *  conversation never looks stalled while the board is still being drawn. */
+  pendingUserText: string | null;
+  pendingReplyText: string | null;
 }) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
@@ -182,8 +195,7 @@ export default function OfficeHoursChat({
   }, [messages.length]);
 
   const afterReply = async (replyText: string) => {
-    onSent();
-    if (voiceOn) {
+    if (voiceOn && replyText) {
       setSpeaking(true);
       try {
         await speak(replyText);
@@ -200,8 +212,8 @@ export default function OfficeHoursChat({
     setErr(null);
     setText("");
     try {
-      const reply = await api.officeHoursSend(sessionId, trimmed);
-      await afterReply(reply.text);
+      const replyText = await onSend(trimmed);
+      await afterReply(replyText);
     } catch (e) {
       setErr(errorText(e));
     } finally {
@@ -214,8 +226,8 @@ export default function OfficeHoursChat({
     setSending(true);
     setErr(null);
     try {
-      const reply = await api.officeHoursSend(sessionId, spokenText);
-      await afterReply(reply.text);
+      const replyText = await onSend(spokenText);
+      await afterReply(replyText);
     } catch (e) {
       setErr(errorText(e));
     } finally {
@@ -229,6 +241,7 @@ export default function OfficeHoursChat({
     setErr(null);
     try {
       const { reply } = await api.officeHoursVoice(sessionId, blob);
+      onVoiceClipSent();
       await afterReply(reply.text);
     } catch (e) {
       setErr(errorText(e));
@@ -253,6 +266,16 @@ export default function OfficeHoursChat({
             {m.source === "failed" ? <span className="badge">offline</span> : null}
           </div>
         ))}
+        {pendingUserText ? (
+          <div className="oh-bubble oh-bubble-user">
+            <div className="oh-bubble-text">{pendingUserText}</div>
+          </div>
+        ) : null}
+        {pendingUserText ? (
+          <div className="oh-bubble oh-bubble-agent oh-bubble-pending">
+            <div className="oh-bubble-text">{pendingReplyText || "Drawing it out…"}</div>
+          </div>
+        ) : null}
         {agent.active && agent.interim ? (
           <div className="oh-bubble oh-bubble-user oh-bubble-interim">
             <div className="oh-bubble-text">{agent.interim}…</div>

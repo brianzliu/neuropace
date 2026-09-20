@@ -12,6 +12,7 @@ from typing import Any
 
 import numpy as np
 from fastapi import APIRouter, File, Form, HTTPException, Request, Response, UploadFile
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from .. import __version__
@@ -932,6 +933,23 @@ async def office_hours_message(session_id: str, body: OHMessageIn, request: Requ
         return await eng.send_message(body.text)
     except ValueError as e:
         raise HTTPException(400, str(e)) from e
+
+
+@router.post("/sessions/{session_id}/office_hours/message/stream")
+async def office_hours_message_stream(session_id: str, body: OHMessageIn, request: Request):
+    """Same turn as office_hours_message, as Server-Sent Events: the reply text and each board element
+    arrive as soon as the model finishes them instead of all at once at the end. See
+    OfficeHoursEngine.send_message_stream for the event shapes."""
+    eng = _office_hours(request, session_id)
+
+    async def gen():
+        try:
+            async for event in eng.send_message_stream(body.text):
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+        except ValueError as e:
+            yield f"data: {json.dumps({'type': 'error', 'detail': str(e)})}\n\n"
+
+    return StreamingResponse(gen(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
 
 
 class OHExpandIn(BaseModel):

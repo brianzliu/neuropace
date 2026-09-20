@@ -725,6 +725,8 @@ a.linklike { font-size: var(--fs-subhead); }
 .oh-bubble-agent { align-self: flex-start; background: var(--surface-2); border-bottom-left-radius: 4px; }
 .oh-bubble .badge { margin-top: 6px; }
 .oh-bubble-interim { opacity: 0.55; font-style: italic; }
+.oh-bubble-pending { opacity: 0.7; }
+.oh-bubble-pending .oh-bubble-text { font-style: italic; }
 .oh-chat-toolbar { padding: 8px 10px 0; gap: 6px; flex-wrap: wrap; }
 .oh-chat-toolbar .btn { flex: 0 0 auto; }
 .oh-chat-input { padding: 10px; border-top: 2px solid var(--line); gap: 8px; flex-wrap: nowrap; }

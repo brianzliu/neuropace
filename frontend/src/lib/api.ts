@@ -3,9 +3,16 @@ import type {
   Profile,
   Devices,
   GapArtifacts,
-  Doctor, EventsResponse, LectureFull, Learner, LossMap, ManimContent, NotesResponse, OHMessage, OHSnapshot, QuizGet, QuizResult, RegenerateResponse, ReviewAnswer,
+  BoardElement, Doctor, EventsResponse, LectureFull, Learner, LossMap, ManimContent, NotesResponse, OHMessage, OHSnapshot, QuizGet, QuizResult, RegenerateResponse, ReviewAnswer,
   ReviewNext, ReviewStart, SessionPublic, TallySummary, GapPublic,
 } from "./types";
+
+/** One increment of an Office Hours turn as it streams in — see office_hours_turn_stream (backend). */
+export type OHStreamEvent =
+  | { type: "reply"; text: string }
+  | { type: "board"; board: BoardElement[] }
+  | { type: "done"; message: OHMessage }
+  | { type: "error"; detail: string };
 
 /** An HTTP error with the backend's `detail` kept separately, so views can show it verbatim. */
 export class ApiError extends Error {
@@ -118,6 +125,47 @@ export const api = {
   officeHoursSnapshot: (id: string, uptoOrd?: number) =>
     get<OHSnapshot>(`/api/sessions/${id}/office_hours${uptoOrd != null ? `?upto_ord=${uptoOrd}` : ""}`),
   officeHoursSend: (id: string, text: string) => postSlow<OHMessage>(`/api/sessions/${id}/office_hours/message`, { text }, MODEL_TIMEOUT_MS),
+  /** Same turn as officeHoursSend, but calls onEvent as the reply and each board element streams in,
+   *  instead of waiting for the whole turn. Resolves once the server-sent stream ends. */
+  officeHoursSendStream: async (id: string, text: string, onEvent: (e: OHStreamEvent) => void): Promise<void> => {
+    const res = await backendFetch(`/api/sessions/${id}/office_hours/message/stream`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+      signal: AbortSignal.timeout(MODEL_TIMEOUT_MS),
+    });
+    if (!res.ok || !res.body) {
+      let detail = res.statusText;
+      try {
+        const j = await res.json();
+        detail = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail ?? j);
+      } catch {
+        // keep statusText
+      }
+      throw new ApiError(res.status, detail);
+    }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const parts = buf.split("\n\n");
+      buf = parts.pop() ?? "";
+      for (const chunk of parts) {
+        const line = chunk.trim();
+        if (!line.startsWith("data:")) continue;
+        const payload = line.slice(5).trim();
+        if (!payload) continue;
+        try {
+          onEvent(JSON.parse(payload) as OHStreamEvent);
+        } catch {
+          // malformed chunk; skip it rather than aborting the whole stream
+        }
+      }
+    }
+  },
   officeHoursExpand: (id: string, elementId: string) =>
     postSlow<OHMessage>(`/api/sessions/${id}/office_hours/expand`, { element_id: elementId }, MODEL_TIMEOUT_MS),
   officeHoursVoice: async (id: string, blob: Blob): Promise<{ text: string; reply: OHMessage }> => {
