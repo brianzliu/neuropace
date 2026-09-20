@@ -14,9 +14,10 @@
 body { color: var(--text); font-family: var(--sans); }
 h1, .t-large, .t-title1 { font-family: var(--display); font-weight: 400; letter-spacing: -.035em; }
 a { font-weight: 500; }
-.btn { text-transform: none; letter-spacing: 0; font-weight: 500; border-width: 1px; border-bottom-width: 3px; white-space: normal; }
-.btn-primary, .btn-blue { background: #f4d76a; border-color: #e1c355; border-bottom-color: #b9a046; color: #493e20; }
+.btn { text-transform: none; letter-spacing: 0; font-weight: 500; border-width: 1px; white-space: normal; }
+.btn-primary, .btn-blue { background: #f4d76a; border-color: #e1c355; color: #493e20; box-shadow: 0 3px 10px #b9a04655; }
 .btn-primary:hover, .btn-blue:hover { background: #f8e18e; }
+.btn-primary:active, .btn-blue:active { box-shadow: 0 1px 4px #b9a04655; }
 .btn-primary .kbd, .btn-blue .kbd { color: #493e20; background: #ffffff66; border-color: #b9a046; }
 .btn:disabled { cursor: not-allowed; }
 .btn-plain, .linklike { color: var(--accent); }

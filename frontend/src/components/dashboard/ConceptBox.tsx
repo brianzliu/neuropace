@@ -27,7 +27,11 @@ export default function ConceptBox({ concept, index, organized, dateLabel }: Con
   return (
     <article className={"concept-box" + (needsExtraTime ? " is-warm" : "")}>
       <div className="concept-box-top">
-        <span className="concept-box-index" aria-hidden="true">{index + 1}</span>
+        {organized ? (
+          <span className="concept-box-index" aria-hidden="true" title="Suggested order">{index + 1}</span>
+        ) : (
+          <span className="concept-box-dot" aria-hidden="true" />
+        )}
         <div>
           <h3>{concept.title}</h3>
           {concept.description ? <p className="concept-box-description">{concept.description}</p> : null}

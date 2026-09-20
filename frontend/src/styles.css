@@ -15,7 +15,7 @@
   --tap: #fbbf24;
   --radius: 12px;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --sans: "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --fs: 18px;
 }
 
@@ -84,8 +84,8 @@ h1 { font-size: 1.8em; margin: 0 0 1rem; }
 
 /* badges */
 .badge {
-  display: inline-block; padding: 0.1rem 0.5rem; border-radius: 999px; font-size: 0.72em; font-weight: 700;
-  letter-spacing: 0.06em; text-transform: uppercase; border: 1px solid var(--line); color: var(--muted);
+  display: inline-block; padding: 0.1rem 0.5rem; border-radius: var(--r-capsule, 8px); font-size: 0.72em; font-weight: 700;
+  border: 1px solid var(--line); color: var(--muted);
 }
 .badge.sim { color: var(--warn); border-color: var(--warn); }
 .badge.offline { color: var(--accent-2); border-color: var(--accent-2); }

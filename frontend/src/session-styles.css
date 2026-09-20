@@ -1,5 +1,9 @@
 /* NeuroPace design system v2: consumer, Duolingo-derived (docs/PRODUCT.md §7).
-   One thing per screen, chunky tactile controls, bold type, progress everywhere, warm feedback. */
+   One thing per screen, tactile controls with a real soft shadow (not a flat offset block),
+   bold type, progress everywhere, warm feedback. Tags/badges are a small rounded rectangle,
+   not a full pill — a pill reads as the interactive kind (toggles, segmented controls, the
+   progress track), so keeping it off everything else is what gives the pill shape meaning. */
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Figtree:ital,wght@0,400;0,500;0,600;0,700;1,500&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap');
 
 :root {
@@ -28,12 +32,13 @@
   --danger: #ff4b4b;
   --purple: #ce82ff;
   --wave: #1cb0f6;
-  --font: "Nunito", "Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font: "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Baloo 2", "Figtree", -apple-system, sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, monospace;
   --r-sm: 10px;
   --r: 16px;
   --r-lg: 22px;
-  --r-capsule: 999px;
+  --r-capsule: 10px;
   --shadow-card: 0 0 0 2px var(--line);
   --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.16);
   --ease: cubic-bezier(0.2, 0, 0, 1);
@@ -119,8 +124,8 @@ h1, h2, h3 { margin: 0; letter-spacing: -0.01em; }
 .shell.shell-rail { grid-template-columns: var(--rail-w) minmax(0, 1fr); }
 .content { min-width: 0; position: relative; }
 .flash-host { position: fixed; top: 16px; right: 20px; z-index: 70; pointer-events: none; }
-.flash { display: inline-flex; align-items: center; padding: 8px 14px; border-radius: var(--r-capsule); font-size: var(--fs-footnote); font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; background: var(--orange); color: #fff; box-shadow: 0 4px 0 var(--orange-dark); animation: pop var(--t-med) var(--spring); }
-.flash.neutral { background: var(--brand); box-shadow: 0 4px 0 var(--brand-dark); }
+.flash { display: inline-flex; align-items: center; padding: 8px 14px; border-radius: var(--r-sm); font-size: var(--fs-footnote); font-weight: 700; background: var(--orange); color: #fff; box-shadow: 0 4px 12px var(--shadow, rgba(0,0,0,0.18)); animation: pop var(--t-med) var(--spring); }
+.flash.neutral { background: var(--brand); box-shadow: 0 4px 12px color-mix(in srgb, var(--brand-dark) 60%, transparent); }
 @keyframes pop { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: none; } }
 
 .sidebar { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; padding: 18px 12px 14px; background: var(--surface); border-right: 2px solid var(--line); }
@@ -146,10 +151,10 @@ h1, h2, h3 { margin: 0; letter-spacing: -0.01em; }
 .sb-theme > button { flex: 1; justify-content: center; }
 
 /* ---------- controls ---------- */
-.btn { appearance: none; font: inherit; font-size: var(--fs-subhead); font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--label-2); background: var(--surface); border: 2px solid var(--line); border-bottom-width: 4px; border-radius: var(--r); height: 46px; padding: 0 18px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; transition: transform var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease), opacity var(--t-fast); }
-.btn:hover { background: var(--surface-2); }
-.btn:active { transform: translateY(2px); border-bottom-width: 2px; margin-bottom: 2px; }
-.btn:disabled { opacity: 0.45; cursor: default; transform: none; }
+.btn { appearance: none; font: inherit; font-size: var(--fs-subhead); font-weight: 700; letter-spacing: 0.01em; color: var(--label-2); background: var(--surface); border: 2px solid var(--line); border-radius: var(--r); height: 46px; padding: 0 18px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; box-shadow: 0 2px 6px var(--shadow, rgba(0,0,0,0.1)); transition: transform var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease), opacity var(--t-fast); }
+.btn:hover { background: var(--surface-2); transform: translateY(-1px); box-shadow: 0 5px 14px var(--shadow, rgba(0,0,0,0.14)); }
+.btn:active { transform: translateY(0); box-shadow: 0 1px 3px var(--shadow, rgba(0,0,0,0.1)); }
+.btn:disabled { opacity: 0.45; cursor: default; transform: none; box-shadow: none; }
 .btn-primary { background: var(--green); color: #fff; border-color: var(--green); border-bottom-color: var(--green-dark); }
 .btn-primary:hover { background: color-mix(in srgb, var(--green) 90%, white); }
 .btn-primary .kbd { background: rgba(255, 255, 255, 0.22); border-color: rgba(255, 255, 255, 0.3); color: #fff; }
@@ -225,7 +230,7 @@ h1, h2, h3 { margin: 0; letter-spacing: -0.01em; }
 .dot.warn { background: var(--orange); }
 .dot.bad { background: var(--red); }
 .dot.accent { background: var(--brand); }
-.badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: var(--r-capsule); font-size: var(--fs-caption); font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; background: var(--surface-2); color: var(--label-2); border: 2px solid var(--line); }
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: var(--r-capsule); font-size: var(--fs-caption); font-weight: 700; white-space: nowrap; background: var(--surface-2); color: var(--label-2); border: 2px solid var(--line); }
 .badge.accent { background: color-mix(in srgb, var(--brand) 14%, transparent); color: var(--brand); border-color: color-mix(in srgb, var(--brand) 30%, transparent); }
 .badge.success { background: color-mix(in srgb, var(--green) 16%, transparent); color: var(--green-dark); border-color: color-mix(in srgb, var(--green) 35%, transparent); }
 .badge.warning { background: color-mix(in srgb, var(--orange) 16%, transparent); color: var(--orange-dark); border-color: color-mix(in srgb, var(--orange) 35%, transparent); }
@@ -300,7 +305,7 @@ h1, h2, h3 { margin: 0; letter-spacing: -0.01em; }
 .document .w.flagged { background: color-mix(in srgb, var(--orange) 22%, transparent); border-radius: 4px; box-decoration-break: clone; }
 .document .w.now { color: var(--brand); }
 .document .empty { color: var(--label-3); font-weight: 600; }
-.pill { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px 0 10px; border-radius: 999px; font-size: var(--fs-caption); font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--label-2); background: var(--surface-2); border: 2px solid var(--line); }
+.pill { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px 0 10px; border-radius: var(--r-capsule); font-size: var(--fs-caption); font-weight: 700; letter-spacing: 0.01em; color: var(--label-2); background: var(--surface-2); border: 2px solid var(--line); }
 .pill .dot { width: 8px; height: 8px; }
 .pill.is-live { color: var(--green-dark); border-color: color-mix(in srgb, var(--green) 45%, transparent); background: color-mix(in srgb, var(--green) 12%, transparent); }
 .pill.is-live .dot { background: var(--green); box-shadow: 0 0 0 4px color-mix(in srgb, var(--green) 25%, transparent); }
@@ -415,7 +420,7 @@ h1, h2, h3 { margin: 0; letter-spacing: -0.01em; }
 .ki-ex { font-size: var(--fs-subhead); color: var(--label-2); font-weight: 600; }
 .steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .step-item { display: flex; align-items: flex-start; gap: 12px; font-size: var(--fs-body); font-weight: 600; animation: rise 0.35s var(--spring); }
-.step-num { width: 30px; height: 30px; border-radius: 50%; background: var(--brand); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: var(--fs-footnote); flex: none; box-shadow: 0 3px 0 var(--brand-dark); }
+.step-num { width: 30px; height: 30px; border-radius: 50%; background: var(--brand); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: var(--fs-footnote); flex: none; box-shadow: 0 2px 6px color-mix(in srgb, var(--brand-dark) 55%, transparent); }
 .example { display: flex; flex-direction: column; gap: 8px; font-family: var(--mono); font-size: var(--fs-subhead); background: var(--surface-2); border-radius: var(--r); padding: 16px 18px; }
 .ex-line { animation: rise 0.35s var(--spring); }
 .ex-result { font-weight: 800; color: var(--green-dark); border-top: 2px solid var(--line); padding-top: 8px; animation: rise 0.35s var(--spring); }
@@ -620,12 +625,12 @@ a.linklike { font-size: var(--fs-subhead); }
 .ok-text { color: var(--green-dark, #3f8f00); font-weight: 700; }
 
 /* Tutor concept whiteboard: fixed shapes and a small Pocket Studio palette. */
-.concept-whiteboard { background: #fffefa; border: 1px solid #e5decc; border-radius: 20px; box-shadow: 0 5px 0 #eee8d9; overflow: hidden; color: #443e31; }
+.concept-whiteboard { background: #fffefa; border: 1px solid #e5decc; border-radius: 20px; box-shadow: 0 4px 14px #eee8d9aa; overflow: hidden; color: #443e31; }
 .whiteboard-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; border-bottom: 1px solid #ece5d5; }
 .whiteboard-toolbar h3 { margin: 0; font-family: var(--display, var(--font)); font-size: 1.1rem; font-weight: 400; }
 .whiteboard-tabs { display: flex; gap: 4px; padding: 4px; background: #f4f0e6; border-radius: 12px; }
 .whiteboard-tabs button { padding: 7px 12px; min-height: 36px; background: transparent; color: #625a48; border: 0; border-radius: 9px; box-shadow: none; font-size: .8rem; font-weight: 500; }
-.whiteboard-tabs button[aria-selected="true"] { background: #f8dc70; color: #443e31; box-shadow: 0 2px 0 #d8bd58; }
+.whiteboard-tabs button[aria-selected="true"] { background: #f8dc70; color: #443e31; box-shadow: 0 2px 8px #d8bd5888; }
 .whiteboard-tabs button:focus-visible, .whiteboard-content:focus-visible { outline: 2px solid #857328; outline-offset: 3px; }
 .whiteboard-content { min-height: 200px; padding: 20px; background-image: radial-gradient(#ddd5be 1px, transparent 1px); background-size: 20px 20px; }
 .concept-whiteboard .diagram .title { display: none; }

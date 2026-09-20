@@ -112,7 +112,7 @@ The student and the agent share one thing: a **board**. As the conversation goes
 ## 7. Design philosophy (from Duolingo, applied)
 
 - **One thing per screen, one primary button.** Every screen has exactly one big action.
-- **Chunky, tactile controls.** Buttons with a solid bottom edge that press down; big radii; bold labels. Progress bars everywhere progress exists.
+- **Tactile, not gimmicky.** Buttons and cards get a real, soft shadow that lifts on hover and settles on press — not a flat offset color block simulating a bevel. A full pill/capsule shape is reserved for things that are actually a track or a toggle (progress bars, switches, segmented controls); a badge, tag or button is a small rounded rectangle, so the pill still means something when it shows up. Numbered markers appear only when the content really is a sequence. Progress bars everywhere progress exists.
 - **Immediate, warm feedback.** Right answers get a green flash and a line of praise; wrong answers get an honest "not yet" and a different explanation, never a red wall.
 - **Bite-sized units and streaks.** A lecture's restudy is a lesson of a few cards; days with a lecture make a streak.
 - **Character through motion and color, not mascots.** Progressive reveals, springs on buttons, a confetti-free completion screen that still feels like an event.
