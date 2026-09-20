@@ -31,11 +31,14 @@
 .brand-dot { background: linear-gradient(135deg, var(--accent), var(--object)); box-shadow: inset 2px 2px 3px #ffffff55, 2px 3px 0 var(--object-dark); }
 /* Brand mark: a tilted pencil in a tactile squircle. Inline SVG so the
   eraser, ferrule, body, wood, and lead all read crisply at any size. */
-.brand-mark { width: 36px; height: 36px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 13px 13px 6px 13px; background: var(--bg-2); border: 1px solid var(--surface-edge); box-shadow: inset 1px 2px 2px #ffffff88, 0 3px 0 var(--surface-edge); }
-.brand-mark svg { width: 23px; height: 23px; display: block; overflow: visible; }
+.brand-mark { position: relative; width: 38px; height: 38px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
+.brand-mark svg { width: 28px; height: 28px; display: block; overflow: visible; }
+/* Generated brain mark covers the pencil fallback when the file loads;
+   the pencil stays underneath for offline/missing-file cases. */
+.brand-mark img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: contain; }
 .brand-mark i { display: none; }
-.app-compact .brand-mark { width: 28px; height: 28px; border-radius: 10px 10px 5px 10px; }
-.app-compact .brand-mark svg { width: 18px; height: 18px; }
+.app-compact .brand-mark { width: 30px; height: 30px; }
+.app-compact .brand-mark svg { width: 22px; height: 22px; }
 .topnav > a { font-size: .9rem; }
 .main { padding-top: .25rem; }
 .welcome { padding: 1.5rem 0 2.5rem; gap: 3rem; min-height: 380px; }
