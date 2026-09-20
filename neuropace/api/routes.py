@@ -16,7 +16,7 @@ from fastapi import APIRouter, File, Form, HTTPException, Request, Response, Upl
 from pydantic import BaseModel, Field
 
 from .. import __version__
-from ..config import FORMS
+from ..config import FOCUS_METRIC, FORMS
 from ..core import tally as tallymod
 from ..core.gaps import regenerate_packages
 from ..core.lossmap import compute_lossmap
@@ -470,6 +470,7 @@ def _session_public(request: Request, sess: dict) -> dict:
     db = _db(request)
     out = dict(sess)
     out["running"] = rt is not None and rt.status == "running"
+    out["focus_enabled"] = rt.focus_enabled if rt else (sess.get("baseline") or {}).get("focus_enabled", True)
     out["flags"] = [rt._flag_public(f) for f in rt.flags.values()] if rt else db.get_flags(sess["id"])
     out["gaps"] = len(db.get_gaps(sess["id"]))
     out["words"] = rt.words_total if rt else len(db.get_words(sess["id"]))
@@ -550,8 +551,17 @@ async def _create_session(body: SessionIn, request: Request):
     use_stored = body.use_stored_baseline
     if use_stored is None:
         use_stored = learner.get("baseline_source") == "personal"
-    if use_stored and learner.get("baseline_mu") is not None:
-        baseline = {"mu": learner["baseline_mu"], "sigma": learner["baseline_sigma"], "stored": True}
+    if (
+        use_stored
+        and learner.get("baseline_mu") is not None
+        and learner.get("baseline_metric") == FOCUS_METRIC
+    ):
+        baseline = {
+            "mu": learner["baseline_mu"],
+            "sigma": learner["baseline_sigma"],
+            "stored": True,
+            "metric": FOCUS_METRIC,
+        }
     seed = body.seed if body.seed is not None else int(time.time() * 1000) % 2_000_000_000
     sess = db.create_session(
         learner_id=learner["id"],
@@ -660,13 +670,24 @@ async def end_session(session_id: str, request: Request):
 
 
 @router.post("/sessions/{session_id}/tap")
-def session_tap(session_id: str, request: Request):
+async def session_tap(session_id: str, request: Request):
     rt = request.app.state.runtimes.get(session_id)
     if not rt:
         raise HTTPException(404, "session is not running")
     if rt.calibration_pending:
         raise HTTPException(409, "Finish calibration before requesting a catch-up")
     return rt._flag_public(rt.tap(source="key"))
+
+
+@router.post("/sessions/{session_id}/catchups/{flag_id}/explanation")
+async def catchup_explanation(session_id: str, flag_id: str, request: Request):
+    rt = request.app.state.runtimes.get(session_id)
+    if rt is None or flag_id not in rt.flags:
+        raise HTTPException(404, "Unknown live catch-up")
+    try:
+        return rt.explanations.request(flag_id)
+    except ValueError as error:
+        raise HTTPException(409, str(error)) from error
 
 
 class SimHeadsetIn(BaseModel):
@@ -718,6 +739,17 @@ async def personal_calibration_continue(session_id: str, request: Request):
         raise HTTPException(404, "session is not running")
     try:
         return await rt.complete_startup_calibration()
+    except ValueError as error:
+        raise HTTPException(409, str(error)) from error
+
+
+@router.post("/sessions/{session_id}/personal-calibration/skip")
+async def personal_calibration_skip(session_id: str, request: Request):
+    rt = request.app.state.runtimes.get(session_id)
+    if rt is None:
+        raise HTTPException(404, "session is not running")
+    try:
+        return await rt.complete_startup_calibration(without_eeg=True)
     except ValueError as error:
         raise HTTPException(409, str(error)) from error
 
@@ -893,9 +925,10 @@ def review_state(session_id: str, request: Request):
 
 
 @router.post("/sessions/{session_id}/review/answer")
-def review_answer(session_id: str, body: AnswerIn, request: Request):
+async def review_answer(session_id: str, body: AnswerIn, request: Request):
     eng = _review(request, session_id)
     try:
+        await eng.plan_after_miss(request.app.state.llm, body.card_id, body.choice)
         out = eng.answer(body.card_id, body.choice, body.focus_ratio)
     except ValueError as e:
         raise HTTPException(400, str(e)) from e

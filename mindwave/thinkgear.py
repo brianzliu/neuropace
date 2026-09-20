@@ -190,11 +190,13 @@ class ThinkGearReader(threading.Thread):
                     self.error = None
                     parser = PacketParser()
                     last_packet = time.monotonic()
+                    packet_timeout = 30 if self.transport == "native Bluetooth" else 5
                     while not self._stop_event.is_set():
                         data = ser.read(max(1, ser.in_waiting))
                         t = time.time()
                         for payload in parser.feed(data):
                             last_packet = time.monotonic()
+                            packet_timeout = 5
                             self.last_data_t = t
                             for ev in events_from_payload(parse_payload(payload), t):
                                 if isinstance(ev, Raw):
@@ -203,8 +205,8 @@ class ThinkGearReader(threading.Thread):
                                     self.out.put_nowait(ev)
                                 except queue.Full:
                                     self.dropped += 1
-                        if time.monotonic() - last_packet > 5:
-                            raise serial.SerialException("No valid ThinkGear packets for 5 seconds; reopening port")
+                        if time.monotonic() - last_packet > packet_timeout:
+                            raise serial.SerialException(f"No valid ThinkGear packets for {packet_timeout} seconds; reopening port")
             except (serial.SerialException, OSError) as e:
                 self.error = str(e)
                 if sys.platform == "darwin" and self.port.startswith(("/dev/cu.", "/dev/tty.")) and any(

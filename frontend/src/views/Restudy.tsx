@@ -2,7 +2,7 @@ import { libraryHref, useLibrary } from "./Library";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api, errorText } from "../lib/api";
-import { ARTIFACT_LABEL, FORM_ICON, FORM_LABEL, FORMS, type Card, type Progress, type TallySummary } from "../lib/types";
+import { ARTIFACT_LABEL, FORM_ICON, FORM_LABEL, FORMS, type Card, type Progress, type SessionPublic, type TallySummary } from "../lib/types";
 import { flash } from "../lib/flash";
 import { useFocusSession } from "../lib/focusSession";
 import { narrationForCard, useTutor } from "../lib/tutor";
@@ -35,8 +35,8 @@ export default function Restudy() {
   const [hits, setHits] = useState(0);
   const pendingNext = useRef<Card | null>(null);
   const busy = useRef(false);
-  const [learnerId, setLearnerId] = useState<string>();
-  const focus = useFocusSession(!!learnerId, learnerId);
+  const [parentSession, setParentSession] = useState<Pick<SessionPublic, "id" | "learner_id" | "focus_enabled"> | null>(null);
+  const focus = useFocusSession(parentSession?.id === sessionId && !!parentSession.learner_id && parentSession.focus_enabled !== false, parentSession?.learner_id);
   const focusRef = useRef(focus);
   focusRef.current = focus;
   const [ttsOk, setTtsOk] = useState(false);
@@ -47,9 +47,25 @@ export default function Restudy() {
   const tutorRef = useRef(tutor);
   tutorRef.current = tutor;
   const [spoken, setSpoken] = useState(-1); // index of the beat being read (why = 0, context = 1, then the template)
+  const [autoCheckPending, setAutoCheckPending] = useState(false);
+  const playback = useRef<{ timer?: number } | null>(null);
+  const current = useRef({ card, phase, sessionId, mode, err });
+  current.current = { card, phase, sessionId, mode, err };
+  const mounted = useRef(true);
+  const stopReading = useCallback(() => {
+    if (playback.current?.timer !== undefined) window.clearTimeout(playback.current.timer);
+    playback.current = null;
+    tutorRef.current.stop();
+    setAutoCheckPending(false);
+  }, []);
+
+  const isCurrentCard = useCallback((expected: Card | null) => mounted.current && current.current.card === expected
+    && current.current.sessionId === sessionId && current.current.mode === mode && !current.current.err, [sessionId, mode]);
 
   const applyNext = useCallback(
     (next: Card | null, done: boolean) => {
+      stopReading();
+      setSpoken(-1);
       setChosen(null);
       setCorrectIdx(null);
       setOutcome(null);
@@ -63,31 +79,33 @@ export default function Restudy() {
       setCard(next);
       setPhase(next.kind === "question" ? "answering" : "reteach");
       focusRef.current.startCard();
-      tutorRef.current.stop();
-      setSpoken(-1);
     },
-    [],
+    [stopReading],
   );
   // the tutor reads each explanation once, and the template advances with the voice (docs/PRODUCT.md §5)
-  const playedFor = useRef<string | null>(null);
+  const playedFor = useRef<Card | null>(null);
   useEffect(() => {
-    if (phase !== "reteach" || !card || !tutor.enabled || playedFor.current === card.id) return;
-    playedFor.current = card.id;
-    setSpoken(-1);
-    void tutor.play(narrationForCard(card), (i, b) => {
-      setSpoken(i);
-      setStep(b.step);
-    });
-  }, [phase, card, tutor.enabled, tutor.play]);
-  useEffect(() => () => tutorRef.current.stop(), []);
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      stopReading();
+    };
+  }, [stopReading]);
 
   useEffect(() => {
     let cancelled = false;
+    stopReading();
+    current.current = { ...current.current, card: null, phase: "idle" };
+    setCard(null);
+    setPhase("idle");
+    setProgress(null);
+    setTally(null);
+    setErr(null);
     (async () => {
       try {
         const sess = await api.session(sessionId);
         if (cancelled) return;
-        setLearnerId(sess.learner_id);
+        setParentSession(sess);
         if (sess.lecture_id) {
           api.lecture(sess.lecture_id).then((l) => !cancelled && setLectureTitle(l.title)).catch(() => undefined);
         }
@@ -97,6 +115,7 @@ export default function Restudy() {
         setTally(st.tally);
         applyNext(st.card, st.progress.done);
       } catch (e) {
+        if (cancelled) return;
         const text = errorText(e);
         if (/not ready|no generated notes|end the session/i.test(text)) {
           setBlocked(text);
@@ -109,7 +128,7 @@ export default function Restudy() {
     return () => {
       cancelled = true;
     };
-  }, [sessionId, mode, applyNext]);
+  }, [sessionId, mode, applyNext, stopReading]);
 
   const answer = useCallback(
     async (choice: number) => {
@@ -118,6 +137,7 @@ export default function Restudy() {
       setChosen(choice);
       try {
         const r = await api.reviewAnswer(sessionId, card.id, choice, focusRef.current.endCard());
+        if (!isCurrentCard(card)) return;
         setCorrectIdx(r.correct_index);
         setExplanation(r.explanation);
         setOutcome(r.outcome);
@@ -129,9 +149,10 @@ export default function Restudy() {
         const done = r.done;
         window.setTimeout(
           () => {
+            if (!isCurrentCard(card)) return;
             if (r.outcome === "miss" && r.next && r.next.kind === "reteach") {
               setPhase("dissolving");
-              window.setTimeout(() => applyNext(pendingNext.current, done), 750);
+              window.setTimeout(() => { if (isCurrentCard(card)) applyNext(pendingNext.current, done); }, 750);
             } else {
               applyNext(pendingNext.current, done);
             }
@@ -139,22 +160,23 @@ export default function Restudy() {
           r.outcome === "hit" ? 1300 : 1700,
         );
       } catch (e) {
-        setErr(errorText(e));
+        if (isCurrentCard(card)) setErr(errorText(e));
       } finally {
         busy.current = false;
       }
     },
-    [card, phase, sessionId, applyNext],
+    [card, phase, sessionId, applyNext, isCurrentCard],
   );
 
   const drop = useCallback(
     async (simulated: boolean) => {
       if (!card || busy.current || (phase !== "answering" && phase !== "reteach")) return;
       busy.current = true;
-      tutorRef.current.stop();
+      stopReading();
       if (simulated) flash("SIMULATED DRIFT");
       try {
         const r = await api.reviewDrop(sessionId, card.id, focusRef.current.endCard());
+        if (!isCurrentCard(card)) return;
         setOutcome("drop");
         setProgress(r.progress);
         setTally(r.tally);
@@ -162,16 +184,17 @@ export default function Restudy() {
         const nxt = r.next;
         const done = r.done;
         window.setTimeout(() => {
+          if (!isCurrentCard(card)) return;
           setPhase("dissolving");
-          window.setTimeout(() => applyNext(nxt, done), 750);
+          window.setTimeout(() => { if (isCurrentCard(card)) applyNext(nxt, done); }, 750);
         }, 1200);
       } catch (e) {
-        setErr(errorText(e));
+        if (isCurrentCard(card)) setErr(errorText(e));
       } finally {
         busy.current = false;
       }
     },
-    [card, phase, sessionId, applyNext],
+    [card, phase, sessionId, applyNext, stopReading, isCurrentCard],
   );
 
   // a real drift on an explanation switches it early (only after the card had a moment to land)
@@ -183,37 +206,83 @@ export default function Restudy() {
   }, [focus.driftSeq, phase, card, drop]);
 
   const advance = useCallback(async () => {
-    if (!card || card.kind !== "reteach" || busy.current) return;
+    const isCurrent = () => isCurrentCard(card) && current.current.phase === "reteach";
+    if (!card || card.kind !== "reteach" || busy.current || !isCurrent()) return;
     busy.current = true;
-    tutorRef.current.stop();
+    stopReading();
     try {
       const r = await api.reviewAdvance(sessionId, card.id, focusRef.current.endCard());
+      if (!isCurrent()) return;
       setProgress(r.progress);
       setTally(r.tally);
       applyNext(r.next, r.done);
     } catch (e) {
-      setErr(errorText(e));
+      if (isCurrent()) setErr(errorText(e));
     } finally {
       busy.current = false;
     }
-  }, [card, sessionId, applyNext]);
+  }, [card, sessionId, applyNext, stopReading, isCurrentCard]);
+
+  const readCard = useCallback(() => {
+    if (!card?.reteach || !isCurrentCard(card) || mode !== "tutor" || phase !== "reteach" || !tutorRef.current.enabled || busy.current) return;
+    stopReading();
+    const run: { timer?: number } = {};
+    playback.current = run;
+    const started = Date.now();
+    const isCurrent = () => playback.current === run && isCurrentCard(card) && current.current.phase === "reteach"
+      && current.current.mode === "tutor" && tutorRef.current.enabled && !busy.current;
+    setSpoken(-1);
+    setStep(0);
+    void tutorRef.current.play(narrationForCard(card), (i, beat) => {
+      if (!isCurrent()) return;
+      setSpoken(i);
+      setStep(beat.step);
+    }).then((completed) => {
+      if (!isCurrent()) return;
+      setSpoken(-1);
+      if (!completed) {
+        playback.current = null;
+        return;
+      }
+      setAutoCheckPending(true);
+      const readingTime = card.reteach?.artifact === "diagram" ? 3000 : 1500;
+      const animationTime = card.reteach?.artifact === "animation" ? 8000 - (Date.now() - started) : 0;
+      run.timer = window.setTimeout(() => {
+        if (isCurrent()) void advance();
+      }, Math.max(readingTime, animationTime));
+    });
+  }, [card, mode, phase, advance, stopReading, isCurrentCard]);
+
+  useEffect(() => {
+    if (phase !== "reteach" || !card || mode !== "tutor" || !tutor.enabled || err || playedFor.current === card) return;
+    playedFor.current = card;
+    readCard();
+    return () => {
+      stopReading();
+      if (playedFor.current === card) playedFor.current = null;
+    };
+  }, [phase, card, mode, sessionId, tutor.enabled, err, readCard, stopReading]);
 
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => {
       const tag = (ev.target as HTMLElement | null)?.tagName;
       if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
       const k = ev.key;
+      if ((tag === "BUTTON" || tag === "A") && (k === " " || k === "Enter")) return;
       if (phase === "answering" && ["1", "2", "3", "4"].includes(k)) void answer(Number(k) - 1);
       else if (k.toLowerCase() === "d") void drop(true);
       else if (phase === "reteach" && (k === " " || k === "ArrowRight" || k === "Enter")) {
         ev.preventDefault();
         if (tutorRef.current.speaking) {
-          tutorRef.current.stop();
+          stopReading();
           setSpoken(-1);
           setStep(nSteps - 1);
-        } else if (step < nSteps - 1) setStep((s) => s + 1);
-        else void advance();
+        } else if (step < nSteps - 1) {
+          stopReading();
+          setStep((s) => s + 1);
+        } else void advance();
       } else if (k.toLowerCase() === "v" && tutorRef.current.supported) {
+        stopReading();
         if (!tutorRef.current.enabled) playedFor.current = null;
         tutorRef.current.setEnabled(!tutorRef.current.enabled);
         if (tutorRef.current.enabled) setSpoken(-1);
@@ -222,7 +291,7 @@ export default function Restudy() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [phase, answer, drop, advance, step, nSteps]);
+  }, [phase, answer, drop, advance, step, nSteps, stopReading]);
 
   const onSteps = useCallback((n: number) => setNSteps(Math.max(1, n)), []);
   const pct = useMemo(() => {
@@ -231,6 +300,9 @@ export default function Restudy() {
     return Math.round(((progress.gaps_closed + progress.gaps_exhausted) / total) * 100);
   }, [progress]);
   const headsetOn = !!focus.headset?.connected;
+  const planReason = card?.reteach?.plan_reason?.trim() || card?.reteach?.why;
+  const context = card?.reteach?.context?.trim();
+  const showContext = context && context !== planReason?.trim();
 
   if (err) return <div className="page narrow"><div className="callout danger">{err}</div></div>;
   if (phase === "blocked") {
@@ -267,6 +339,7 @@ export default function Restudy() {
           <button
             className={"btn btn-sm tutor-toggle" + (tutor.enabled ? " is-on" : "")}
             onClick={() => {
+              stopReading();
               if (!tutor.enabled) playedFor.current = null;
               tutor.setEnabled(!tutor.enabled);
               setSpoken(-1);
@@ -319,13 +392,14 @@ export default function Restudy() {
                       else if (i === chosen) cls += " wrong";
                     }
                     return (
-                      <button key={i} className={cls} disabled={phase !== "answering"} onClick={() => void answer(i)}>
+                      <button key={i} className={cls} disabled={phase !== "answering" || busy.current} onClick={() => void answer(i)}>
                         <span className="k">{i + 1}</span>
                         <Dissolve text={o} active={phase === "dissolving"} />
                       </button>
                     );
                   })}
                 </div>
+                {phase === "answering" && busy.current ? <p role="status">Checking your answer…</p> : null}
                 {outcome ? (
                   <div className={"feedback " + outcome}>
                     <div>
@@ -349,17 +423,20 @@ export default function Restudy() {
                   </span>
                   {card.reteach.key_term ? <span className="badge accent">{card.reteach.key_term}</span> : null}
                 </div>
-                {card.reteach.why ? <p className={"why-line" + (spoken === 0 ? " spoken" : "")}>{card.reteach.why}</p> : null}
-                {card.reteach.context ? (
-                  <p className={"context-line" + (spoken === 1 ? " spoken" : "")}>
-                    <span className="lbl">Where you were</span> {card.reteach.context}
+                {planReason ? <p className={"why-line" + (spoken === 0 ? " spoken" : "")}>{planReason}</p> : null}
+                {showContext ? (
+                  <p className={"context-line" + (spoken === (planReason ? 1 : 0) ? " spoken" : "")}>
+                    <span className="lbl">Where you were</span> {context}
                   </p>
+                ) : null}
+                {card.reteach.visual_unavailable ? (
+                  <div className="callout" role="status">Text fallback: the planned visual is unavailable. You can still read this explanation and take the check.</div>
                 ) : null}
                 {tutor.error && <div className="callout" role="status">
                   <p>{tutor.error}</p>
-                  <button className="btn btn-sm" disabled={tutor.speaking} onClick={() => void tutor.play(narrationForCard(card), (i, beat) => { setSpoken(i); setStep(beat.step); })}>Retry voice</button>
+                  <button className="btn btn-sm" disabled={tutor.speaking || !tutor.enabled} onClick={readCard}>Retry voice</button>
                 </div>}
-                <ArtifactView kind={card.reteach.artifact} content={card.reteach.content} step={step} onSteps={onSteps} />
+                <ArtifactView key={card.id} kind={card.reteach.artifact} content={card.reteach.content} step={step} onSteps={onSteps} />
                 {card.reteach.said ? (
                   <details className="said">
                     <summary>What the lecturer said</summary>
@@ -371,12 +448,18 @@ export default function Restudy() {
                     <div className="fb-title">You drifted. Switching to another way.</div>
                   </div>
                 ) : null}
+                {autoCheckPending ? <p className="label-2" role="status">Take a look. A quick check is next, or pause to keep reading.</p> : null}
                 <div className="row">
+                  {tutor.speaking || autoCheckPending ? (
+                    <button className="btn btn-sm" onClick={() => { stopReading(); setSpoken(-1); }}>Pause tutor</button>
+                  ) : tutor.enabled && !tutor.error ? (
+                    <button className="btn btn-sm" onClick={readCard}>Read again</button>
+                  ) : null}
                   {tutor.speaking ? (
                     <button
                       className="btn btn-blue"
                       onClick={() => {
-                        tutor.stop();
+                        stopReading();
                         setSpoken(-1);
                         setStep(nSteps - 1);
                       }}
@@ -384,7 +467,7 @@ export default function Restudy() {
                       Skip the reading <span className="kbd">space</span>
                     </button>
                   ) : step < nSteps - 1 ? (
-                    <button className="btn btn-blue" onClick={() => setStep((s) => s + 1)}>
+                    <button className="btn btn-blue" onClick={() => { stopReading(); setStep((s) => s + 1); }}>
                       Next ({step + 1}/{nSteps}) <span className="kbd">space</span>
                     </button>
                   ) : (

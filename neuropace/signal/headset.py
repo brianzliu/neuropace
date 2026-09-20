@@ -180,14 +180,14 @@ class MindwaveHeadset:
         self.replay_dir = replay_dir
         self.replay_speed = replay_speed
         self.log_dir = log_dir
-        self.state = fake_state
+        self.state = fake_state if self._mode == "fake" else None
         self.pipe = None
         self.source = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self.frames = 0
 
     # neuropace sim states -> the pipeline's fake states
-    _STATE_MAP = {"focused": "easy", "drifting": "drowsy", "poor": "off"}
+    _STATE_MAP = {"focused": "hard", "drifting": "drowsy", "poor": "off"}
 
     @property
     def connected(self) -> bool:
@@ -221,9 +221,11 @@ class MindwaveHeadset:
 
     def set_state(self, state: str) -> None:
         """Fake source only. Accepts neuropace names (focused/drifting/poor) or the pipeline's own states."""
+        if self._mode != "fake":
+            raise ValueError("State controls are only available for simulated headsets")
         mapped = self._STATE_MAP.get(state, state)
         self.state = state
-        if self._mode == "fake" and self.source is not None:
+        if self.source is not None:
             self.source.set_state(mapped)
 
     def calibrate(self, phase: str) -> None:
@@ -275,7 +277,7 @@ def make_headset(
         port = port or autodetect_headset_port()
         return SerialHeadset(port, on_events) if port else SimulatedHeadset(on_events, seed=seed)
     if setting == "fake":
-        return MindwaveHeadset(on_frame, fake=True, on_raw=on_raw)
+        return MindwaveHeadset(on_frame, fake=True, fake_state="focused", on_raw=on_raw)
     if setting.startswith("replay:"):
         return MindwaveHeadset(on_frame, replay_dir=setting.split(":", 1)[1], on_raw=on_raw)
     if setting.startswith("serial:"):

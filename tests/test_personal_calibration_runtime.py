@@ -62,6 +62,141 @@ async def test_startup_failure_can_retry_and_preserves_saved_baseline(settings, 
     assert db.get_learner(learner["id"]) == before
 
 
+async def test_real_pipeline_uses_effort_when_beta_alertness_moves_the_other_way(settings, db, llm):
+    from types import SimpleNamespace
+
+    from neuropace.signal.features import FocusEngine
+
+    rt, _ = await runtime(settings, db, llm)
+    rt.engine = FocusEngine(settings, stored_baseline=(0.4, 0.1))
+    extras = dict.fromkeys(
+        (
+            "alpha_ratio",
+            "blink_rate",
+            "z_effort_ema",
+            "z_engagement_ema",
+            "artifact_coverage",
+            "cal_phase",
+            "attention",
+            "log_theta",
+            "log_alpha",
+            "log_beta",
+        )
+    )
+    try:
+        for second in range(30):
+            rt._on_frame(
+                SimpleNamespace(
+                    **extras,
+                    effort=0.4 if second < 10 else -0.2,
+                    engagement=-0.6 if second < 10 else 0.5,
+                    quality=0,
+                    valid=True,
+                    blink_count=0,
+                    calibrated=False,
+                )
+            )
+            rt.clock.set(second + 11)
+            sample = rt.step()
+            if second == 0:
+                assert sample["x"] == pytest.approx(0.4)
+        assert any(flag["source"] == "eeg" for flag in rt.flags.values())
+        assert rt.engine.extra["engagement"] == 0.5
+    finally:
+        await rt.end()
+
+
+async def test_personal_calibration_does_not_fit_the_waiting_period_ema(settings, db, llm):
+    rt, _ = await runtime(settings, db, llm)
+    try:
+        rt.begin_personal_calibration()
+        rt.engine.feed_frame(0.4, 0, True, extra={"cal_phase": None})
+        sample = rt.step(11)
+        assert sample["x"] == pytest.approx(0.4)
+    finally:
+        await rt.end()
+
+
+@pytest.mark.parametrize("use_stored", [None, True])
+async def test_legacy_engagement_baseline_is_never_reused_as_effort(app, db, use_stored):
+    import httpx
+
+    learner = db.default_learner()
+    assert db.compare_and_set_learner_baseline(
+        learner["id"], -0.6, 0.12, learner["baseline_at"], metric="beta_ratio_v1"
+    )
+    before = db.get_learner(learner["id"])
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://testserver"
+    ) as client:
+        body = {"learner_id": learner["id"], "mode": "review", "headset": "sim", "totem": "keyboard"}
+        if use_stored is not None:
+            body["use_stored_baseline"] = use_stored
+        response = await client.post("/api/sessions", json=body)
+        assert response.status_code == 200
+        session = response.json()
+        try:
+            assert session["baseline"] is None
+            assert not app.state.runtimes[session["id"]].engine.baseline.ready
+        finally:
+            await client.post(f"/api/sessions/{session['id']}/end")
+    assert db.get_learner(learner["id"]) == before
+
+
+@pytest.mark.parametrize("phase", ["waiting", "collecting", "failed"])
+async def test_button_only_continuation_preserves_baseline_and_suppresses_only_eeg(phase, settings, db, llm):
+    from neuropace.signal.features import DetectorEvent
+    from neuropace.transcribe.transcript import Word
+
+    rt, learner = await runtime(settings, db, llm)
+    before = db.get_learner(learner["id"])
+    rt.mode = "live"
+    rt.review_only = False
+    rt.startup_calibration = {"status": "waiting"}
+    if phase == "collecting":
+        rt.begin_personal_calibration()
+    else:
+        rt.startup_calibration = {"status": phase}
+    try:
+        result = await rt.complete_startup_calibration(without_eeg=True)
+        assert result["status"] == "complete" and result["skipped"]
+        assert not rt.calibration_pending and not rt.focus_enabled
+        assert rt.headset_status()["focus_enabled"] is False
+        assert rt._personal_calibration is None
+        rt.engine.feed_frame(-10, 0, True)
+        sample = rt.step(1)
+        assert sample["focus_enabled"] is False and sample["x"] is None
+        assert sample["state"] == "nosignal" and not sample["baseline_ready"]
+        rt._on_detector_events([DetectorEvent("enter", 1, 0, None)], 1)
+        assert not rt.flags
+        rt._on_words([Word("The lecture keeps recording.", 0, 1)], True)
+        assert rt.words_total == 1
+        assert rt.tap("key")["source"] == "key"
+    finally:
+        await rt.end()
+    assert db.get_learner(learner["id"]) == before
+    assert db.get_session(rt.id)["baseline"]["focus_enabled"] is False
+
+
+async def test_button_only_api_survives_a_fresh_consumer(app, settings, db, llm):
+    import httpx
+
+    rt, learner = await runtime(settings, db, llm)
+    rt.mode = "live"
+    rt.startup_calibration = {"status": "waiting"}
+    app.state.runtimes[rt.id] = rt
+    before = db.get_learner(learner["id"])
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://testserver"
+    ) as client:
+        r = await client.post(f"/api/sessions/{rt.id}/personal-calibration/skip")
+        assert r.status_code == 200 and r.json()["skipped"]
+        assert (await client.get(f"/api/sessions/{rt.id}")).json()["focus_enabled"] is False
+        await client.post(f"/api/sessions/{rt.id}/end")
+        assert (await client.get(f"/api/sessions/{rt.id}")).json()["focus_enabled"] is False
+        assert db.get_learner(learner["id"]) == before
+
+
 async def runtime(settings, db, llm):
     learner = db.create_learner("Calibration test")
     db.set_learner_baseline(learner["id"], 1.0, 0.2)

@@ -61,6 +61,7 @@ def _drain(q: asyncio.Queue) -> list[dict]:
 @pytest.mark.asyncio
 async def test_live_session_tap_catchup_eeg_flag_notes_and_log(settings, db, llm):
     rt, lec, lrn = _make(settings, db, llm)
+    rt.headset.sim._wander_sigma = 0.0
     await rt.start()
     q = rt.subscribe()
     words = [Word(**w) for w in lec["words"]]

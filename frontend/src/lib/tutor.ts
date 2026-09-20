@@ -96,8 +96,9 @@ export function narrationForCard(card: Card): Beat[] {
   const r = card.reteach;
   if (!r) return [];
   const beats: Beat[] = [];
-  if (r.why) beats.push({ text: r.why, step: 0 });
-  if (r.context) beats.push({ text: `Where you were: ${r.context}`, step: 0 });
+  const reason = r.plan_reason?.trim() || r.why;
+  if (reason) beats.push({ text: reason, step: 0 });
+  if (r.context && r.context.trim() !== reason?.trim()) beats.push({ text: `Where you were: ${r.context}`, step: 0 });
   return beats.concat(narrationOf(r.artifact, r.content));
 }
 
@@ -111,7 +112,7 @@ export interface Tutor {
   /** Index into the beats being read, or -1. */
   beat: number;
   /** Reads the beats in order; resolves when done or stopped. onBeat fires as each beat starts. */
-  play: (beats: Beat[], onBeat?: (i: number, beat: Beat) => void) => Promise<void>;
+  play: (beats: Beat[], onBeat?: (i: number, beat: Beat) => void) => Promise<boolean>;
   stop: () => void;
 }
 
@@ -128,25 +129,38 @@ async function fetchBeat(text: string): Promise<string | null> {
 
 export function playUrl(url: string, gen: () => boolean): Promise<boolean> {
   return new Promise((resolve) => {
-    const a = new Audio(url);
+    let a: HTMLAudioElement;
+    try {
+      a = new Audio(url);
+    } catch {
+      URL.revokeObjectURL(url);
+      resolve(false);
+      return;
+    }
     let finished = false;
     const started = Date.now();
     const done = (played: boolean) => {
       if (finished) return;
       finished = true;
       window.clearInterval(tick);
+      a.onended = null;
+      a.onerror = null;
       a.pause();
       URL.revokeObjectURL(url);
       resolve(played);
     };
-    a.onended = () => done(true);
+    a.onended = () => done(gen());
     a.onerror = () => done(false);
     const tick = window.setInterval(() => {
       const elapsed = Date.now() - started;
       if (!gen() || (a.currentTime === 0 && elapsed > 10000) || elapsed > 120000) done(false);
     }, 100);
     if (!gen()) { done(false); return; }
-    void a.play().catch(() => done(false));
+    try {
+      void a.play().catch(() => done(false));
+    } catch {
+      done(false);
+    }
   });
 }
 
@@ -163,8 +177,11 @@ export function useTutor(supported: boolean): Tutor {
   const [error, setError] = useState<string | null>(null);
   const [beat, setBeat] = useState(-1);
   const gen = useRef(0);
+  const enabledRef = useRef(enabled);
+  enabledRef.current = enabled;
 
   const setEnabled = useCallback((on: boolean) => {
+    enabledRef.current = on;
     setEnabledState(on);
     try {
       localStorage.setItem("reflow.voice", on ? "1" : "0");
@@ -185,31 +202,43 @@ export function useTutor(supported: boolean): Tutor {
   }, []);
 
   const play = useCallback(
-    async (beats: Beat[], onBeat?: (i: number, b: Beat) => void) => {
-      if (!supported || !beats.length) return;
+    async (beats: Beat[], onBeat?: (i: number, b: Beat) => void): Promise<boolean> => {
+      if (!supported || !enabledRef.current || !beats.length) return false;
       const my = ++gen.current;
-      const alive = () => gen.current === my;
+      const alive = () => gen.current === my && enabledRef.current;
       setSpeaking(true);
       setError(null);
-      let next: Promise<string | null> = fetchBeat(beats[0].text);
-      for (let i = 0; i < beats.length; i++) {
-        const url = await next;
-        if (!alive()) { if (url) URL.revokeObjectURL(url); break; }
-        if (i + 1 < beats.length) next = fetchBeat(beats[i + 1].text);
-        setBeat(i);
-        onBeat?.(i, beats[i]);
-        let played = false;
-        if (url) played = await playUrl(url, alive);
-        else await new Promise((r) => window.setTimeout(r, 1200)); // no audio for this beat: keep the pace
-        if (!played && alive()) setError("Voice could not play. Retry the reading, or continue with the text.");
-        if (!alive() || !played) {
-          if (i + 1 < beats.length) { const unused = await next; if (unused) URL.revokeObjectURL(unused); }
-          break;
+      let next: Promise<string | null> | null = fetchBeat(beats[0].text);
+      let url: string | null = null;
+      try {
+        for (let i = 0; i < beats.length; i++) {
+          url = await next;
+          next = null;
+          if (!alive()) return false;
+          if (i + 1 < beats.length) next = fetchBeat(beats[i + 1].text);
+          setBeat(i);
+          onBeat?.(i, beats[i]);
+          let played = false;
+          if (url) {
+            const audio = playUrl(url, alive);
+            url = null;
+            played = await audio;
+          }
+          else await new Promise((r) => window.setTimeout(r, 1200)); // no audio for this beat: keep the pace
+          if (!played && alive()) setError("Voice could not play. Retry the reading, or continue with the text.");
+          if (!alive() || !played) return false;
         }
-      }
-      if (alive()) {
-        setSpeaking(false);
-        setBeat(-1);
+        return true;
+      } catch {
+        if (alive()) setError("Voice could not play. Retry the reading, or continue with the text.");
+        return false;
+      } finally {
+        if (url) URL.revokeObjectURL(url);
+        if (next) void next.then((unused) => { if (unused) URL.revokeObjectURL(unused); });
+        if (alive()) {
+          setSpeaking(false);
+          setBeat(-1);
+        }
       }
     },
     [supported],

@@ -76,6 +76,7 @@ async def test_review_session_streams_waves_and_flags_without_transcript(setting
         drive_manually=True,
     )
     rt.clock = ManualClock(0.0)
+    rt.headset.sim._wander_sigma = 0.0
     await rt.start()
     q = rt.subscribe()
     for sec in range(1, 46):

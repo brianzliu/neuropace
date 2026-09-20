@@ -72,6 +72,21 @@ Real-headset live and recorded sessions now open with the same 30-second calibra
 existing connection. The server holds transcript capture and attention flags until calibration
 is saved and the user starts the lecture. Review sessions reuse that baseline. Explicit simulated
 practice skips personal calibration. Calibration time is excluded from lecture focus samples.
+The production focus input is now the pipeline's primary effort index, `log10(theta/alpha)`,
+versioned as `theta_alpha_v1`. Engagement remains telemetry, not the sole decision signal.
+Stored baselines with another or missing `baseline_metric` must not be reused on this scale;
+leave their values intact until a new personal calibration succeeds. Starting calibration
+resets the input EMA so waiting-period values cannot contaminate its fit. Raw and pipeline
+inputs both use log10. Synthetic focused/drifting profiles must reflect this selected metric.
+Native Bluetooth gets a 30-second first-valid-packet allowance because its connection helper
+negotiates asynchronously; after a valid packet, the existing five-second stall recovery applies.
+This startup allowance is not a claim that all macOS/headset reconnect failures are solved.
+Judge-demo fallback: POST `personal-calibration/skip` explicitly starts button-only recording.
+It cancels any partial calibration, preserves the learner baseline, marks `focus_enabled=false`,
+and suppresses automatic EEG flags and focus scores while keeping real transcription and taps.
+The flag persists in session baseline metadata; restudy must not start another focus session for
+that recording. Never substitute simulated EEG for this fallback. Real/replay headset status
+has no synthetic `state`; simulation controls are rejected outside explicit fake mode.
 
 Learning TTS uses `DEEPGRAM_TTS_API_KEY` (falls back to `DEEPGRAM_API_KEY` for older setups),
 `NEUROPACE_TTS_MODEL=flux-cole-en`, and `NEUROPACE_TTS_EXPRESSIVITY=2`. Local `.env.tts` is
@@ -120,7 +135,8 @@ mutations and is included in the readiness runner.
 
 ## House rules
 
-- MVP workflow: prioritize the smallest useful implementation and direct live checks. Do not expand test harnesses, documentation, or architecture beyond what is needed to make the requested behavior work. Keep verification focused on the changed behavior.
+- MVP workflow: prioritize the smallest useful implementation and direct live checks. Do not expand test harnesses, documentation, or architecture beyond what is needed to make the requested behavior work. Keep verification focused on the changed behavior. The user explicitly prefers a direct browser pass over large new test matrices or custom test harnesses.
+- Current demo interaction (20 Sep): Start session navigates in the same tab. Live catch-ups immediately show a recap and asynchronously add existing generated ArtifactView formats, staying open until dismissed. Older one-line-only HUD requirements do not govern this new path. Tutor mode leads with the generated visual plan, advances after natural narration completion, and can use the model to select an available unused format after a wrong answer. Manual review stays question-first. Do not replace actual visual generation with a text label or a canned animation.
 
 - No teacher/institutional dashboard of an individual learner's data — every part of the plan
   treats the learner's gap history as learner-owned. If you're building UI or storage for this,

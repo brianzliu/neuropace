@@ -4,7 +4,7 @@ import type {
   Devices,
   GapArtifacts,
   Doctor, EventsResponse, LectureFull, Learner, LossMap, NotesResponse, QuizGet, QuizResult, RegenerateResponse, ReviewAnswer,
-  ReviewNext, ReviewStart, SessionPublic, TallySummary, GapPublic,
+  ReviewNext, ReviewStart, SessionPublic, StartupCalibration, TallySummary, GapPublic, CatchupExplanation,
 } from "./types";
 
 /** An HTTP error with the backend's `detail` kept separately, so views can show it verbatim. */
@@ -85,7 +85,9 @@ export const api = {
   endSession: (id: string) => post<{ gaps: GapPublic[]; session: SessionPublic }>(`/api/sessions/${id}/end`),
   beginCalibration: (id: string) => post<unknown>(`/api/sessions/${id}/personal-calibration/start`),
   continueCalibration: (id: string) => post<unknown>(`/api/sessions/${id}/personal-calibration/continue`),
+  skipCalibration: (id: string) => post<StartupCalibration>(`/api/sessions/${id}/personal-calibration/skip`),
   tap: (id: string) => post<unknown>(`/api/sessions/${id}/tap`),
+  catchupExplanation: (id: string, flagId: string) => post<CatchupExplanation>(`/api/sessions/${id}/catchups/${flagId}/explanation`),
   simHeadset: (id: string, state: string) => post<unknown>(`/api/sessions/${id}/sim/headset`, { state }),
   events: (id: string) => get<EventsResponse>(`/api/sessions/${id}/events`),
   notes: (id: string) => get<NotesResponse>(`/api/sessions/${id}/notes`),

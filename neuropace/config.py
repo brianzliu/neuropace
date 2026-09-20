@@ -9,6 +9,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+FOCUS_METRIC = "theta_alpha_v1"
+
 # The four explanation families the preference model learns over (docs/PRODUCT.md §4).
 FORMS: tuple[str, ...] = ("words", "analogy", "visual", "doing")
 FORM_LABELS: dict[str, str] = {

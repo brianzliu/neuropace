@@ -17,7 +17,7 @@ from typing import Any
 import numpy as np
 
 from ..clock import LiveClock, MediaClock
-from ..config import FORMS, Settings
+from ..config import FOCUS_METRIC, FORMS, Settings
 from ..ids import new_id
 from ..llm.artifacts import build_package
 from ..llm.client import LLMClient, LLMUnavailable
@@ -33,6 +33,7 @@ from ..transcribe.scripted import ScriptedTranscript
 from ..transcribe.transcript import Transcript, Word
 from . import tally as tallymod
 from .board import BoardCapture
+from .explanations import CatchupExplanations
 from .recaps import Recap, RecapRing, RecapScheduler
 from .spans import eeg_span, merge_into_gaps, snap_end, tap_span
 
@@ -83,8 +84,13 @@ class SessionRuntime:
         self.clock = MediaClock() if self.mode == "recorded" else LiveClock()
         self.transcript = Transcript()
         self.board = BoardCapture(self)
+        self.explanations = CatchupExplanations(self)
         stored = None
-        if session.get("baseline") and session["baseline"].get("stored"):
+        if (
+            session.get("baseline")
+            and session["baseline"].get("stored")
+            and session["baseline"].get("metric") == FOCUS_METRIC
+        ):
             stored = (session["baseline"]["mu"], session["baseline"]["sigma"])
         self.engine = FocusEngine(s, stored_baseline=stored)
         self.ring = RecapRing()
@@ -139,6 +145,7 @@ class SessionRuntime:
         self.notices: list[dict] = []
         self._focus_hist: list[dict] = []
         self._personal_calibration: dict | None = None
+        self.focus_enabled = True
         self.startup_calibration: dict | None = (
             {"status": "waiting"}
             if startup_calibration and self.headset.kind == "real" and self.mode != "review"
@@ -204,6 +211,7 @@ class SessionRuntime:
             "connected": bool(getattr(self.headset, "connected", False)),
             "kind": self.headset.kind,
             "simulated": self.headset.kind != "real",
+            "focus_enabled": self.focus_enabled,
             "port": getattr(self.headset, "port", None),
             "state": getattr(self.headset, "state", None),
             "stream": {
@@ -259,20 +267,29 @@ class SessionRuntime:
             remaining = max(0, DURATION_SECONDS - (self.clock.now() - self._personal_calibration["t_start"]))
         return {**self.startup_calibration, "clean": clean, "remaining_seconds": remaining}
 
-    async def complete_startup_calibration(self) -> dict:
+    async def complete_startup_calibration(self, *, without_eeg: bool = False) -> dict:
         if self.status != "running" or self.startup_calibration is None:
             raise ValueError("No startup calibration is pending")
         if self.startup_calibration["status"] == "complete":
+            if without_eeg and self.focus_enabled:
+                raise ValueError("Calibration can only be skipped before starting the lecture")
             return self.startup_calibration_status()
-        if self.startup_calibration["status"] != "saved":
+        if not without_eeg and self.startup_calibration["status"] != "saved":
             raise ValueError("Complete the focused calibration before starting the lecture")
         b = self.engine.baseline
-        self.engine = FocusEngine(self.s, stored_baseline=(b.mu, b.sigma))
+        self.focus_enabled = not without_eeg
+        self.engine = FocusEngine(self.s, stored_baseline=None if without_eeg else (b.mu, b.sigma))
+        if without_eeg:
+            self._personal_calibration = None
+            self._save_baseline_on_end = False
+            self.db.update_session(
+                self.id, baseline={"focus_enabled": False, "ready": False, "stored": False}
+            )
         self.clock = MediaClock() if self.mode == "recorded" else LiveClock()
         self._focus_hist.clear()
         self._focus_buf.clear()
         self._last_tick_t = -1.0
-        self.startup_calibration = {"status": "complete"}
+        self.startup_calibration = {"status": "complete", "skipped": without_eeg}
         if isinstance(self.transcriber, ScriptedTranscript):
             self.transcriber.clock = self.clock
             if not self.drive_manually:
@@ -295,6 +312,9 @@ class SessionRuntime:
         last = self.engine.last
         if not last or last.quality != "good" or last.artifact or self.engine.extra.get("cal_phase"):
             raise ValueError("Wait for clean signal outside a diagnostic calibration phase")
+        self.engine._x_ema = None
+        self.engine._zwin.clear()
+        self.engine.detector = DropDetector(self.s)
         previous = self.db.get_learner(self.learner["id"])
         self._personal_calibration = {
             "t_start": self.clock.now(),
@@ -338,7 +358,13 @@ class SessionRuntime:
             self.learner = self.db.get_learner(self.learner["id"])
             self.db.update_session(
                 self.id,
-                baseline={"mu": result["mu"], "sigma": result["sigma"], "stored": True, "ready": True},
+                baseline={
+                    "mu": result["mu"],
+                    "sigma": result["sigma"],
+                    "stored": True,
+                    "ready": True,
+                    "metric": FOCUS_METRIC,
+                },
             )
             result["saved"] = True
             if self.calibration_pending:
@@ -406,6 +432,7 @@ class SessionRuntime:
             "words": self.transcript.to_dicts(),
             "flags": [self._flag_public(f) for f in self.flags.values()],
             "recaps": self.ring.all(),
+            "catchup_explanations": self.explanations.snapshot(),
             "focus": self._focus_recent,
             "headset": self.headset_status(),
             "totem": self.totem.status(),
@@ -472,7 +499,7 @@ class SessionRuntime:
             "log_alpha": frame.log_alpha,
             "log_beta": frame.log_beta,
         }
-        self.engine.feed_frame(frame.engagement, frame.quality, frame.valid, frame.blink_count, extra=extra)
+        self.engine.feed_frame(frame.effort, frame.quality, frame.valid, frame.blink_count, extra=extra)
         if frame.attention is not None:
             self.engine.feed_attention(int(frame.attention))
 
@@ -616,6 +643,7 @@ class SessionRuntime:
         form = "words" if recap.source == "transcript" else self.best_form
         return {
             "type": "catchup",
+            "rich": not self.review_only,
             "flag_id": flag["id"],
             "since": flag["t_start"],
             "span_seconds": round(max(0.0, t - flag["t_start"]), 1),
@@ -680,6 +708,8 @@ class SessionRuntime:
             self.broadcast({"type": "totem", **self.totem.status(), "pulse": True})
             self.broadcast({"type": "chip", "flag_id": f["id"]})
         self.broadcast(card)
+        if auto_show and not self.review_only and self.status == "running":
+            self.explanations.request(f["id"])
 
     def tap(self, source: str = "key") -> dict:
         """A "lost me" from the pad (source "tap") or the keyboard / on-screen pad (source "key"). Both are real."""
@@ -717,17 +747,20 @@ class SessionRuntime:
 
     def open_catchup(self, flag_id: str) -> None:
         f = self.flags.get(flag_id)
-        if f:
-            f["opened"] = True
-            self.catchups_shown += 1
-            self._persist_flag(f)
+        if f and f.get("catchup_shown"):
+            if not f.get("opened"):
+                f["opened"] = True
+                self.catchups_shown += 1
+                self._persist_flag(f)
             self.broadcast({"type": "catchup_opened", "flag_id": flag_id})
+            if self.status == "running" and not self.review_only:
+                self.explanations.request(flag_id)
 
     def dismiss_catchup(self, flag_id: str) -> None:
         self.broadcast({"type": "catchup_dismissed", "flag_id": flag_id})
 
     def _on_detector_events(self, events: list[DetectorEvent], t: float) -> None:
-        if self.calibration_pending:
+        if self.calibration_pending or not self.focus_enabled:
             return
         for ev in events:
             if ev.kind == "enter":
@@ -757,8 +790,11 @@ class SessionRuntime:
         paused = self.clock.paused
         if self.mode == "recorded" and not self.calibration_pending:
             self._reveal_recorded_words(t)
-        sample, events = self.engine.tick(t, paused=paused)
+        sample, events = self.engine.tick(t, paused=paused or not self.focus_enabled)
         d = sample.to_dict()
+        d["focus_enabled"] = self.focus_enabled
+        if not self.focus_enabled:
+            d.update(state="nosignal", e=None, x=None, z=None, w15=None, baseline_ready=False)
         d["sim"] = self.headset.kind != "real"
         d["blinks_total"] = self.engine.blinks.count
         if self.engine.external and self.engine.extra:
@@ -919,6 +955,7 @@ class SessionRuntime:
                 with contextlib.suppress(Exception):
                     await stopper.stop()
         await self.recaps.flush()
+        await self.explanations.finish()
         if self._focus_buf:
             self.db.add_focus_samples(self.id, self._focus_buf)
             self._focus_buf = []
@@ -941,6 +978,8 @@ class SessionRuntime:
                 "sigma": self.engine.baseline.sigma,
                 "stored": self.engine.baseline.stored,
                 "ready": self.engine.baseline.ready,
+                "metric": FOCUS_METRIC,
+                "focus_enabled": self.focus_enabled,
             },
         )
         self.status = "ended"
@@ -990,14 +1029,18 @@ class SessionRuntime:
         async def fill(row: dict, i: int) -> None:
             async with sem:
                 try:
-                    pkg, source = await build_package(
-                        self.llm,
-                        row["span_text"],
-                        row["context_text"],
-                        corpus,
-                        self.keyterms,
-                        seed=self.seed + i,
-                    )
+                    cached = self.explanations.match(row["span_text"], row["context_text"])
+                    if cached is not None:
+                        pkg, source = cached
+                    else:
+                        pkg, source = await build_package(
+                            self.llm,
+                            row["span_text"],
+                            row["context_text"],
+                            corpus,
+                            self.keyterms,
+                            seed=self.seed + i,
+                        )
                 except LLMUnavailable as e:
                     row["package"] = {"error": str(e)}
                     row["package_source"] = "failed"
@@ -1016,6 +1059,7 @@ class SessionRuntime:
     async def abort(self) -> None:
         """Stop without building gaps (server shutdown)."""
         await self.board.stop()
+        await self.explanations.stop()
         if self.status == "running":
             self.status = "ended"
             if self._tick_task:

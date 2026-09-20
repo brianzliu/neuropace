@@ -15,7 +15,7 @@ STATES = ("focused", "drifting", "poor")
 # amplitudes (theta, alpha, beta) in raw units
 _AMPS = {
     "focused": (12.0, 15.0, 18.0),
-    "drifting": (22.0, 19.0, 9.0),
+    "drifting": (22.0, 40.0, 9.0),
     "poor": (12.0, 15.0, 18.0),
 }
 

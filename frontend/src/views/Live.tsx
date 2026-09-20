@@ -5,7 +5,7 @@ import { backendFetch } from "../lib/backend";
 import { ConnectionPills, type ConnectionPill } from "../components/StudioChrome";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBlocker, useNavigate, useParams } from "react-router-dom";
-import { api } from "../lib/api";
+import { api, errorText } from "../lib/api";
 import { SessionSocket, type SocketStatus } from "../lib/ws";
 import { startMicStream, type MicStream } from "../lib/audio";
 import { clearCatchup, dismissChip, initialState, openChip, reduce, type SessionState } from "../lib/sessionState";
@@ -31,7 +31,7 @@ const CAL: { k: CalPhase; label: string }[] = [
 function inField(ev: KeyboardEvent): boolean {
   const el = ev.target as HTMLElement | null;
   const tag = el?.tagName;
-  return tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || tag === "BUTTON" || tag === "A" || !!el?.isContentEditable;
+  return tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || tag === "BUTTON" || tag === "A" || !!el?.isContentEditable || !!el?.closest("[data-live-catchup]");
 }
 
 function micMessage(e: unknown): string {
@@ -84,6 +84,8 @@ export default function Live() {
     });
   }, []);
   const sockRef = useRef<SessionSocket | null>(null);
+  const catchupGeneration = useRef(0);
+  const catchupRequests = useRef(new Set<string>());
   const stateRef = useRef(state);
   stateRef.current = state;
   const leaving = useRef(false); // set once the lecture is ended here, so the guard lets the navigation through
@@ -126,6 +128,7 @@ export default function Live() {
     sockRef.current = sock;
     sock.connect();
     return () => {
+      catchupGeneration.current++;
       sock.close();
       sockRef.current = null;
     };
@@ -287,7 +290,33 @@ export default function Live() {
     return () => window.removeEventListener("keydown", onKey);
   }, [doTap, doForce, doSim, doEnd, details, blocker, calibrating]);
 
-  const onExpire = useCallback(() => setState((s) => clearCatchup(s)), []);
+  const onCatchupRetry = useCallback(async (flagId: string) => {
+    const current = stateRef.current;
+    const requestKey = `${sessionId}:${flagId}`;
+    if (!current.catchup?.rich || current.catchup.flag_id !== flagId || current.catchupExplanations[flagId]?.status === "pending" || catchupRequests.current.has(requestKey)) return;
+    const generation = catchupGeneration.current;
+    catchupRequests.current.add(requestKey);
+    setState((s) => reduce(s, { type: "catchup_explanation", flag_id: flagId, status: "pending" }));
+    try {
+      const result = await api.catchupExplanation(sessionId, flagId);
+      if (generation !== catchupGeneration.current) return;
+      if (result.flag_id !== flagId) throw new Error("The explanation response did not match this lecture moment. Please retry.");
+      setState((s) => {
+        const latest = s.catchupExplanations[flagId];
+        if (result.status === "pending" && latest?.status !== "pending") return s;
+        if (latest?.status === "ready" && result.status !== "ready") return s;
+        return reduce(s, { ...result, type: "catchup_explanation" });
+      });
+    } catch (error) {
+      if (generation !== catchupGeneration.current) return;
+      setState((s) => s.catchupExplanations[flagId]?.status !== "pending" ? s : reduce(s, {
+        type: "catchup_explanation", flag_id: flagId, status: "failed", error: errorText(error),
+      }));
+    } finally {
+      catchupRequests.current.delete(requestKey);
+    }
+  }, [sessionId]);
+  const onExpire = useCallback(() => setState((s) => s.catchup?.rich ? s : clearCatchup(s)), []);
   const onDismiss = useCallback(() => {
     const c = stateRef.current.catchup;
     if (c) send({ type: "dismiss_catchup", flag_id: c.flag_id });
@@ -428,7 +457,7 @@ export default function Live() {
             duration={hello.lecture?.duration ?? null}
             onTime={onTime}
             pauseSeq={state.pauseRequest?.seq ?? 0}
-            onResume={() => setState((s) => clearCatchup(s))}
+            onResume={() => setState((s) => s.catchup?.rich ? s : clearCatchup(s))}
           />
         ) : null}
         <button className={"btn btn-sm" + (details ? " is-on" : "")} onClick={toggleDetails} title="Signal trace, headset and pad status, rolling recaps">
@@ -484,6 +513,7 @@ export default function Live() {
         </> : undefined}
         onCatchupExpire={onExpire}
         onCatchupDismiss={onDismiss}
+        onCatchupRetry={onCatchupRetry}
         onOpenChip={onOpenChip}
         onIgnoreChip={onIgnoreChip}
         cycleToken={cycleToken}

@@ -1,0 +1,52 @@
+.live-catchup {
+  position: fixed;
+  right: 24px;
+  bottom: calc(var(--controlbar-h, 84px) + 18px);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  width: min(760px, calc(100vw - 48px));
+  max-height: calc(100dvh - var(--controlbar-h, 84px) - 48px);
+  color: var(--label);
+  background: var(--surface);
+  border: 2px solid var(--brand);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-pop);
+  overflow: hidden;
+}
+
+.live-catchup-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-shrink: 0;
+  gap: 16px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.live-catchup-header h2 { font-size: var(--fs-title2); }
+.live-catchup-header p { margin: 6px 0 0; font-size: var(--fs-footnote); color: var(--label-2); }
+.live-catchup-header button { flex-shrink: 0; }
+.live-catchup-body { overflow-y: auto; overscroll-behavior: contain; padding: 20px 24px; min-height: 0; }
+.live-catchup-recap { padding: 16px; background: var(--surface-2); border-radius: var(--r); }
+.live-catchup-recap h3 { font-size: var(--fs-subhead); }
+.live-catchup-recap p { margin: 8px 0 0; line-height: 1.55; }
+.live-catchup-now { color: var(--label-2); font-size: var(--fs-subhead); }
+.live-catchup-status { padding: 16px 0 0; margin: 0; }
+.live-catchup-status p { margin: 0 0 12px; }
+.live-catchup-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 16px; }
+.live-catchup-tabs [aria-selected="true"] { color: var(--label); border-color: var(--brand); background: color-mix(in srgb, var(--brand) 14%, var(--surface)); }
+.live-catchup-artifact { min-width: 0; overflow-x: auto; padding: 4px; }
+.live-catchup-format { color: var(--label-2); font-size: var(--fs-footnote); margin-bottom: 10px; }
+.live-catchup-steps { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+.live-catchup-steps span { text-align: center; font-size: var(--fs-footnote); }
+.live-catchup :focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+
+@media (max-width: 600px) {
+  .live-catchup { right: 8px; width: calc(100vw - 16px); bottom: calc(var(--controlbar-h, 84px) + 8px); max-height: calc(100dvh - var(--controlbar-h, 84px) - 24px); }
+  .live-catchup-header { flex-wrap: wrap; padding: 16px; gap: 12px; }
+  .live-catchup-header h2 { font-size: var(--fs-title3); }
+  .live-catchup-body { padding: 16px; }
+  .live-catchup-steps { flex-wrap: wrap; }
+}

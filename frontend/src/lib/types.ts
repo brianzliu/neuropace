@@ -47,6 +47,7 @@ export interface Word {
 
 export interface FocusMsg {
   type: "focus";
+  focus_enabled?: boolean;
   t: number;
   e: number | null;
   x: number | null;
@@ -83,8 +84,18 @@ export interface Flag {
   simulated?: boolean;
 }
 
+export interface CatchupExplanation {
+  flag_id: string;
+  status: "pending" | "ready" | "failed";
+  options?: { form: Form; artifact: ArtifactKind; content: ReteachContent }[];
+  plan?: Plan | null;
+  source?: PackageSource;
+  error?: string;
+}
+
 export interface CatchupMsg {
   type: "catchup";
+  rich?: boolean;
   t: number;
   flag_id: string;
   since?: number; // lecture time where the missed span starts (the EEG drop when a tap is linked)
@@ -145,6 +156,7 @@ export interface StreamHealth {
 
 export interface HeadsetStatus {
   connected: boolean;
+  focus_enabled?: boolean;
   kind: HeadsetKind;
   /** true for every kind but "real": the waves on screen are not from a headset on this student's head */
   simulated?: boolean;
@@ -242,6 +254,7 @@ export interface SessionRow {
 
 export interface SessionPublic extends SessionRow {
   running: boolean;
+  focus_enabled?: boolean;
   flags: Flag[];
   gaps: number;
   words: number;
@@ -252,6 +265,7 @@ export interface SessionPublic extends SessionRow {
 
 export interface StartupCalibration {
   status: "waiting" | "collecting" | "failed" | "saved" | "complete";
+  skipped?: boolean;
   clean: boolean;
   remaining_seconds: number;
   error?: string;
@@ -259,6 +273,7 @@ export interface StartupCalibration {
 
 export interface HelloMsg {
   startup_calibration?: StartupCalibration | null;
+  catchup_explanations?: CatchupExplanation[];
   type: "hello";
   session: SessionRow;
   learner: Learner;
@@ -306,6 +321,7 @@ export type ServerMsg =
   | ({ type: "flag_open"; flag: Flag; t: number })
   | ({ type: "flag_close"; flag: Flag; t: number })
   | CatchupMsg
+  | ({ type: "catchup_explanation"; t?: number } & CatchupExplanation)
   | ({ type: "catchup_withheld"; flag_id: string; reason: string; t: number })
   | ({ type: "catchup_opened"; flag_id: string; t: number })
   | ({ type: "catchup_dismissed"; flag_id: string; t: number })
@@ -489,6 +505,8 @@ export interface Card {
     said: string;
     /** the tutor's reason for this family: preferred, untried, or exploring */
     why: string;
+    plan_reason?: string;
+    visual_unavailable?: boolean;
   };
 }
 

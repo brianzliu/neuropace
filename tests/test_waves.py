@@ -189,14 +189,19 @@ async def test_restudy_session_measures_focus_on_the_wall_clock(settings, db, ll
         return out
 
     lrn = db.default_learner()
-    db.set_learner_baseline(lrn["id"], -0.55, 0.06)
+    db.set_learner_baseline(lrn["id"], 0.95, 0.06)
     lrn = db.default_learner()
     sess = db.create_session(
         learner_id=lrn["id"],
         lecture_id=None,
         mode="review",
         seed=7,
-        baseline={"mu": lrn["baseline_mu"], "sigma": lrn["baseline_sigma"], "stored": True},
+        baseline={
+            "mu": lrn["baseline_mu"],
+            "sigma": lrn["baseline_sigma"],
+            "stored": True,
+            "metric": lrn["baseline_metric"],
+        },
     )
     rt = SessionRuntime(
         settings,
@@ -213,9 +218,9 @@ async def test_restudy_session_measures_focus_on_the_wall_clock(settings, db, ll
     await rt.start()
     q = rt.subscribe()
     assert rt.engine.baseline.ready and rt.engine.baseline.stored
-    easy, drowsy = frames("easy", 12, 1), frames("drowsy", 40, 2)
+    focused, drowsy = frames("hard", 12, 1), frames("drowsy", 40, 2)
     t = 0.0
-    for f in easy + drowsy:
+    for f in focused + drowsy:
         t += 1.0
         rt._on_frame(f)
         d = rt.step(t)

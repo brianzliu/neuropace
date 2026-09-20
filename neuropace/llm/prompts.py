@@ -5,7 +5,7 @@ a plan (which visual and which doing template fit the moment); then one focused 
 the data that template renders. Each template prompt lists its fields and nothing else.
 """
 
-PROMPT_VERSION = "10"
+PROMPT_VERSION = "11"
 
 GROUNDING = (
     "Ground every word in the transcript text you are given. Quote or closely paraphrase it. "
@@ -42,7 +42,11 @@ CORE_INSTRUCTIONS = (
     "shape); 'timeline' when it is dated events or the phases of a process in order; 'compare' when it contrasts two "
     "things aspect by aspect; 'animation' when it describes a mechanism in motion (something orbiting, travelling, "
     "flowing, oscillating, sorting, filling) that a moving picture would make obvious; otherwise 'diagram' (a concept "
-    "graph of how the ideas connect).\n"
+    "graph of how the ideas connect). Spatial motion and repeated oscillation take precedence over timeline: "
+    "a period or changes in speed describe how an object moves, not a chronology. Choose animation for that "
+    "motion so the student can see position and speed change. Reserve timeline for discrete events or stages, "
+    "not positions in a repeating swing or a list of characteristics. Do not animate abstract numerical growth "
+    "when a chart or plot would show the stated quantities more faithfully.\n"
     "  doing = 'steps' when the span describes a procedure, method or algorithm the student could follow; otherwise "
     "'example' (a concrete instance carried through to a result).\n"
     "plan.why: one line naming the content cue that decided it. " + GROUNDING

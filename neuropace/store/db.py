@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from ..config import FORMS, LEGACY_FORMS
+from ..config import FOCUS_METRIC, FORMS, LEGACY_FORMS
 from ..ids import new_id
 
 SCHEMA = """
@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS curricula(
   learner_id TEXT PRIMARY KEY, content_json TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS learners(
   id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at REAL NOT NULL,
-  baseline_mu REAL, baseline_sigma REAL, baseline_at REAL, baseline_source TEXT);
+  baseline_mu REAL, baseline_sigma REAL, baseline_at REAL, baseline_source TEXT, baseline_metric TEXT);
 CREATE TABLE IF NOT EXISTS lectures(
   id TEXT PRIMARY KEY, title TEXT NOT NULL, kind TEXT NOT NULL, media_path TEXT,
   transcript_json TEXT, segments_json TEXT, quiz_json TEXT, keyterms_json TEXT, duration REAL, created_at REAL NOT NULL);
@@ -81,6 +81,8 @@ class DB:
         with self.lock:
             if "baseline_source" not in self._columns("learners"):
                 self.conn.execute("ALTER TABLE learners ADD COLUMN baseline_source TEXT")
+            if "baseline_metric" not in self._columns("learners"):
+                self.conn.execute("ALTER TABLE learners ADD COLUMN baseline_metric TEXT")
             if "artifact_kind" not in self._columns("cards"):
                 self.conn.execute("ALTER TABLE cards ADD COLUMN artifact_kind TEXT")
             if "focus_ratio" not in self._columns("cards"):
@@ -176,20 +178,27 @@ class DB:
     def list_learners(self) -> list[dict]:
         return [dict(r) for r in self._q("SELECT * FROM learners ORDER BY created_at")]
 
-    def set_learner_baseline(self, lid: str, mu: float, sigma: float) -> None:
+    def set_learner_baseline(self, lid: str, mu: float, sigma: float, *, metric: str = FOCUS_METRIC) -> None:
         self._x(
-            "UPDATE learners SET baseline_mu=?, baseline_sigma=?, baseline_at=?, baseline_source='automatic' WHERE id=?",
-            (mu, sigma, time.time(), lid),
+            "UPDATE learners SET baseline_mu=?, baseline_sigma=?, baseline_at=?, baseline_source='automatic', "
+            "baseline_metric=? WHERE id=?",
+            (mu, sigma, time.time(), metric, lid),
         )
 
     def compare_and_set_learner_baseline(
-        self, lid: str, mu: float, sigma: float, previous_at: float | None
+        self,
+        lid: str,
+        mu: float,
+        sigma: float,
+        previous_at: float | None,
+        *,
+        metric: str = FOCUS_METRIC,
     ) -> bool:
         with self.lock:
             cursor = self.conn.execute(
-                "UPDATE learners SET baseline_mu=?, baseline_sigma=?, baseline_at=?, baseline_source='personal' "
-                "WHERE id=? AND baseline_at IS ?",
-                (mu, sigma, time.time(), lid, previous_at),
+                "UPDATE learners SET baseline_mu=?, baseline_sigma=?, baseline_at=?, baseline_source='personal', "
+                "baseline_metric=? WHERE id=? AND baseline_at IS ?",
+                (mu, sigma, time.time(), metric, lid, previous_at),
             )
             return cursor.rowcount == 1
 
@@ -535,7 +544,8 @@ class DB:
         with self.lock:
             self.conn.execute("DELETE FROM tally WHERE learner_id=?", (learner_id,))
             self.conn.execute(
-                "UPDATE learners SET baseline_mu=NULL, baseline_sigma=NULL, baseline_at=NULL, baseline_source=NULL WHERE id=?",
+                "UPDATE learners SET baseline_mu=NULL, baseline_sigma=NULL, baseline_at=NULL, baseline_source=NULL, "
+                "baseline_metric=NULL WHERE id=?",
                 (learner_id,),
             )
 
