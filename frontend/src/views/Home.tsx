@@ -34,7 +34,8 @@ export default function Home() {
     if (learnerRef.current !== learnerId) {
       learnerRef.current = learnerId;
       setClassId("");
-      return;
+      // Fall through to load: setClassId("") is a no-op when already "",
+      // so an early return here would skip the load forever.
     }
     const version = ++generation.current;
     setData(null); setError("");
