@@ -302,7 +302,7 @@ function TimelineView({ c, step }: { c: TimelineContent; step: number }) {
           <i style={{ width: `${n > 1 ? ((shown - 1) / (n - 1)) * 100 : 100}%` }} />
         </div>
         {c.events.map((e, i) => (
-          <div key={i} className={"tl-event" + (i < shown ? " on" : "") + (i === shown - 1 ? " cur" : "")} style={{ left: `${n > 1 ? (i / (n - 1)) * 100 : 50}%` }}>
+          <div key={i} className={"tl-event" + (i < shown ? " on" : "") + (i === shown - 1 ? " cur" : "")} style={{ left: n > 1 ? `calc(60px + (100% - 120px) * ${i / (n - 1)})` : "50%" }}>
             <span className="tl-when">{e.when}</span>
             <span className="tl-dot" />
             <span className="tl-label">{e.label}</span>
