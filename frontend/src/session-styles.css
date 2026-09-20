@@ -400,7 +400,8 @@ h1, h2, h3 { margin: 0; letter-spacing: -0.01em; }
 .feedback.hit { background: color-mix(in srgb, var(--green) 16%, transparent); color: var(--green-dark); }
 .feedback.miss { background: color-mix(in srgb, var(--orange) 16%, transparent); color: var(--orange-dark); }
 .feedback.drop { background: color-mix(in srgb, var(--brand) 14%, transparent); color: var(--brand-dark); }
-.dissolve span { display: inline-block; white-space: pre-wrap; }
+.dissolve .dissolve-word { display: inline; white-space: nowrap; }
+.dissolve .dissolve-word span { display: inline-block; }
 .dissolve.active span { animation: dissolve 0.3s ease-in forwards; animation-delay: var(--d, 0s); }
 @keyframes dissolve { to { opacity: 0; transform: translateY(6px) scale(0.96); filter: blur(3px); } }
 .reteach { display: flex; flex-direction: column; gap: 14px; animation: rise 0.4s var(--spring); }
@@ -558,9 +559,11 @@ a.linklike { font-size: var(--fs-subhead); }
 .plot .plot-line { fill: none; stroke: var(--brand); stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 2000; stroke-dashoffset: 2000; animation: draw 1.4s ease-out forwards; }
 .plot .series.s1 .plot-line { stroke: var(--orange); }
 .plot .series.s2 .plot-line { stroke: var(--green); }
-.plot .series-name { font-size: 12px; font-weight: 800; font-family: var(--font); fill: var(--brand); }
-.plot .series.s1 .series-name { fill: var(--orange-dark); }
-.plot .series.s2 .series-name { fill: var(--green-dark); }
+.plot-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: var(--fs-footnote); font-weight: 800; color: var(--label-2); }
+.plot-legend .legend-item { display: inline-flex; align-items: center; gap: 8px; }
+.plot-legend .legend-item i { display: inline-block; width: 22px; height: 4px; border-radius: 2px; background: var(--brand); }
+.plot-legend .legend-item.s1 i { background: var(--orange); }
+.plot-legend .legend-item.s2 i { background: var(--green); }
 .plot .annot circle { fill: var(--label); }
 .plot .annot-text { fill: var(--label); font-size: 12px; font-weight: 800; font-family: var(--font); }
 @keyframes draw { to { stroke-dashoffset: 0; } }

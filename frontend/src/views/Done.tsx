@@ -19,6 +19,8 @@ export default function Done() {
   }, [sessionId]);
   if (!sess) return <div className="page narrow"><div className="loading">Wrapping up…</div></div>;
   const taps = sess.flags.filter((f) => f.source === "tap" || f.source === "key").length;
+  // catch-ups the student actually saw: every tap card, plus the drift cards they chose to open
+  const seen = sess.flags.filter((f) => f.catchup_shown && (f.source === "tap" || f.source === "key" || f.opened)).length;
   return (
     <div className="page narrow">
       <div className="complete">
@@ -37,7 +39,7 @@ export default function Done() {
             <div className="k">times you asked to catch up</div>
           </div>
           <div className="stat green">
-            <div className="v">{sess.catchups_shown}</div>
+            <div className="v">{seen}</div>
             <div className="k">catch-ups</div>
           </div>
         </div>

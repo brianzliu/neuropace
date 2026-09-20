@@ -345,7 +345,7 @@ export default function Restudy() {
                   <span className="artifact-kind">
                     <span className="family-icon">{FORM_ICON[card.reteach.form]}</span>
                     {FORM_LABEL[card.reteach.form]}
-                    {ARTIFACT_LABEL[card.reteach.artifact] !== FORM_LABEL[card.reteach.form] ? ` · ${ARTIFACT_LABEL[card.reteach.artifact]}` : ""}
+                    {FORM_LABEL[card.reteach.form].includes(ARTIFACT_LABEL[card.reteach.artifact]) ? "" : ` · ${ARTIFACT_LABEL[card.reteach.artifact]}`}
                   </span>
                   {card.reteach.key_term ? <span className="badge accent">{card.reteach.key_term}</span> : null}
                 </div>
@@ -430,11 +430,11 @@ export function FamilyList({ tally }: { tally: TallySummary }) {
 function WhatWorked({ tally }: { tally: TallySummary }) {
   const best = tally.preferred ?? (tally.rank && tally.rank[0]) ?? [...FORMS].sort((a, b) => tally.forms[b].rescues - tally.forms[a].rescues)[0];
   const st = tally.forms[best];
-  if (!st || st.attempts === 0) return <p className="sub">Reflow is still learning which explanations land for you.</p>;
+  if (!st || st.attempts === 0) return <p className="sub">NeuroPace is still learning which explanations land for you.</p>;
   const held = st.focus?.mean_focus != null ? ` and held your attention ${Math.round(st.focus.mean_focus * 100)}% of the time` : "";  return (
     <p className="sub">
       {FORM_LABEL[best]} rescued you {st.rescues} time{st.rescues === 1 ? "" : "s"}
-      {held}. {tally.preferred ? "That is your preferred way, so you will see it first." : "Reflow keeps trying the others until it is sure."}
+      {held}. {tally.preferred ? "That is your preferred way, so you will see it first." : "NeuroPace keeps trying the others until it is sure."}
     </p>
   );
 }

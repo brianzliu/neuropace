@@ -225,6 +225,7 @@ h1 { font-size: 1.8em; margin: 0 0 1rem; }
 .lossbars .bar:hover::after { content: attr(data-tip); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: var(--bg-3); padding: 0.2rem 0.5rem; border-radius: 6px; font-size: 0.75em; white-space: nowrap; border: 1px solid var(--line); }
 .segtable { width: 100%; border-collapse: collapse; }
 .segtable th, .segtable td { text-align: left; padding: 0.5rem 0.6rem; border-top: 1px solid var(--line); }
+.segtable td.mono { white-space: nowrap; }
 .segtable th { color: var(--muted); font-size: 0.8em; text-transform: uppercase; letter-spacing: 0.06em; }
 .segtable tr.planted td { background: rgba(248, 113, 113, 0.12); }
 .segtable tr.top td:first-child { color: var(--bad); font-weight: 700; }

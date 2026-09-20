@@ -103,7 +103,7 @@ export default function BrainWaves({
           ))}
         </div>
       ) : tone === "waiting" ? (
-        <div className="waves-note">Nothing is coming from the headset. Check it is on and charged; Reflow reconnects by itself.</div>
+        <div className="waves-note">Nothing is coming from the headset. Check it is on and charged; NeuroPace reconnects by itself.</div>
       ) : null}
     </div>
   );

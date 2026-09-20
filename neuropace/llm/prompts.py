@@ -5,14 +5,16 @@ a plan (which visual and which doing template fit the moment); then one focused 
 the data that template renders. Each template prompt lists its fields and nothing else.
 """
 
-PROMPT_VERSION = "9"
+PROMPT_VERSION = "10"
 
 GROUNDING = (
     "Ground every word in the transcript text you are given. Quote or closely paraphrase it. "
     "Never introduce facts, names, numbers or examples that are not in the transcript. "
     "Preserve qualifications: a specific comparison does not justify a general verdict about reliability or superiority. "
     "If the transcript is too thin to support a field, write a short honest line such as "
-    "'the lecturer only mentioned X here' instead of inventing content. Plain text only, no markdown, no bullet symbols."
+    "'the lecturer only mentioned X here' instead of inventing content. Plain text only, no markdown, no bullet symbols. "
+    "spelling_hints lists terms from the course as spelling hints only: use a hint's spelling when the transcript says "
+    "that term, and never mention a hint the transcript does not contain."
 )
 
 RECAP_INSTRUCTIONS = (

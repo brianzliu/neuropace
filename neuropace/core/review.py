@@ -149,13 +149,22 @@ class ReviewEngine:
             }
         return out
 
+    _BEST = {
+        "words": "Putting it in words usually works best for you, so here it is in words.",
+        "analogy": "A comparison usually works best for you, so here it is by comparison.",
+        "visual": "A picture usually works best for you, so here it is as a picture.",
+        "doing": "Doing it usually works best for you, so here it is by doing.",
+    }
+
     def _why(self, form: str) -> str:
         """The tutor says why this family, in one line (docs/PRODUCT.md §5): preferred, untried, or exploring."""
         t = self.tally_summary()
         st = t["forms"].get(form) or {}
         label = st.get("label") or form
         if t.get("enough_data") and t.get("rank") and t["rank"][0] == form:
-            return f"{label.capitalize()} usually works best for you, so here it is that way."
+            return self._BEST.get(
+                form, f"{label.capitalize()} usually works best for you, so here it is that way."
+            )
         if not st.get("attempts"):
             return f"Let's try it {label}. We have not tried that one yet."
         return f"Let's try it {label} this time."

@@ -36,7 +36,7 @@ function inField(ev: KeyboardEvent): boolean {
 
 function micMessage(e: unknown): string {
   const name = (e as { name?: string })?.name ?? "";
-  if (name === "NotAllowedError" || name === "SecurityError") return "Reflow needs the microphone to hear the lecture. Allow it in the browser, then try again.";
+  if (name === "NotAllowedError" || name === "SecurityError") return "NeuroPace needs the microphone to hear the lecture. Allow it in the browser, then try again.";
   if (name === "NotFoundError") return "No microphone found. Plug one in, then try again.";
   return "The microphone could not start. " + (e instanceof Error ? e.message : String(e));
 }
@@ -264,14 +264,15 @@ export default function Live() {
 
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => {
-      if (calibrating || inField(ev) || ev.metaKey || ev.ctrlKey || ev.altKey) return;
       const k = ev.key.toLowerCase();
       if (blocker.state === "blocked") {
+        // the dialog's own button has focus, so this runs before the field guard below
         if (k === "escape") blocker.reset();
         else return;
         ev.preventDefault();
         return;
       }
+      if (calibrating || inField(ev) || ev.metaKey || ev.ctrlKey || ev.altKey) return;
       if (k === " " || k === "t") doTap();
       else if (k === "l" && details) doForce();
       else if (k === "f") setCycleToken((x) => x + 1);
@@ -356,7 +357,7 @@ export default function Live() {
         {hello?.transcript_kind === "deepgram" ? (
           <div className="grp">
             {mic ? (
-              <button className="btn" onClick={() => void stopMic()} title="Reflow stops hearing the lecture">
+              <button className="btn" onClick={() => void stopMic()} title="NeuroPace stops hearing the lecture">
                 <span className="dot ok" /> Microphone on
               </button>
             ) : (
@@ -442,8 +443,8 @@ export default function Live() {
     return (
       <div className="page narrow">
         <div className="complete">
-          <h1 className="t-title1">{gone ? "This lecture has ended." : "Reflow lost the lecture."}</h1>
-          <p className="sub">{gone ? "Your notes are ready when you are." : "The connection to Reflow dropped. If it was restarted, the lecture so far is kept and its moments are on the lecture page."}</p>
+          <h1 className="t-title1">{gone ? "This lecture has ended." : "NeuroPace lost the lecture."}</h1>
+          <p className="sub">{gone ? "Your notes are ready when you are." : "The connection to NeuroPace dropped. If it was restarted, the lecture so far is kept and its moments are on the lecture page."}</p>
           <div className="row">
             <button className="btn btn-primary btn-lg" onClick={() => nav(`/lecture/${sessionId}`)}>
               See what you missed
@@ -497,7 +498,7 @@ export default function Live() {
             <h2 id="quit-title" className="t-title2">
               Do you want to quit recording?
             </h2>
-            <p className="sub">Reflow is still listening to this lecture. Leaving stops the recording and writes your notes from what it heard so far.</p>
+            <p className="sub">NeuroPace is still listening to this lecture. Leaving stops the recording and writes your notes from what it heard so far.</p>
             <div className="row">
               <button className="btn btn-primary" autoFocus onClick={() => blocker.reset()}>
                 Keep listening <span className="kbd">esc</span>

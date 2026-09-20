@@ -92,7 +92,7 @@ class LLMClient:
     async def recap(
         self, window_text: str, corpus_text: str, keyterms: list[str] | None = None
     ) -> tuple[RecapForms, str]:
-        payload = {"transcript_last_30s": window_text, "key_terms": keyterms or []}
+        payload = {"transcript_last_30s": window_text, "spelling_hints": keyterms or []}
         obj, source = await self._structured(
             "recap", RECAP_INSTRUCTIONS, payload, RecapForms, self.s.recap_timeout_seconds, 400
         )
@@ -107,7 +107,11 @@ class LLMClient:
         self, span_text: str, context_text: str, keyterms: list[str] | None = None
     ) -> tuple[GapCore | None, str]:
         """Stage one of a missed moment: note, question, words family, plan. None when the API kept failing."""
-        payload = {"missed_span": span_text, "context_before_span": context_text, "key_terms": keyterms or []}
+        payload = {
+            "missed_span": span_text,
+            "context_before_span": context_text,
+            "spelling_hints": keyterms or [],
+        }
         return await self._with_retries("core", CORE_INSTRUCTIONS, payload, GapCore, 1800)
 
     async def gap_artifact(
@@ -120,7 +124,7 @@ class LLMClient:
             "context_before_span": context_text,
             "key_term": note.get("key_term", ""),
             "definition": note.get("definition", ""),
-            "key_terms": keyterms or [],
+            "spelling_hints": keyterms or [],
         }
         max_tokens = 3000 if kind == "animation" else 1400
         return await self._with_retries(

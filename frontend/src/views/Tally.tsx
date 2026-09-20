@@ -11,8 +11,8 @@ export function TallyCard({ tally }: { tally: TallySummary }) {
     <>
       <section className="panel">
         {FORMS.map(form => <div className="tally-row" key={form}>
-          <span>{FORM_LABEL[form]}</span><span className="small muted">{tally.forms[form].attempts} attempts</span>
-          <span>{tally.forms[form].rescues} rescues</span>
+          <span>{FORM_LABEL[form]}</span><span className="small muted">{tally.forms[form].attempts} attempt{tally.forms[form].attempts === 1 ? "" : "s"}</span>
+          <span>{tally.forms[form].rescues} rescue{tally.forms[form].rescues === 1 ? "" : "s"}</span>
         </div>)}
         {!tally.enough_data && <p className="small muted">More review answers are needed before comparing explanation formats.</p>}
       </section>
