@@ -30,17 +30,41 @@ def gap(gid, status="open"):
     }
 
 
-def test_dashboard_is_learner_scoped(app, db):
+def test_dashboard_is_learner_scoped_and_completion_is_explicit(app, db):
     a, b = db.create_learner("Synthetic A"), db.create_learner("Synthetic B")
     sa, sb = make_session(db, a["id"]), make_session(db, b["id"])
     db.replace_gaps(sa["id"], [gap("gap_a"), gap("gap_closed", "closed")])
     db.replace_gaps(sb["id"], [gap("gap_b")])
     with TestClient(app) as client:
+        body = {"title": "Synthetic syllabus", "topics": [{"title": "Timing", "completed": True}]}
+        assert client.put(f"/api/learners/{a['id']}/curriculum", json=body).status_code == 200
         result = client.get(f"/api/learners/{a['id']}/dashboard?organize=true").json()
         assert [c["id"] for c in result["concepts"]] == ["gap_a"]
         assert result["closed"] == 1 and result["organization_source"] == "rules"
-        assert [c["id"] for c in client.get(f"/api/learners/{b['id']}/dashboard").json()["concepts"]] == ["gap_b"]
+        assert result["curriculum"] == body
+        assert client.get(f"/api/learners/{b['id']}/dashboard").json()["curriculum"]["topics"] == []
         assert client.get("/api/learners/nope/dashboard").status_code == 404
+        parsed = client.post(
+            f"/api/learners/{a['id']}/syllabus/parse",
+            files={"file": ("syllabus.txt", b"Timing\nOrbits\nTiming", "text/plain")},
+        ).json()
+        assert parsed["source"] == "lines"
+        assert [t["title"] for t in parsed["curriculum"]["topics"]] == ["Timing", "Orbits"]
+        assert all(not t["completed"] for t in parsed["curriculum"]["topics"])
+        # Parsing previews never overwrite the saved syllabus.
+        assert client.get(f"/api/learners/{a['id']}/dashboard").json()["curriculum"] == body
+        assert (
+            client.post(
+                f"/api/learners/{a['id']}/syllabus/parse", files={"file": ("bad.pdf", b"not pdf")}
+            ).status_code
+            == 400
+        )
+        assert (
+            client.post(
+                f"/api/learners/{a['id']}/syllabus/parse", files={"file": ("big.txt", b"x" * 2_000_001)}
+            ).status_code
+            == 413
+        )
 
 
 @pytest.mark.asyncio

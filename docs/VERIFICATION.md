@@ -2,6 +2,38 @@
 
 What was checked, how, and what is still unverified. Re-run the commands before the demo; the outcomes below are from the build day on Joaquin's laptop (macOS, Python 3.13.14, Node 24, pnpm 11.13, arduino-cli with core arduino:renesas_uno 1.6.0).
 
+## Same-screen launch and proactive visual lessons: 20 Sep 2026
+
+The popup came from `window.open`; the live overlay accepted only four strings; tutoring selected precomputed formats and waited for manual advancement. The new path reuses the existing artifact builder and sandboxed renderers, with bounded live generation and answer-specific model selection after misses.
+
+Browser session `sess_4dcba6bc` used a labelled practice transcript and real model/TTS calls. Dashboard Start session kept the same tab (one before and after). Catch me up displayed a generated pendulum animation; screenshots one second apart showed its bob on opposite sides of the pivot. The transcript continued, and switching to the worked example revealed its next step. Tutoring began with the animation and reached its check without a Got it click. Choosing constant speed made the model select an analogy with a reason addressing that specific misconception. Natural playback led to the next check; the correct answer ended at Every moment covered. Saved cards confirm animation/read, question/miss, analogy/read, question/hit.
+
+A planning ambiguity initially selected a timeline for physical motion. Prompt version 11 distinguishes spatial oscillation from chronology. Direct provider checks then selected animation for the motion example and plot for numerical growth. Before the final prompt wording change, the combined checks passed 247 backend tests and 73 frontend tests; the final browser/provider pass, frontend build, lint/format, and rebuilt wheel also passed. This pass does not claim new EEG-accuracy evidence.
+
+## Judge demo rehearsal with EEG unavailable: 20 Sep 2026
+
+Claude's completed non-EEG demo fixes are present in local commit `4947e46`; the remaining local work keeps the primary-effort correction and adds an explicit button-only continuation. Real/replay devices no longer report a fake state or accept simulator state controls.
+
+The full browser rehearsal `sess_5989ed1d` passed on a separate demo learner: Start session, headset unavailable, Continue with button only, real microphone capture of the spoken compound-interest lesson, Catch me up, End lecture, Private tutoring, Cole narration with a chart revealing $110 and $121, an intentional $10 answer to the second-year-interest question, re-teaching in words, then the correct $11 answer and Every moment covered. The session captured 176 words, created one real key/tap flag, used a generated cached recap, and saved one LLM-generated study gap. It finished reviewed with two answers, one closed moment, and no outstanding runtime. No EEG flag or attention score was fabricated; the learner baseline stayed unset and restudy did not start a headset session.
+
+An unreviewed saved copy of that recorded rehearsal is available at `/lecture/sess_ec7e5f55`, titled Saved demo: compound interest. It is a cached-content backup, not a new live capture. The original completed rehearsal is unchanged.
+
+Final combined checks: 205 backend tests, 18 frontend tests, TypeScript/Vite build, Ruff lint/format, diff checks, and isolated wheel startup passed. The required demo sequence is in `docs/DEMO-RUNBOOK.md`. Live EEG remains optional for completing the demo; physical camera/Arduino, hosted deployment, loss-map presentation, and new accuracy studies are outside this pass.
+
+## Focus input correction after the live release check: 20 Sep 2026
+
+The real session `sess_4e931769` completed 30/30 clean calibration seconds and kept streaming after a headset power cycle. Microphone capture, manual catch-ups, sample-workspace switching, the new whiteboard, browser narration, and the packaged installation worked. A fresh review session loaded the saved personal baseline unchanged. The full software readiness command passed with 188 backend and 18 frontend tests before the input correction below.
+
+The wearer confirmed silent counting during calibration and silent eyes-open daydreaming during the spoken check. The microphone captured “Begin now” at lecture time 267.179 and the stop cue at 304.639. The monitored interval had 35/35 valid focus ticks and 281 raw chunks. The old beta-based score stayed positive (w15 1.175 to 2.569), so the unchanged -1.25 trigger could not fire. It also stayed above the trigger for 30 seconds on either side. Two actual EEG flags at 94.608 and 172.607 verified the real event path, but were outside the confirmed drift interval.
+
+The consumer used secondary engagement as its sole input, contrary to `EEG_PIPELINE.md`'s primary-effort guidance. Mean raw effort fell from 0.3436 during counting to 0.1453 during confirmed drift, while mean engagement rose from -0.5163 to -0.3317. The correction selects the existing theta/alpha effort feature without changing the MindWave feature formulas or detector thresholds. Calibration now clears waiting-period EMA history, and saved baselines carry a metric version so legacy engagement baselines cannot be misinterpreted.
+
+Replaying the unchanged recording through the corrected SessionRuntime, including calibration, its reset, and catch-up generation, produced one EEG flag at 283.607 (16.43 seconds after the recorded start cue), plus a chip and a non-auto-opening catch-up. This is recorded-data verification, not a fresh live accuracy result.
+
+Fresh live confirmation then passed in `sess_9da187b6`: the new 30-second baseline was saved with metric `theta_alpha_v1`; the native spoken drift cue was captured from lecture time 14.430; a real, non-forced EEG flag fired at 43.122 (about 29 seconds after the cue began, 24 seconds after playback finished). All 40 observed focus frames, including the short cue, were usable, with w15 reaching -1.538. The browser displayed the catch-up offer, Show me opened its explicitly labelled transcript fallback, and ending the session saved one LLM-generated study gap. Tutoring opened that actual gap with a grounded pendulum explanation and voice narration. This is one successful live check, not a population-level accuracy claim.
+
+All 197 backend tests passed, including the new input-selection, baseline-version, smoothing-reset, and connection-startup regressions. Lint/format and the isolated wheel check passed. Native Bluetooth now gets 30 seconds for its first valid packet, then retains the existing five-second stalled-stream recovery. This prevents premature handshake cancellation; it does not resolve every macOS/headset failure. A power cycle was still required for the successful fresh hardware check.
+
 ## MVP startup and tutor voice integration: 20 Sep 2026
 
 Real-headset lecture sessions now begin with the existing 30-second focused calibration, without reconnecting the headset. Failed calibration preserves the previous baseline; recording and attention flags wait until calibration succeeds and the learner starts the lecture. Simulated practice remains labelled and does not save a personal calibration.
@@ -440,14 +472,14 @@ uses `uv run neuropace serve`.
 
 The current product name is **NeuroPace**. Historical deployment URLs and CLI aliases
 remain compatible. Main's lecture, quiz, and restudy flow is merged with the Pocket
-Studio dashboard, camera capture, and local device bridge.
+Studio dashboard, syllabus, camera capture, and local device bridge.
 
 - Full backend suite: `uv run pytest -q`, **92 passed**.
 - `uv run ruff check neuropace tests scripts` passed.
 - `npm --prefix frontend run build` passed, including TypeScript checking.
 - Safari preview used an isolated temporary server on port 8766 with synthetic
   sessions, simulated EEG, keyboard input, and explicitly enabled offline fixtures.
-  Dashboard concepts, activity, Library, quiz questions and selection,
+  Dashboard concepts, activity, syllabus progress, Library, quiz questions and selection,
   restudy, and the prominent Start session page were checked visually.
 - This verification did not exercise physical hardware, microphone/camera permissions,
   external model generation, or production deployment. The existing local data and

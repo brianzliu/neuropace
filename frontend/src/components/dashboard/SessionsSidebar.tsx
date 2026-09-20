@@ -34,9 +34,9 @@ export default function SessionsSidebar({ sessions }: { sessions: Dashboard["ses
                 {session.summary ? <p className="session-summary">{session.summary}</p> : null}
                 {session.status === "running" ? (
                   <div className="row session-actions">
-                    <a className="live-open" href={`/live/${session.id}`} target="neuropace-studio">
+                    <Link className="live-open" to={`/live/${session.id}`}>
                       <span aria-hidden="true">▶</span> Open live session
-                    </a>
+                    </Link>
                   </div>
                 ) : (
                   <div className="row session-links">

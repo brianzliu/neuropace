@@ -9,15 +9,16 @@ export default function FocusCard({ last, headset, flags, rawAt }: { last: Focus
     const id = window.setInterval(() => setNow(Date.now()), 500);
     return () => window.clearInterval(id);
   }, []);
+  const focusDisabled = headset?.focus_enabled === false || last?.focus_enabled === false;
   const real = headset?.kind === "real";
   const practice = headset?.kind === "simulated" || headset?.kind === "fake";
   const replay = headset?.kind === "replay";
   const streamLive = rawAt !== undefined ? rawAt > 0 && now - rawAt < 2000 : headset?.stream ? headset.stream.live : true;
   const lost = real && !streamLive;
-  const state = !headset ? "off" : lost ? "lost" : !last ? "off" : last.state;  const settling = state === "baseline";
-  const pct = settling ? Math.round((last?.baseline_progress ?? 0) * 100) : 100;
+  const state = focusDisabled || !headset ? "off" : lost ? "lost" : !last ? "off" : last.state;  const settling = state === "baseline";
+  const pct = focusDisabled ? 0 : settling ? Math.round((last?.baseline_progress ?? 0) * 100) : 100;
   const tone = state === "drop" ? "drop" : state === "lost" ? "lost" : state === "bad" || state === "nosignal" || state === "off" ? "off" : settling ? "settle" : "steady";
-  const title =
+  const title = focusDisabled ? "Button-only mode" :
     tone === "drop"
       ? "You may have drifted"
       : tone === "lost"
@@ -29,7 +30,7 @@ export default function FocusCard({ last, headset, flags, rawAt }: { last: Focus
           : settling
             ? "Getting to know you"
             : "Steady";
-  const body =
+  const body = focusDisabled ? "Automatic focus detection is off for this session. Tap Catch me up whenever you need a recap." :
     tone === "drop"
       ? "Tap Catch me up for a one-line recap, or keep listening."
       : tone === "lost"
@@ -54,8 +55,8 @@ export default function FocusCard({ last, headset, flags, rawAt }: { last: Focus
         <circle cx="28" cy="28" r="6" className="core" />
       </svg>
       <div className="focus-text">
-        <div className="focus-title">{practice ? `Simulated · ${title}` : replay ? `Replay · ${title}` : title}</div>
-        <div className="focus-body">{practice ? "Practice signal, not a measurement of your attention." : replay ? "Previously recorded signal, not your current attention." : body}</div>
+        <div className="focus-title">{focusDisabled ? title : practice ? `Simulated · ${title}` : replay ? `Replay · ${title}` : title}</div>
+        <div className="focus-body">{focusDisabled ? body : practice ? "Practice signal, not a measurement of your attention." : replay ? "Previously recorded signal, not your current attention." : body}</div>
       </div>
     </div>
   );

@@ -9,13 +9,15 @@ import time
 from pathlib import Path
 from typing import Any
 
-from ..config import FORMS, LEGACY_FORMS
+from ..config import FOCUS_METRIC, FORMS, LEGACY_FORMS
 from ..ids import new_id
 
 SCHEMA = """
+CREATE TABLE IF NOT EXISTS curricula(
+  learner_id TEXT PRIMARY KEY, content_json TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS learners(
   id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at REAL NOT NULL,
-  baseline_mu REAL, baseline_sigma REAL, baseline_at REAL, baseline_source TEXT);
+  baseline_mu REAL, baseline_sigma REAL, baseline_at REAL, baseline_source TEXT, baseline_metric TEXT);
 CREATE TABLE IF NOT EXISTS lectures(
   id TEXT PRIMARY KEY, title TEXT NOT NULL, kind TEXT NOT NULL, media_path TEXT,
   transcript_json TEXT, segments_json TEXT, quiz_json TEXT, keyterms_json TEXT, duration REAL, created_at REAL NOT NULL);
@@ -46,14 +48,6 @@ CREATE TABLE IF NOT EXISTS quiz_answers(
   session_id TEXT NOT NULL, item_id TEXT NOT NULL, phase TEXT NOT NULL, choice INTEGER, correct INTEGER,
   PRIMARY KEY(session_id, item_id, phase));
 CREATE TABLE IF NOT EXISTS llm_cache(key TEXT PRIMARY KEY, task TEXT, model TEXT, output_json TEXT, created_at REAL);
-CREATE TABLE IF NOT EXISTS oh_messages(
-  id TEXT PRIMARY KEY, session_id TEXT NOT NULL, ord INTEGER NOT NULL, role TEXT NOT NULL,
-  text TEXT NOT NULL, related_element_ids_json TEXT, source TEXT, created_at REAL NOT NULL);
-CREATE INDEX IF NOT EXISTS ix_oh_messages ON oh_messages(session_id, ord);
-CREATE TABLE IF NOT EXISTS oh_board_ops(
-  id TEXT PRIMARY KEY, session_id TEXT NOT NULL, ord INTEGER NOT NULL, op TEXT NOT NULL,
-  element_id TEXT NOT NULL, payload_json TEXT, created_at REAL NOT NULL);
-CREATE INDEX IF NOT EXISTS ix_oh_board_ops ON oh_board_ops(session_id, ord);
 """
 
 
@@ -85,17 +79,14 @@ class DB:
 
     def _migrate(self) -> None:
         with self.lock:
-            # Retired syllabus/class tracking: drop the tables so no stale topic data remains.
-            self.conn.execute("DROP TABLE IF EXISTS curricula")
-            self.conn.execute("DROP TABLE IF EXISTS classes")
             if "baseline_source" not in self._columns("learners"):
                 self.conn.execute("ALTER TABLE learners ADD COLUMN baseline_source TEXT")
+            if "baseline_metric" not in self._columns("learners"):
+                self.conn.execute("ALTER TABLE learners ADD COLUMN baseline_metric TEXT")
             if "artifact_kind" not in self._columns("cards"):
                 self.conn.execute("ALTER TABLE cards ADD COLUMN artifact_kind TEXT")
             if "focus_ratio" not in self._columns("cards"):
                 self.conn.execute("ALTER TABLE cards ADD COLUMN focus_ratio REAL")
-            if "parent_session_id" not in self._columns("sessions"):
-                self.conn.execute("ALTER TABLE sessions ADD COLUMN parent_session_id TEXT")
             rows = self.conn.execute("SELECT learner_id, form, rescues, attempts FROM tally").fetchall()
             merged: dict[tuple[str, str], list[int]] = {}
             legacy = False
@@ -139,6 +130,17 @@ class DB:
         with self.lock:
             self.conn.executemany(sql, rows)
 
+    def get_curriculum(self, learner_id: str) -> dict:
+        row = self._one("SELECT content_json FROM curricula WHERE learner_id=?", (learner_id,))
+        return _uj(row["content_json"]) if row else {"title": "My curriculum", "topics": []}
+
+    def set_curriculum(self, learner_id: str, content: dict) -> None:
+        self._x(
+            "INSERT INTO curricula(learner_id,content_json) VALUES(?,?) "
+            "ON CONFLICT(learner_id) DO UPDATE SET content_json=excluded.content_json",
+            (learner_id, _j(content)),
+        )
+
     # ---- learners ----
     def create_learner(self, name: str) -> dict:
         lid = new_id("lrn")
@@ -176,20 +178,27 @@ class DB:
     def list_learners(self) -> list[dict]:
         return [dict(r) for r in self._q("SELECT * FROM learners ORDER BY created_at")]
 
-    def set_learner_baseline(self, lid: str, mu: float, sigma: float) -> None:
+    def set_learner_baseline(self, lid: str, mu: float, sigma: float, *, metric: str = FOCUS_METRIC) -> None:
         self._x(
-            "UPDATE learners SET baseline_mu=?, baseline_sigma=?, baseline_at=?, baseline_source='automatic' WHERE id=?",
-            (mu, sigma, time.time(), lid),
+            "UPDATE learners SET baseline_mu=?, baseline_sigma=?, baseline_at=?, baseline_source='automatic', "
+            "baseline_metric=? WHERE id=?",
+            (mu, sigma, time.time(), metric, lid),
         )
 
     def compare_and_set_learner_baseline(
-        self, lid: str, mu: float, sigma: float, previous_at: float | None
+        self,
+        lid: str,
+        mu: float,
+        sigma: float,
+        previous_at: float | None,
+        *,
+        metric: str = FOCUS_METRIC,
     ) -> bool:
         with self.lock:
             cursor = self.conn.execute(
-                "UPDATE learners SET baseline_mu=?, baseline_sigma=?, baseline_at=?, baseline_source='personal' "
-                "WHERE id=? AND baseline_at IS ?",
-                (mu, sigma, time.time(), lid, previous_at),
+                "UPDATE learners SET baseline_mu=?, baseline_sigma=?, baseline_at=?, baseline_source='personal', "
+                "baseline_metric=? WHERE id=? AND baseline_at IS ?",
+                (mu, sigma, time.time(), metric, lid, previous_at),
             )
             return cursor.rowcount == 1
 
@@ -256,7 +265,7 @@ class DB:
         sid = kw.get("id") or new_id("sess")
         self._x(
             "INSERT INTO sessions(id,learner_id,lecture_id,mode,catchup_policy,headset_kind,totem_kind,transcript_kind,best_form,"
-            "status,started_at,baseline_json,seed,auto_pause,parent_session_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "status,started_at,baseline_json,seed,auto_pause) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (
                 sid,
                 kw["learner_id"],
@@ -272,7 +281,6 @@ class DB:
                 _j(kw.get("baseline")),
                 kw.get("seed"),
                 1 if kw.get("auto_pause", True) else 0,
-                kw.get("parent_session_id"),
             ),
         )
         return self.get_session(sid)  # type: ignore[return-value]
@@ -299,14 +307,6 @@ class DB:
             sql += " WHERE " + " AND ".join(conds)
         sql += " ORDER BY started_at DESC"
         return [self.get_session(r["id"]) for r in self._q(sql, tuple(params))]  # type: ignore[misc]
-
-    def child_session(self, parent_id: str, mode: str) -> dict | None:
-        """The one session of `mode` opened from `parent_id` (the whiteboard for a lecture), if any."""
-        r = self._one(
-            "SELECT id FROM sessions WHERE parent_session_id=? AND mode=? ORDER BY started_at DESC LIMIT 1",
-            (parent_id, mode),
-        )
-        return self.get_session(r["id"]) if r else None
 
     def update_session(self, sid: str, **fields: Any) -> None:
         if "baseline" in fields:
@@ -544,7 +544,8 @@ class DB:
         with self.lock:
             self.conn.execute("DELETE FROM tally WHERE learner_id=?", (learner_id,))
             self.conn.execute(
-                "UPDATE learners SET baseline_mu=NULL, baseline_sigma=NULL, baseline_at=NULL, baseline_source=NULL WHERE id=?",
+                "UPDATE learners SET baseline_mu=NULL, baseline_sigma=NULL, baseline_at=NULL, baseline_source=NULL, "
+                "baseline_metric=NULL WHERE id=?",
                 (learner_id,),
             )
 
@@ -594,83 +595,3 @@ class DB:
             "INSERT OR REPLACE INTO llm_cache(key,task,model,output_json,created_at) VALUES(?,?,?,?,?)",
             (key, task, model, _j(output), time.time()),
         )
-
-    # ---- office hours (chat + board, event-sourced: ord is one counter shared by both tables per session) ----
-    def oh_add_message(
-        self,
-        sid: str,
-        ord: int,
-        role: str,
-        text: str,
-        related_element_ids: list[str] | None = None,
-        source: str | None = None,
-    ) -> dict:
-        mid = new_id("ohm")
-        created_at = time.time()
-        self._x(
-            "INSERT INTO oh_messages(id,session_id,ord,role,text,related_element_ids_json,source,created_at)"
-            " VALUES(?,?,?,?,?,?,?,?)",
-            (mid, sid, ord, role, text, _j(related_element_ids), source, created_at),
-        )
-        return {
-            "id": mid,
-            "session_id": sid,
-            "ord": ord,
-            "role": role,
-            "text": text,
-            "related_element_ids": related_element_ids,
-            "source": source,
-            "created_at": created_at,
-        }
-
-    def oh_get_messages(self, sid: str, upto_ord: int | None = None) -> list[dict]:
-        sql = "SELECT * FROM oh_messages WHERE session_id=?"
-        params: list[Any] = [sid]
-        if upto_ord is not None:
-            sql += " AND ord<=?"
-            params.append(upto_ord)
-        sql += " ORDER BY ord"
-        out = []
-        for r in self._q(sql, tuple(params)):
-            d = dict(r)
-            d["related_element_ids"] = _uj(d.pop("related_element_ids_json"))
-            out.append(d)
-        return out
-
-    def oh_add_board_op(self, sid: str, ord: int, op: str, element_id: str, payload: dict | None) -> dict:
-        oid = new_id("ohop")
-        created_at = time.time()
-        self._x(
-            "INSERT INTO oh_board_ops(id,session_id,ord,op,element_id,payload_json,created_at) VALUES(?,?,?,?,?,?,?)",
-            (oid, sid, ord, op, element_id, _j(payload), created_at),
-        )
-        return {
-            "id": oid,
-            "session_id": sid,
-            "ord": ord,
-            "op": op,
-            "element_id": element_id,
-            "payload": payload,
-            "created_at": created_at,
-        }
-
-    def oh_get_board_ops(self, sid: str, upto_ord: int | None = None) -> list[dict]:
-        sql = "SELECT * FROM oh_board_ops WHERE session_id=?"
-        params: list[Any] = [sid]
-        if upto_ord is not None:
-            sql += " AND ord<=?"
-            params.append(upto_ord)
-        sql += " ORDER BY ord"
-        out = []
-        for r in self._q(sql, tuple(params)):
-            d = dict(r)
-            d["payload"] = _uj(d.pop("payload_json"))
-            out.append(d)
-        return out
-
-    def oh_next_ord(self, sid: str) -> int:
-        """MAX(ord)+1 across both tables for this session: the restart-safe next write position."""
-        a = self._one("SELECT MAX(ord) AS m FROM oh_messages WHERE session_id=?", (sid,))
-        b = self._one("SELECT MAX(ord) AS m FROM oh_board_ops WHERE session_id=?", (sid,))
-        hi = max(a["m"] if a and a["m"] is not None else -1, b["m"] if b and b["m"] is not None else -1)
-        return hi + 1

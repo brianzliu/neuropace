@@ -1,10 +1,32 @@
+import { useEffect, useMemo, useState } from "react";
 import { useGuidedStep } from "../lib/guide";
-import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../lib/api";
-import type { QuizExplanation, QuizGet, QuizResult } from "../lib/types";
+import type { QuizGet, QuizResult } from "../lib/types";
+import { Badge } from "../components/Badges";
 import SessionBack from "../components/BackLink";
 import { useLibrary } from "./Library";
+
+/** A stable shuffle of option positions per item and session, so the answer key's position never gives it away
+ * (the lecture files list the correct option first) and the order stays the same across the two phases. */
+function permutation(seed: string, n: number): number[] {
+  let h = 2166136261;
+  for (const ch of seed) {
+    h ^= ch.charCodeAt(0);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  const idx = Array.from({ length: n }, (_, i) => i);
+  for (let i = n - 1; i > 0; i--) {
+    h ^= h << 13;
+    h >>>= 0;
+    h ^= h >>> 17;
+    h ^= h << 5;
+    h >>>= 0;
+    const j = h % (i + 1);
+    [idx[i], idx[j]] = [idx[j], idx[i]];
+  }
+  return idx;
+}
 
 export default function Quiz() {
   const { sessionId = "" } = useParams();
@@ -12,28 +34,12 @@ export default function Quiz() {
   const guide = useGuidedStep();
   const [data, setData] = useState<QuizGet | null>(null);
   const [phase, setPhase] = useState<"before" | "after">("before");
-  const [prompt, setPrompt] = useState("");
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [result, setResult] = useState<QuizResult | null>(null);
-  const [explanations, setExplanations] = useState<Record<string, QuizExplanation>>({});
-  const [explanationLoading, setExplanationLoading] = useState<Record<string, boolean>>({});
-  const [explanationErrors, setExplanationErrors] = useState<Record<string, string>>({});
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
-    let active = true;
-    api.quiz(sessionId).then((quiz) => {
-      if (!active) return;
-      setData(quiz);
-      setPhase(quiz.answers.some((answer) => answer.phase === "before") ? "after" : "before");
-      const first = quiz.items[0];
-      if (first) {
-        void api.quizPrompt(sessionId, first.id).then((message) => {
-          if (active) setPrompt(message.text);
-        }).catch(() => {});
-      }
-    }).catch((e) => { if (active) setErr(String(e)); });
-    return () => { active = false; };
+    api.quiz(sessionId).then(setData).catch((e) => setErr(String(e)));
   }, [sessionId]);
   const submit = async () => {
     setBusy(true);
@@ -47,31 +53,35 @@ export default function Quiz() {
       setBusy(false);
     }
   };
-  const explain = async (itemId: string, choice: number) => {
-    if (!result) return;
-    const key = `${itemId}:${choice}`;
-    if (explanations[key] || explanationLoading[key]) return;
-    setExplanationLoading((current) => ({ ...current, [key]: true }));
-    setExplanationErrors((current) => ({ ...current, [key]: "" }));
-    try {
-      const explanation = await api.quizExplanation(sessionId, itemId, choice);
-      setExplanations((current) => ({ ...current, [key]: explanation }));
-    } catch {
-      setExplanationErrors((current) => ({ ...current, [key]: "Couldn't explain this choice. Try again." }));
-    } finally {
-      setExplanationLoading((current) => ({ ...current, [key]: false }));
-    }
-  };
+  const orders = useMemo(() => Object.fromEntries((data?.items ?? []).map((it) => [it.id, permutation(sessionId + it.id, it.options.length)])), [data, sessionId]);
   if (err) return <div className="page narrow">{!library ? <div className="page-back"><SessionBack /></div> : null}<div className="card error-text">{err}</div></div>;
   if (!data) return <div className="page narrow"><div className="loading">Loading…</div></div>;
+  const prior = data.answers.filter((a) => a.phase === phase);
   const answered = Object.keys(answers).length;
   return (
     <div className="page narrow">
       {!library ? <div className="page-back"><SessionBack /></div> : null}
-      <div className="page-head quiz-head">
+      <div className="page-head">
         <div>
-          <h1 className="t-title1">Quiz</h1>
-          {prompt ? <p className="quiz-prompt">{prompt}</p> : null}
+          <h1 className="t-title1">Final quiz</h1>
+          <div className="sub">
+            {data.items.length} items. {prior.length ? `Already submitted for this phase: ${prior.filter((a) => a.correct).length}/${prior.length} correct (resubmitting replaces).` : "Not submitted yet for this phase."}
+          </div>
+        </div>
+        <div className="segmented">
+          {(["before", "after"] as const).map((p) => (
+            <button
+              key={p}
+              className={phase === p ? "is-active" : ""}
+              onClick={() => {
+                setPhase(p);
+                setResult(null);
+                setAnswers({});
+              }}
+            >
+              {p} review
+            </button>
+          ))}
         </div>
       </div>
       <div className="stack-lg">
@@ -81,45 +91,45 @@ export default function Quiz() {
             <div className="q">
               <span className="label-2 mono">{n + 1}.</span> {it.question}
             </div>
-            <div className="options quiz-options">
-              {it.options.map((o, i) => {
-                const sel = answers[it.id] === i;
+            <div className="options">
+              {(orders[it.id] ?? it.options.map((_, i) => i)).map((orig, i) => {
+                const o = it.options[orig];
+                const sel = answers[it.id] === orig;
                 const r = result?.per_item.find((p) => p.item_id === it.id);
-                const key = `${it.id}:${i}`;
-                const explanation = explanations[key];
-                const judged = explanation?.correct ?? (r && sel ? r.correct : null);
-                const cls = (sel ? " selected" : "") + (judged === true ? " correct" : judged === false ? " wrong" : "");
+                const cls = (sel ? " selected" : "") + (r && sel ? (r.correct ? " correct" : " wrong") : "");
                 return (
-                  <div className={`quiz-choice${cls}`} key={i}>
-                    <label className="group-row clickable" onClick={(event) => {
-                      if (!result) return;
-                      event.preventDefault();
-                      void explain(it.id, i);
-                    }}>
-                      <span className="row">
-                        <input type="radio" className="radio" name={it.id} checked={sel} disabled={!!result} onChange={() => setAnswers({ ...answers, [it.id]: i })} />
-                        <span className="txt">{o}</span>
-                      </span>
-                    </label>
-                    {explanationLoading[key] ? <p className="quiz-explanation muted" role="status">Writing an explanation…</p> : null}
-                    {explanation ? <p className="quiz-explanation">{explanation.text}</p> : null}
-                    {explanationErrors[key] ? <button className="quiz-explanation-error" onClick={() => void explain(it.id, i)}>{explanationErrors[key]}</button> : null}
-                  </div>
+                  <label key={i} className={"group-row clickable" + cls}>
+                    <span className="row">
+                      <input type="radio" className="radio" name={it.id} checked={sel} disabled={!!result} onChange={() => setAnswers({ ...answers, [it.id]: orig })} />
+                      <span className="txt">{o}</span>
+                    </span>
+                  </label>
                 );
               })}
             </div>
           </div>
         ))}
         {data.items.length ? (
-          <div className="card row">
+          <div className="row">
             {!result ? (
               <button className="btn btn-primary btn-lg" disabled={answered < data.items.length || busy} onClick={() => void submit()}>
                 Submit ({answered}/{data.items.length})
               </button>
             ) : (
-              <p className="quiz-result" role="status">
-                {result.score} of {result.total} correct. Select any answer to see why.
-              </p>
+              <>
+                <Badge tone="success">
+                  score {result.score}/{result.total} · {phase} review
+                </Badge>
+                <button
+                  className="btn btn-plain"
+                  onClick={() => {
+                    setResult(null);
+                    setAnswers({});
+                  }}
+                >
+                  Answer again
+                </button>
+              </>
             )}
           </div>
         ) : null}

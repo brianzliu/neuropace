@@ -27,8 +27,14 @@ class Recap:
 
 
 class RecapRing:
-    def __init__(self, maxlen: int = 30) -> None:
+    # A recap that ended this long before the missed span began still describes the point being made when the
+    # student drifted (TDD §6: "no overlap -> the latest recap"); anything older would mislead, so the catch-up
+    # falls back to the verbatim transcript instead. The scheduler sets it to one recap period plus slack.
+    STALE_SECONDS_DEFAULT = 25.0
+
+    def __init__(self, maxlen: int = 30, stale_seconds: float = STALE_SECONDS_DEFAULT) -> None:
         self._items: deque[Recap] = deque(maxlen=maxlen)
+        self.stale_seconds = stale_seconds
 
     def add(self, r: Recap) -> None:
         self._items.append(r)
@@ -41,7 +47,10 @@ class RecapRing:
 
     def lookup(self, t: float, span_start: float) -> Recap | None:
         """The recap that covers the missed span [span_start, t] best: largest overlap, later one on ties
-        (for a span shorter than one window this is simply the latest recap that reaches into it)."""
+        (for a span shorter than one window this is simply the latest recap that reaches into it). When no recap
+        reaches into the span yet (a tap between two recap cycles), the latest one is used as long as it ended
+        within `stale_seconds` of the span start; older than that, or an empty ring, returns None and the
+        catch-up shows the verbatim transcript."""
         cands = [r for r in self._items if r.t_to <= t + 2.0]
         if not cands:
             return None
@@ -53,6 +62,9 @@ class RecapRing:
                 best, best_key = r, key
         if best is not None and best_key is not None and best_key[0] > 0:
             return best
+        latest = max(cands, key=lambda r: r.t_to)
+        if span_start - latest.t_to <= self.stale_seconds:
+            return latest
         return None
 
     def all(self) -> list[dict]:
@@ -73,6 +85,7 @@ class RecapScheduler:
         self.llm = llm
         self.tr = transcript
         self.ring = ring
+        ring.stale_seconds = s.recap_period_seconds + 5.0  # one cycle plus model latency
         self.on_recap = on_recap
         self.keyterms = keyterms or []
         self.last_t: float | None = None

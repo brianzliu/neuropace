@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import type { SessionPublic } from "../lib/types";
 import { BackLink } from "./BackLink";
 import SessionSwitcher from "./SessionSwitcher";
@@ -10,7 +11,7 @@ export function sessionHref(sessionId: string, tab: SessionTab) {
 }
 
 /** Every lecture view shares the same navigation, including standalone and team links. */
-export default function SessionNavigation({ sessionId, title, sessions, titles, onSelect }: {
+export default function SessionNavigation({ sessionId, tab, title, sessions, titles, onSelect }: {
   sessionId: string;
   tab: SessionTab;
   title: string;
@@ -31,6 +32,12 @@ export default function SessionNavigation({ sessionId, title, sessions, titles, 
         <h1 className="library-title">{title}</h1>
       )}
     </div>
-
+    <nav className="library-tabs" aria-label="Lecture views">
+      {(["notes", "review", "replay", "quiz"] as const).map(item => (
+        <Link key={item} className={"library-tab btn btn-sm" + (tab === item ? " is-active" : "")} aria-current={tab === item ? "page" : undefined} to={sessionHref(sessionId, item)}>
+          {{ notes: "Notes", review: "Study", replay: "Replay", quiz: "Quiz" }[item]}
+        </Link>
+      ))}
+    </nav>
   </header>;
 }

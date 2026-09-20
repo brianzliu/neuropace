@@ -133,7 +133,7 @@ def test_openrouter_uses_chat_completions_and_strict_schema(tmp_path):
     assert call["model"] == "openai/gpt-4o-mini"
     assert call["response_format"]["type"] == "json_schema"
     assert call["response_format"]["json_schema"]["strict"] is True
-    assert call["extra_body"] == {"provider": {"require_parameters": True}, "reasoning": {"enabled": False}}
+    assert call["extra_body"] == {"provider": {"require_parameters": True}}
 
 
 def test_llm_retries_once_on_invalid_then_falls_back(tmp_path):

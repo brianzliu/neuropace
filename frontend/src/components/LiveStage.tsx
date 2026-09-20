@@ -13,6 +13,7 @@ interface Props {
   state: SessionState;
   onCatchupExpire: () => void;
   onCatchupDismiss: () => void;
+  onCatchupRetry?: (flagId: string) => void;
   onOpenChip: () => void;
   onIgnoreChip: () => void;
   cycleToken: number;
@@ -78,7 +79,16 @@ export default function LiveStage(props: Props) {
         </div>
       </div>
       {controls ? <div className="controlbar">{controls}</div> : null}
-      <CatchupOverlay card={state.catchup} onExpire={onCatchupExpire} onDismiss={onCatchupDismiss} cycleToken={cycleToken} freeze={freezeCatchup} details={details} />
+      <CatchupOverlay
+        card={state.catchup}
+        explanation={state.catchup ? state.catchupExplanations[state.catchup.flag_id] : undefined}
+        onRetry={props.onCatchupRetry}
+        onExpire={onCatchupExpire}
+        onDismiss={onCatchupDismiss}
+        cycleToken={cycleToken}
+        freeze={freezeCatchup}
+        details={details}
+      />
       <Chip count={state.chipIds.length} onOpen={onOpenChip} onIgnore={onIgnoreChip} />
     </>
   );

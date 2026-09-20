@@ -30,8 +30,8 @@ def test_personal_baseline_uses_the_full_focused_window_and_keeps_the_detector_t
     assert result["valid_seconds"] == 30
     assert result["mu"] == pytest.approx(np.mean([sample["x"] for sample in samples]))
     assert result["sigma"] == settings.sigma_floor
-    assert result["entry_log_engagement"] == pytest.approx(result["mu"] - 1.25 * result["sigma"])
-    assert result["exit_log_engagement"] == pytest.approx(result["mu"] - 0.6 * result["sigma"])
+    assert result["entry_log_effort"] == pytest.approx(result["mu"] - 1.25 * result["sigma"])
+    assert result["exit_log_effort"] == pytest.approx(result["mu"] - 0.6 * result["sigma"])
     assert result["duration_seconds"] == 30
 
 

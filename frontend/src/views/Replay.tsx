@@ -177,7 +177,7 @@ export default function Replay() {
           : <div className="replay-transcript">{state.words.length || state.interim.length ? <TranscriptPane words={state.words} interim={state.interim} flags={flags} now={state.t} /> : <p className="replay-empty">{playing ? "The transcript will appear as the lecture plays." : "Press Play to follow the lecture transcript."}</p>}</div>}
       </div>
       {state.hello?.sim.transcript && <p className="replay-note">Practice lecture · scripted transcript</p>}
-      <CatchupOverlay card={state.catchup} onExpire={() => setState(s => clearCatchup(s))}
+      <CatchupOverlay card={state.catchup} explanation={state.catchup ? state.catchupExplanations[state.catchup.flag_id] : undefined} onExpire={() => setState(s => clearCatchup(s))}
         onDismiss={() => setState(s => clearCatchup(s))} cycleToken={cycleToken} details={false} />
       <Chip count={state.chipIds.length} onOpen={onOpenChip} onIgnore={onIgnoreChip} />
     </section>
@@ -197,7 +197,7 @@ function synthHello(sess: SessionPublic, lecture: LectureFull | null): HelloMsg 
     // Office Hours sessions have no runtime/event log and are filtered out of every list that links here;
     // this fallback only avoids widening HelloMsg's mode (an unrelated, /ws/session-only type) for a case
     // that shouldn't reach Replay in practice.
-    mode: sess.mode === "office_hours" ? "live" : sess.mode,
+    mode: sess.mode,
     policy: sess.catchup_policy,
     auto_pause: sess.auto_pause,
     transcript_kind: sess.transcript_kind ?? "scripted",

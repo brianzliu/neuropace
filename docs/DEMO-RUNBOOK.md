@@ -1,53 +1,40 @@
-# Demo runbook (3 minutes) and rehearsal checklist
+# Judge demo: one lecture, one catch-up, one learning loop
 
-## Before judging (do all of these, in order)
+## Scope
 
-1. `uv run neuropace doctor`: both keys present, Deepgram ok, OpenAI model ok (if not, set `OPENAI_MODEL` to one of the listed alternatives), headset port found, totem port found, frontend built.
-2. Fresh AAA in the headset. Spare AAA in your pocket.
-3. Calibrated wearer: the teammate who wears the headset in the live beat runs one full session earlier (3 min baseline). Their learner then has a stored baseline; start the demo session with "use stored baseline" so the trace is live from second one. The UI labels "stored baseline".
-4. Recorded replay session ready: one real session of the demo lecture with a tap and an EEG flag, ended, notes generated, review not yet started. Note its session id. Open `/replay/:id` once to check it plays.
-5. Loss map ready: `/lossmap/:lectureId` shows n ≥ 2 and a ranking. Do not click "reveal" until the beat.
-6. Study number ready: `uv run neuropace study-analyze --lecture LEC_ID` output copied onto the slide, with its interval.
-7. Browser: one window, zoom so the transcript is readable at 3 m, mic permission already granted for the site, `/live` open on the demo learner.
-8. Rehearse the script below ten times. Say "simulated" out loud whenever `L`, `1`/`2`/`3` or a simulated headset is used. Space or `T` is the keyboard pad: a real tap, say "keyboard instead of the pad".
+The judge wears the headset. Show real waves when packets are arriving, but do not depend on an automatic EEG flag to complete the demo. The judge's Catch me up button is a real input, not a simulated lapse. No loss map, study statistics, camera setup, or physical-pad setup in this demo.
 
-## Script
+## Before the slot
 
-| Time | Beat | Say | Do |
-|---|---|---|---|
-| 0:00 | Pitch | "NeuroChat restyled every reply and found no learning gain. We don't believe in learning styles. We test it on you, and show you the data." | Title slide |
-| 0:20 | Live | "Teammate lectures. Transcript and focus stream. Judge, tap the pad when you drift." | Live session, deepgram transcript, headset on the calibrated wearer, judge holds the totem |
-| 0:45 | Catch-up | "One line, one glance, under a second. And here is the same recap as an analogy, because this learner's data says analogies land." | Judge taps; press `F` to cycle the form on the visible card |
-| 1:20 | Replay | "A real session at 4×. Flags, taps, the chip. Then the notes for only what was missed, and one review card." | `/replay/:id` then `/notes/:id` then `/review/:id`: miss on purpose, watch the dissolve into the diagram, hit |
-| 2:10 | Loss map | "Twelve learners, the 40 seconds where the room was lost. Here is the segment we planted." | `/lossmap/:lectureId`, click reveal. Read the flagged-vs-unflagged number with its interval |
-| 2:50 | Close | "Learner-owned data. The only shared view grades the lecture." | End |
+1. Keep `uv run neuropace serve --port 8765` running. Use the local app at http://localhost:8765/session/new. Do not deploy or restart services between judges.
+2. Check `uv run neuropace doctor`: transcription, the selected model provider, and TTS must be available. The current tutor voice is Deepgram Cole / Flux with expressivity 2.
+3. Put a fresh AAA in the headset and have a spare. If Bluetooth stalls, power-cycle the headset once. Do not keep the judges waiting through repeated reconnect attempts.
+4. Use a separate judge/demo learner, not another person's learned profile. Fit the forehead sensor and ear clip. Run the normal 30-second calibration if the signal is clean.
+5. If connection or calibration is not ready, click **Continue with button only**. Say: "The signal isn't clean enough for automatic prompts, so use this button whenever you want a catch-up." Recording, notes, and tutoring still work. Any waveform displayed remains real; no attention score is invented.
+6. Confirm the browser says **Microphone on**, and check that a few spoken words appear. Keep other conversations away from the microphone. Use a quiet speaker or have a teammate read the lesson below.
+7. Keep a previously generated session open as an explicitly labelled saved-lecture backup: http://localhost:8765/lecture/sess_8f4856e0. Never describe saved material as generated live.
 
-## Rehearsing without the headset (the honest way)
+## The live sequence
 
-`uv run reflow virtual-headset --control /tmp/vh.ctl` puts a MindWave on a pseudo-terminal and prints its path. Start the server with `REFLOW_HEADSET_PORT=<path> uv run reflow serve`: Reflow sees a real headset (no practice badge, "live from your headset"). Then, from another terminal: `echo "state drowsy" > /tmp/vh.ctl` (a drift within about ten seconds, the chip appears), `echo "state easy" > /tmp/vh.ctl` (recovered), `echo "state off" > /tmp/vh.ctl` (electrode off: "Adjust the headset"), `echo "pause 6" > /tmp/vh.ctl` (a dropout: "Headset lost", then back). Everything above the serial port is the code that runs on the real device; only the bytes are synthetic.
+1. **Listen:** Start a fresh lecture. The teammate teaches the short example below while the judge sees the transcript and, when available, real brain waves.
+2. **Catch up:** After the core explanation has been spoken, ask the judge to click **Catch me up**. The recap appears immediately and a generated visual follows. Use the format tabs and step controls, then **Back to lecture**. Recording continues while the panel is open; failures show a retry without hiding the recap.
+3. **Save:** Click **End lecture**. Open **Private tutoring** once the moment's notes are ready.
+4. **Learn:** Cole narrates the model's visual plan and the tutor moves to a check after playback. Use **Pause tutor** for more viewing time or Space to skip the reading. A wrong answer can make the model choose another available explanation to address that misconception.
+5. **Adapt:** Answer one question incorrectly on purpose. Show the next explanation family. Answer correctly, then show the lesson completion. A new learner remains labelled as still learning; do not claim a measured preference from one answer.
 
-Review goes straight into Office Hours (docs/PRODUCT.md §5a): an open conversation that opens by walking through what was missed, with a corner toggle to *Review on my own* (the scripted check-first, explain-on-a-miss drill, no voice) instead. `/team/artifacts/sample` shows all ten explanation templates with built-in data; `/team/artifacts/<session>` shows what the model filled for a real session.
+## Short lesson to read aloud
 
-## If something breaks
+Suppose you save one hundred dollars in an account that pays ten percent interest each year. After the first year, you have one hundred and ten dollars.
 
-| Symptom | Do |
-|---|---|
-| No transcript in the live beat | Say "scripted transcript" and start a session on the demo lecture (`lecture = How GPS finds you`); the pad still works |
-| No EEG flag fires in 60 s | Say so. The judge's tap carries the beat. Never press `L` without saying "simulated" |
-| No OpenAI key or the API is down | The app refuses to start a session without a key; mid-lecture the card shows the verbatim transcript (labelled) and failed notes offer a retry. Check `neuropace doctor` before the slot |
-| Headset poor signal | Reseat, check the ear clip, wait for the quality chip to go green; otherwise headset `sim` and say "simulated headset" |
-| Totem not detected | Reconnect USB (a running session picks it up within 5 s) or use the keyboard fallback: Space/`T` or the on-screen pad. A key tap is a real tap; say "keyboard instead of the pad" |
-| OpenAI down | Cards carry the `offline` badge; say "offline recap, extractive". The flow is the same |
-| Browser mic blocked | Reload, allow mic, or switch to the scripted lecture |
+With compound interest, the second year pays interest on all one hundred and ten dollars, not just your original deposit. Ten percent of one hundred and ten is eleven dollars, so you finish the second year with one hundred and twenty one dollars.
 
-## Codex story (fill in during the event, one concrete sentence)
+Simple interest would pay ten dollars each year, giving you one hundred and twenty dollars instead. The extra dollar comes from earning interest on your interest. That is why compound growth accelerates over time.
 
-Record here the one concrete way Codex changed the build, with the commit hash:
+## If something is unavailable
 
-- _example shape_: "Codex wrote the ThinkGear parser test that caught a checksum bug in split packets (commit …)."
+- **EEG:** Use the explicit button-only continuation. If EEG drops after recording starts, recording and the button continue. Never force an EEG flag or present simulated data as real.
+- **Microphone:** Allow permission and retry the microphone. If it remains unavailable, explicitly announce a recorded/practice lecture and use the saved-lecture backup.
+- **Model/network:** The live card can show the labelled transcript. Failed notes offer Retry; use the already generated saved lecture rather than waiting through an outage during judging.
+- **Voice:** Click Retry voice once. The explanation remains readable and its Next / Got it controls still work.
 
-## Sponsor booths (verify at hour 0)
-
-- Deepgram: confirm the streaming call in `neuropace/transcribe/deepgram_live.py` qualifies; ask about `keyterm` limits on nova-3.
-- OpenAI: confirm credits and the model id; put it in `.env` as `OPENAI_MODEL`.
-- HackMIT organizers: rule on code written before hacking opened and on AI assistance. Disclose AI help in the submission.
+Finish after this loop. Additional experiments and non-demo screens are outside this pass.

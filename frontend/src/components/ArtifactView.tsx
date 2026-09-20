@@ -218,6 +218,18 @@ function PlotView({ c, step }: { c: PlotContent; step: number }) {
   const sy = (v: number) => padT + innerH - ((v - ys[0]) / (ys[1] - ys[0])) * innerH;
   const shown = Math.min(c.series.length, step + 1);
   const fmt = (v: number) => (Math.abs(v) >= 100 ? Math.round(v).toString() : Number(v.toFixed(2)).toString());
+  // annotations: anchor away from the nearest edge and stagger ones that would sit on top of each other
+  const placed = useMemo(() => {
+    const out: { x: number; y: number; text: string; anchor: "start" | "end"; ty: number }[] = [];
+    const sorted = c.annotations.map((a) => ({ x: sx(a.x), y: sy(a.y), text: a.text })).sort((a, b) => a.y - b.y || a.x - b.x);
+    for (const a of sorted) {
+      let ty = a.y - 8;
+      for (const o of out) if (Math.abs(o.x - a.x) < 200 && Math.abs(o.ty - ty) < 16) ty = o.ty + 16;
+      out.push({ ...a, anchor: a.x > padL + innerW * 0.6 ? "end" : "start", ty });
+    }
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [c, xs, ys]);
   return (
     <div className="stack">
       <div className="row between">
@@ -230,7 +242,7 @@ function PlotView({ c, step }: { c: PlotContent; step: number }) {
         <text x={W - padR} y={H - 10} textAnchor="end" className="lbl">
           {c.x_label}
         </text>
-        <text x={12} y={padT + 6} className="lbl">
+        <text x={padL + 8} y={padT + 6} className="lbl">
           {c.y_label}
         </text>
         {!c.illustrative ? (
@@ -241,30 +253,37 @@ function PlotView({ c, step }: { c: PlotContent; step: number }) {
             <text x={W - padR} y={padT + innerH + 16} textAnchor="middle" className="tick">
               {fmt(xs[1])}
             </text>
-            <text x={padL - 6} y={padT + 4} textAnchor="end" className="tick">
+            <text x={padL - 6} y={padT + 22} textAnchor="end" className="tick">
               {fmt(ys[1])}
+            </text>
+            <text x={padL - 6} y={padT + innerH + 4} textAnchor="end" className="tick">
+              {fmt(ys[0])}
             </text>
           </>
         ) : null}
         {c.series.slice(0, shown).map((s, i) => (
           <g key={i} className={"series " + SERIES_CLASS[i % 3]}>
             <polyline className="plot-line" points={s.points.map((p) => `${sx(p.x)},${sy(p.y)}`).join(" ")} />
-            <text x={sx(s.points[s.points.length - 1].x) - 4} y={sy(s.points[s.points.length - 1].y) - 8} textAnchor="end" className="series-name">
-              {s.name}
-            </text>
           </g>
         ))}
         {shown >= c.series.length
-          ? c.annotations.map((a, i) => (
+          ? placed.map((a, i) => (
               <g key={i} className="annot">
-                <circle cx={sx(a.x)} cy={sy(a.y)} r={5} />
-                <text x={sx(a.x) + 8} y={sy(a.y) - 6} className="annot-text">
+                <circle cx={a.x} cy={a.y} r={5} />
+                <text x={a.anchor === "end" ? a.x - 8 : a.x + 8} y={a.ty} textAnchor={a.anchor} className="annot-text">
                   {a.text}
                 </text>
               </g>
             ))
           : null}
       </svg>
+      <div className="plot-legend">
+        {c.series.slice(0, shown).map((s, i) => (
+          <span key={i} className={"legend-item " + SERIES_CLASS[i % 3]}>
+            <i /> {s.name}
+          </span>
+        ))}
+      </div>
       {shown >= c.series.length ? <div className="caption">{c.takeaway}</div> : null}
     </div>
   );
@@ -327,7 +346,7 @@ function CompareView({ c, step }: { c: CompareContent; step: number }) {
   );
 }
 
-/** The model's animation runs in a sandboxed iframe (scripts only: no network, storage or access to Reflow). */
+/** The model's animation runs in a sandboxed iframe (scripts only: no network, storage or access to NeuroPace). */
 function AnimationView({ c }: { c: AnimationContent }) {
   const [gen, setGen] = useState(0);
   const doc = useMemo(() => {

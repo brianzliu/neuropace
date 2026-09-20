@@ -100,9 +100,13 @@ def test_full_flow_over_http_and_ws_realtime(app):
         end = c.post(f"/api/sessions/{sess['id']}/end").json()
         assert end["session"]["status"] == "ended" and len(end["gaps"]) >= 1
         g = end["gaps"][0]
-        assert "question" not in g and g["note"]["key_term"]  # the check stays server-side until review
+        assert (
+            "correct_index" not in g["question"]
+            and len(g["question"]["options"]) == 4
+            and g["note"]["key_term"]
+        )
         notes = c.get(f"/api/sessions/{sess['id']}/notes").json()
-        assert len(notes["gaps"]) == len(end["gaps"]) and "words" not in notes
+        assert len(notes["gaps"]) == len(end["gaps"]) and notes["words"]
         manual = c.post(f"/api/sessions/{sess['id']}/review/start", json={"mode": "manual"}).json()
         assert manual["card"]["kind"] == "question" and manual["progress"]["mode"] == "manual"
         assert c.post(f"/api/sessions/{sess['id']}/review/start", json={"mode": "nope"}).status_code == 400

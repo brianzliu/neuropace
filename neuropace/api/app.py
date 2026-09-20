@@ -59,8 +59,7 @@ def create_app(
     db = db or DB(s.db_path)
     ensure_demo_lecture(db)
     demo = DemoData(s)
-    seed_llm = llm or LLMClient(s, db)
-    active_db = demo.database(seed_llm) if demo.enabled else db
+    active_db = demo.database() if demo.enabled else db
     llm = llm or LLMClient(s, active_db)
     from ..core.gaps import recover_orphaned_sessions
 
@@ -97,7 +96,6 @@ def create_app(
     app.state.runtimes = {}
     app.state.session_start_lock = asyncio.Lock()
     app.state.reviews = {}
-    app.state.office_hours = {}
     app.state.loop = None
 
     def _each_running(fn):
@@ -116,10 +114,6 @@ def create_app(
     app.state.force_all = force_all
     app.include_router(routes.router, prefix="/api")
     app.include_router(ws.router)
-    # scholarly sources sidecar (neuropace/scholar): read-only over the store, its own cache file
-    from ..scholar import router as scholar_router
-
-    app.include_router(scholar_router, prefix="/api")
 
     @app.get("/api/bridge/check")
     def bridge_check():

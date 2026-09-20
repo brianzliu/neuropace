@@ -1,35 +1,36 @@
-import { useGuidedStep } from "../lib/guide";
+import { libraryHref, useLibrary } from "./Library";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, errorText } from "../lib/api";
 import type { NotesResponse } from "../lib/types";
 import { range } from "../lib/format";
 import { Badge } from "../components/Badges";
-import { JargonSpans, ScholarStrip, ScholarTopicLine, useJargon, useScholar } from "../components/ScholarSources";
+import TranscriptPane from "../components/TranscriptPane";
+import type { Flag } from "../lib/types";
 
-/** OpenAlex sources and jargon spans (neuropace/scholar sidecar) are kept out of the learner's notes for now:
- * research papers are the wrong altitude for a missed sentence. Flip this to show them again; nothing else
- * changes and the backend keeps serving /api/sessions/:id/scholar. */
-const SHOW_SCHOLAR = false;
-
-/** One lecture's notes: the moments you missed. Always rendered inside the library shell, which carries the
- * title, the session switcher and the Review tab (Explain deck or Whiteboard). */
+/** One lecture: the way into restudy first, then the moments as a list (docs/PRODUCT.md §6). */
 export default function Lecture() {
   const { sessionId = "" } = useParams();
-  const guide = useGuidedStep();
+  const library = useLibrary();
   const nav = useNavigate();
   const [data, setData] = useState<NotesResponse | null>(null);
+  const [title, setTitle] = useState("Lecture");
   const [err, setErr] = useState<string | null>(null);
   const [ending, setEnding] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
-  const ended = Boolean(data && data.session.status !== "running");
-  // scholarly sources load after the notes and never block them (scholar sidecar)
-  const scholar = useScholar(sessionId, SHOW_SCHOLAR && ended && data!.gaps.length > 0);
-  const jargon = useJargon(sessionId, SHOW_SCHOLAR && ended);
 
+  const load = () =>
+    api
+      .notes(sessionId)
+      .then((d) => {
+        setData(d);
+        if (d.session.lecture_id) api.lecture(d.session.lecture_id).then((l) => setTitle(l.title)).catch(() => undefined);
+        else setTitle("Live lecture");
+      })
+      .catch((e) => setErr(errorText(e)));
   useEffect(() => {
-    api.notes(sessionId).then(setData).catch((e) => setErr(errorText(e)));
-  }, [sessionId]);
+    void load();
+  }, [sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const regenerate = async () => {
     setRegenerating(true);
@@ -56,10 +57,23 @@ export default function Lecture() {
 
   if (err) return <div className="page narrow"><div className="callout danger">{err}</div></div>;
   if (!data) return <div className="page narrow"><div className="loading">Loading…</div></div>;
-  const failed = data.gaps.some((g) => g.package_source === "failed");
+  const running = data.session.status === "running";
+  const failed = data.gaps.filter((g) => g.package_source === "failed");
+  const closed = data.gaps.filter((g) => g.status === "closed").length;
+  const total = data.gaps.length;
   return (
     <div className="page narrow">
-      {!ended ? (
+      <header className="hero">
+        {!library ? <>
+          <div className="eyebrow">{new Date(data.session.started_at * 1000).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</div>
+          <h1 className="t-large">{title}</h1>
+        </> : null}
+        <p className="sub">
+          {running ? "This lecture is still going." : total === 0 ? "No moments saved for review." : closed === total ? `All ${total} moments landed. Restudy again any time.` : `${total - closed} of ${total} moment${total === 1 ? "" : "s"} still to restudy.`}
+        </p>
+      </header>
+
+      {running ? (
         <div className="start">
           <Link className="btn btn-primary btn-lg btn-block" to={`/live/${sessionId}`}>
             Back to the lecture
@@ -68,48 +82,80 @@ export default function Lecture() {
             {ending ? "Writing your notes…" : "Or end it now and write my notes"}
           </button>
         </div>
-      ) : null}
-      {ended && failed ? (
-        <button className="linklike" onClick={() => void regenerate()} disabled={regenerating}>
-          {regenerating ? "Writing…" : "Some notes aren't written yet. Try again"}
-        </button>
+      ) : total > 0 ? (
+        <div className="start">
+          <button className="btn btn-primary btn-lg btn-block" onClick={() => nav((library ? libraryHref(sessionId, "review") : `/restudy/${sessionId}`) + "?mode=tutor")} disabled={failed.length > 0}>
+            {closed === total ? "Private tutoring, again" : "Private tutoring"}          </button>
+          <button className="btn btn-blue btn-block" onClick={() => nav((library ? libraryHref(sessionId, "review") : `/restudy/${sessionId}`) + "?mode=manual")} disabled={failed.length > 0}>
+            Review on my own
+          </button>
+          <div className="start-note">{failed.length ? "Some notes aren't written yet." : "Tutoring explains each moment your way (and can read it aloud), then asks. On your own, the question comes first and an explanation only if you miss."}</div>
+          {failed.length ? (
+            <button className="linklike" onClick={() => void regenerate()} disabled={regenerating}>
+              {regenerating ? "Writing…" : "Try writing them again"}
+            </button>
+          ) : null}
+        </div>
       ) : null}
 
-      {SHOW_SCHOLAR && ended ? <JargonSpans data={jargon.data} /> : null}
+      {data.words.length ? (
+        <details className="moment-row whole" open={total === 0}>
+          <summary>
+            <span className="m-body">
+              <span className="m-summary">The whole lecture</span>
+              <span className="m-meta">{data.words.length} words{total ? ` · the ${total} moment${total === 1 ? "" : "s"} you missed are highlighted` : ""}</span>
+            </span>
+          </summary>
+          <div className="m-detail">
+            <TranscriptPane
+              words={data.words}
+              interim={[]}
+              now={-1}
+              autoScroll={false}
+              className="reading"
+              flags={data.gaps.map((g): Flag => ({ id: g.id, source: "eeg", t_trigger: g.t_end, t_start: g.t_start, t_end: g.t_end, catchup_shown: null, catchup_form: null, opened: false }))}
+            />
+          </div>
+        </details>
+      ) : null}
 
-      {data.gaps.length > 0 ? (
+      {total > 0 ? (
         <section className="stack">
-          {!guide && <div className="eyebrow">What you missed</div>}
-          {SHOW_SCHOLAR ? <ScholarTopicLine data={scholar.data} /> : null}
-          {data.gaps.filter((g) => !guide?.decision.target_gap_id || g.id === guide.decision.target_gap_id).map((g) => {
-            const failed = g.package_source === "failed";
-            return (
-              <article key={g.id} className={"moment-card" + (g.status === "closed" ? " is-landed" : "")}>
-                <header className="moment-head">
-                  <span className="m-num">{g.ord + 1}</span>
-                  <div className="m-body">
-                    <h3 className="m-term">{g.note?.key_term ?? (failed ? "Notes not written yet" : "Notes are on their way")}</h3>
-                    <span className="m-meta">{range(g.t_start, g.t_end)}</span>
-                  </div>
-                  <Badge tone={g.status === "closed" ? "success" : g.status === "exhausted" ? "warning" : "neutral"}>{g.status === "closed" ? "landed" : g.status === "exhausted" ? "tricky" : "to do"}</Badge>
-                </header>
-                <div className="moment-text">
-                  {g.summary ? <p className="m-said">{g.summary}</p> : null}
-                  {g.note?.definition ? <p className="m-def"><span className="term">{g.note.key_term}</span> · {g.note.definition}</p> : null}
-                  <details className="m-exact">
-                    <summary>Exact words</summary>
-                    <p>{g.span_text}</p>
-                  </details>
-                  {SHOW_SCHOLAR ? <ScholarStrip gap={scholar.byGap.get(g.id)} loading={scholar.loading} /> : null}
+          <div className="eyebrow">What you missed</div>
+          {data.gaps.map((g) => (
+            <details key={g.id} className="moment-row">
+              <summary>
+                <span className="m-num">{g.ord + 1}</span>
+                <span className="m-body">
+                  <span className="m-summary">{g.package_source === "failed" ? g.span_text.slice(0, 140) + "…" : (g.summary ?? g.note?.what_was_said ?? "Notes are on their way.")}</span>
+                  <span className="m-meta">
+                    {range(g.t_start, g.t_end)} {g.note?.key_term ? `· ${g.note.key_term}` : ""}
+                  </span>
+                </span>
+                <Badge tone={g.status === "closed" ? "success" : g.status === "exhausted" ? "warning" : "neutral"}>{g.status === "closed" ? "landed" : g.status === "exhausted" ? "tricky" : "to do"}</Badge>
+              </summary>
+              <div className="m-detail">
+                {g.note ? (
+                  <>
+                    <div className="note-row">
+                      <div className="k">Key idea</div>
+                      <div>
+                        <span className="term">{g.note.key_term}</span> · {g.note.definition}
+                      </div>
+                    </div>
+                    <div className="note-row">
+                      <div className="k">Connects to</div>
+                      <div className="label-2">{g.note.connection}</div>
+                    </div>
+                  </>
+                ) : null}
+                <div className="note-row">
+                  <div className="k">What was said</div>
+                  <div className="label-2">{g.span_text}</div>
                 </div>
-                {!guide && (
-                  <footer className="moment-foot">
-                    <Link className="btn btn-primary btn-sm" to={`/library/${sessionId}/review`}>Review</Link>
-                  </footer>
-                )}
-              </article>
-            );
-          })}
+              </div>
+            </details>
+          ))}
         </section>
       ) : null}
     </div>

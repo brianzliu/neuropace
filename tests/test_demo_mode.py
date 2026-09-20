@@ -19,33 +19,10 @@ def test_demo_mode_is_isolated_seeded_and_persistent(app, settings):
         assert len(sample["sessions"]) == 3
         assert len(sample["concepts"]) == 2
         assert sample["closed"] == 1
-        # The test fixture's LLMClient has no key, so seeding falls back to the offline extractive
-        # generator (real environments with a provider configured get real LLM-written notes instead).
-        assert all(concept["source"] == "offline" for concept in sample["concepts"])
+        assert sample["curriculum"]["title"] == "Foundations of science and data"
+        assert all(concept["source"] == "demo" for concept in sample["concepts"])
         assert settings.data_dir.joinpath("neuropace-demo.db").exists()
         assert settings.data_dir.joinpath("demo-mode.json").read_text().strip()
-
-        first = sample["sessions"][0]
-        quiz = client.get(f"/api/sessions/{first['id']}/quiz").json()
-        item = quiz["items"][0]
-        scored = client.post(
-            f"/api/sessions/{first['id']}/quiz",
-            json={"phase": "before", "answers": {item["id"]: 0}},
-        )
-        assert scored.status_code == 200
-        continued = client.post(
-            f"/api/sessions/{first['id']}/next-step",
-            json={
-                "learner_id": learner_id,
-                "goal": "understand",
-                "current_step": "quiz",
-                "last_outcome": "hit",
-                "elapsed_seconds": 60,
-                "time_limit_seconds": 600,
-            },
-        )
-        assert continued.status_code == 200
-        assert continued.json()["action"] in continued.json()["allowed_actions"]
 
         disabled = client.put("/api/settings/demo", json={"enabled": False})
         assert disabled.status_code == 200

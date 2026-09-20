@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 import time
 
 from .config import Settings
-from .llm import fallback
-from .llm.artifacts import LLMUnavailable, build_package
-from .llm.client import LLMClient
+from .llm.fallback import gap_package
 from .store.db import DB
 from .transcribe.scripted import script_from_text
 
@@ -31,13 +28,10 @@ class DemoData:
         self.enabled = enabled
         self.state_path.write_text(json.dumps({"enabled": enabled}, indent=2) + "\n")
 
-    def database(self, llm: LLMClient) -> DB:
-        """llm generates the seed content when a provider is configured (build_package degrades to
-        the offline extractive generator on its own whenever it isn't, or the call fails) — the demo
-        workspace should read like any other lecture's notes, not like a deterministic placeholder."""
+    def database(self) -> DB:
         if self._db is None:
             self._db = DB(self.db_path)
-            asyncio.run(seed_demo_database(self._db, llm))
+            seed_demo_database(self._db)
         return self._db
 
     def close(self) -> None:
@@ -94,11 +88,23 @@ def _quiz(term: str) -> list[dict]:
     ]
 
 
-async def seed_demo_database(db: DB, llm: LLMClient) -> None:
+def seed_demo_database(db: DB) -> None:
     if db.get_lecture(LECTURES[0][0]):
         return
     learner = db.default_learner()
     now = time.time()
+    db.set_curriculum(
+        learner["id"],
+        {
+            "title": "Foundations of science and data",
+            "topics": [
+                {"title": "Cellular respiration", "completed": True},
+                {"title": "Statistical inference", "completed": False},
+                {"title": "Orbital mechanics", "completed": False},
+                {"title": "Scientific communication", "completed": False},
+            ],
+        },
+    )
     for index, (lecture_id, title, text, term) in enumerate(LECTURES):
         words = [word.to_dict() for word in script_from_text(text, wpm=145)]
         duration = words[-1]["end"] if words else 0
@@ -154,18 +160,7 @@ async def seed_demo_database(db: DB, llm: LLMClient) -> None:
             ],
         )
         span = text.split(". ")[min(2, len(text.split(". ")) - 1)] + "."
-        try:
-            # A real provider's own retry/backoff (LLMClient._with_retries) can legitimately take
-            # a while; demo seeding never should — it's a one-time preview step, not something a
-            # slow or flaky provider gets to block server startup or a settings toggle over.
-            package, source = await asyncio.wait_for(
-                build_package(llm, span, text.split(". ")[0] + ".", text, keyterms=[term], seed=index),
-                timeout=20.0,
-            )
-        except (LLMUnavailable, TimeoutError):
-            # LLMUnavailable: a provider is configured but disallows the offline stand-in, which
-            # doesn't apply here. TimeoutError: the 20s budget above ran out.
-            package, source = fallback.gap_package(span, text.split(". ")[0] + ".", text, seed=index), "offline"
+        package = gap_package(span, text.split(". ")[0] + ".", text, seed=index)
         gaps = [
             {
                 "id": f"gap_demo_{index + 1}",
@@ -176,7 +171,7 @@ async def seed_demo_database(db: DB, llm: LLMClient) -> None:
                 "context_text": text,
                 "flag_ids": [f"flag_demo_{index + 1}"],
                 "package": package,
-                "package_source": source,
+                "package_source": "demo",
                 "status": "closed" if index == 2 else "open",
             }
         ]

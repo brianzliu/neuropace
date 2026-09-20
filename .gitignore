@@ -37,7 +37,3 @@ data/verification/native-media-*/
 data/verification/calibration-cues-*/
 data/verification/personal-calibration-*/
 data/verification/*.wav
-
-# OpenAlex snapshot slices (scripts/build_jargon_table.py input; fetch.py layout). Never committed.
-data/openalex/
-data/scholar.db*

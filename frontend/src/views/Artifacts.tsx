@@ -141,6 +141,8 @@ const SAMPLE: GapArtifacts = {
   t_start: 0,
   t_end: 42,
   span_text: "",
+  context_text: "",
+  question: null,
   flag_ids: [],
   status: "open",
   note: { what_was_said: "", key_term: "trilateration", definition: "", connection: "" },

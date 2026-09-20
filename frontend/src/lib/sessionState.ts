@@ -1,4 +1,4 @@
-import type { CatchupMsg, Flag, FocusMsg, HeadsetStatus, HelloMsg, Notice, RecapMsg, ServerMsg, SessionEndedMsg, TotemStatus, Word, Form } from "./types";
+import type { CatchupExplanation, CatchupMsg, Flag, FocusMsg, HeadsetStatus, HelloMsg, Notice, RecapMsg, ServerMsg, SessionEndedMsg, TotemStatus, Word, Form } from "./types";
 
 export interface VisibleCatchup extends CatchupMsg {
   shownAt: number; // Date.now()
@@ -15,6 +15,7 @@ export interface SessionState {
   flagOrder: string[];
   recaps: RecapMsg[];
   catchup: VisibleCatchup | null;
+  catchupExplanations: Record<string, CatchupExplanation>;
   pendingChips: Record<string, CatchupMsg>; // eeg catch-ups waiting behind a chip
   chipIds: string[];
   withheld: number;
@@ -40,6 +41,7 @@ export const initialState: SessionState = {
   flagOrder: [],
   recaps: [],
   catchup: null,
+  catchupExplanations: {},
   pendingChips: {},
   chipIds: [],
   withheld: 0,
@@ -60,6 +62,10 @@ const MAX_FOCUS = 400;
 export function reduce(s: SessionState, m: ServerMsg): SessionState {
   switch (m.type) {
     case "hello": {
+      const current = s.hello && s.hello.session.id !== m.session.id ? initialState : s;
+      const catchupExplanations = m.catchup_explanations
+        ? Object.fromEntries(m.catchup_explanations.map((explanation) => [explanation.flag_id, explanation]))
+        : current.catchupExplanations;
       const flags: Record<string, Flag> = {};
       const order: string[] = [];
       for (const f of m.flags) {
@@ -67,7 +73,8 @@ export function reduce(s: SessionState, m: ServerMsg): SessionState {
         order.push(f.id);
       }
       return {
-        ...s,
+        ...current,
+        catchupExplanations,
         hello: m,
         words: m.words,
         interim: [],
@@ -107,6 +114,8 @@ export function reduce(s: SessionState, m: ServerMsg): SessionState {
       }
       return { ...s, pendingChips: { ...s.pendingChips, [m.flag_id]: m } };
     }
+    case "catchup_explanation":
+      return { ...s, catchupExplanations: { ...s.catchupExplanations, [m.flag_id]: m } };
     case "chip":
       return { ...s, chipIds: s.chipIds.includes(m.flag_id) ? s.chipIds : s.chipIds.concat(m.flag_id) };
     case "catchup_withheld":
@@ -119,7 +128,7 @@ export function reduce(s: SessionState, m: ServerMsg): SessionState {
     case "totem":
       return { ...s, totem: { connected: m.connected, kind: m.kind, port: m.port, dots: m.dots, fit: m.fit, pulse: m.pulse, hint: m.hint ?? null } };
     case "headset":
-      return { ...s, headset: { connected: m.connected, kind: m.kind, simulated: m.simulated, port: m.port, state: m.state, stream: m.stream, mw: m.mw } };
+      return { ...s, headset: { connected: m.connected, kind: m.kind, simulated: m.simulated, focus_enabled: m.focus_enabled, port: m.port, state: m.state, stream: m.stream, mw: m.mw } };
     case "pause_request":
       return { ...s, pauseRequest: { flag_id: m.flag_id, seq: (s.pauseRequest?.seq ?? 0) + 1 } };
     case "session_ended":

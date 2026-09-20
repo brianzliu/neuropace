@@ -9,6 +9,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+FOCUS_METRIC = "theta_alpha_v1"
+
 # The four explanation families the preference model learns over (docs/PRODUCT.md §4).
 FORMS: tuple[str, ...] = ("words", "analogy", "visual", "doing")
 FORM_LABELS: dict[str, str] = {
@@ -129,7 +131,7 @@ class Settings:
     # tally and review
     tally_prior_pseudocount: float = 2.0
     tally_enough_attempts: int = 12
-    review_stop_streak: int = 0  # 0 = review ends when every moment landed or ran out of forms
+    review_stop_streak: int = 3
 
     # loss map
     lossmap_bin_seconds: float = 10.0

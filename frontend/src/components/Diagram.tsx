@@ -19,6 +19,7 @@ interface Laid {
 
 const W = 720;
 const NODE_H = 46;
+const CHAR_W = 8.2; // average glyph width of the 14 px bold label font; the box is sized from it and truncation uses the same figure
 
 function layout(graph: SceneGraph): { nodes: Laid[]; height: number } {
   const ids = graph.nodes.map((n) => n.id);
@@ -65,7 +66,7 @@ function layout(graph: SceneGraph): { nodes: Laid[]; height: number } {
     members.forEach((id, i) => {
       const node = nodeOf.get(id)!;
       const label = node.label;
-      const w = Math.min(colW - 24, Math.max(90, label.length * 8.6 + 26));
+      const w = Math.min(colW - 16, Math.max(90, label.length * CHAR_W + 24));
       nodes.push({ id, label, x: colW * column + colW / 2 - w / 2, y: 30 + rowH * i + rowH / 2 - NODE_H / 2, w, h: NODE_H, shape: node.shape ?? "card", tone: node.tone ?? "butter" });
     });
     column += 1;
@@ -130,7 +131,7 @@ export default function Diagram({ graph, step }: Props) {
             : n.shape === "diamond" ? <polygon className="node-shape" points={`${n.x + n.w / 2},${n.y - 8} ${n.x + n.w},${n.y + n.h / 2} ${n.x + n.w / 2},${n.y + n.h + 8} ${n.x},${n.y + n.h / 2}`} />
             : <rect className="node-shape" x={n.x} y={n.y} width={n.w} height={n.h} rx={n.shape === "pill" ? n.h / 2 : 10} /> }
           <text x={n.x + n.w / 2} y={n.y + n.h / 2 + 5} textAnchor="middle">
-            {trunc(n.label, Math.max(8, Math.floor((n.w * (n.shape === "diamond" ? .65 : .9) - 16) / 8.6)))}
+            {trunc(n.label, Math.max(8, Math.floor((n.w * (n.shape === "diamond" ? 0.65 : 1) - 14) / CHAR_W)))}
           </text>
         </g>
       ))}

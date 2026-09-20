@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 import statistics
 
-from ..config import Settings
+from ..config import FOCUS_METRIC, Settings
 
 DURATION_SECONDS = 30
 MIN_VALID_SECONDS = 24
@@ -51,8 +51,9 @@ def fit_personal_baseline(samples: list[dict], start: float, settings: Settings)
         "valid_seconds": len(values),
         "duration_seconds": DURATION_SECONDS,
         "coverage": len(values) / DURATION_SECONDS,
-        "entry_log_engagement": mu + settings.drop_enter_z * sigma,
-        "exit_log_engagement": mu + settings.drop_exit_z * sigma,
+        "metric": FOCUS_METRIC,
+        "entry_log_effort": mu + settings.drop_enter_z * sigma,
+        "exit_log_effort": mu + settings.drop_exit_z * sigma,
         "drop_enter_z": settings.drop_enter_z,
         "drop_exit_z": settings.drop_exit_z,
         "ema_tau_seconds": settings.ema_tau_seconds,

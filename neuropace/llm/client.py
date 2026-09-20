@@ -6,41 +6,16 @@ import asyncio
 import hashlib
 import json
 import logging
-import re
 import time
-from collections.abc import AsyncIterator
 from typing import Any, TypeVar
 
-from pydantic import BaseModel, TypeAdapter, ValidationError
+from pydantic import BaseModel, ValidationError
 
 from ..config import Settings
-from ..manim_render import manim_available
 from ..store.db import DB
 from . import fallback
-from .prompts import (
-    ASK_INSTRUCTIONS,
-    CORE_INSTRUCTIONS,
-    PROMPT_VERSION,
-    RECAP_INSTRUCTIONS,
-    TEMPLATE_INSTRUCTIONS,
-    office_hours_instructions,
-)
-from .schemas import (
-    TEMPLATES,
-    AddElement,
-    AskReply,
-    GapCore,
-    OfficeHoursTurn,
-    RecapForms,
-    RemoveElement,
-    Strict,
-    UpdateElement,
-    strict_schema,
-)
-
-_BOARD_OP_ADAPTER: TypeAdapter[AddElement | UpdateElement | RemoveElement] = TypeAdapter(
-    AddElement | UpdateElement | RemoveElement
-)
+from .prompts import CORE_INSTRUCTIONS, PROMPT_VERSION, RECAP_INSTRUCTIONS, TEMPLATE_INSTRUCTIONS
+from .schemas import TEMPLATES, GapCore, RecapForms, Strict, strict_schema
 
 log = logging.getLogger(__name__)
 T = TypeVar("T", bound=BaseModel)
@@ -117,7 +92,7 @@ class LLMClient:
     async def recap(
         self, window_text: str, corpus_text: str, keyterms: list[str] | None = None
     ) -> tuple[RecapForms, str]:
-        payload = {"transcript_last_30s": window_text, "key_terms": keyterms or []}
+        payload = {"transcript_last_30s": window_text, "spelling_hints": keyterms or []}
         obj, source = await self._structured(
             "recap", RECAP_INSTRUCTIONS, payload, RecapForms, self.s.recap_timeout_seconds, 400
         )
@@ -132,7 +107,11 @@ class LLMClient:
         self, span_text: str, context_text: str, keyterms: list[str] | None = None
     ) -> tuple[GapCore | None, str]:
         """Stage one of a missed moment: note, question, words family, plan. None when the API kept failing."""
-        payload = {"missed_span": span_text, "context_before_span": context_text, "key_terms": keyterms or []}
+        payload = {
+            "missed_span": span_text,
+            "context_before_span": context_text,
+            "spelling_hints": keyterms or [],
+        }
         return await self._with_retries("core", CORE_INSTRUCTIONS, payload, GapCore, 1800)
 
     async def gap_artifact(
@@ -145,7 +124,7 @@ class LLMClient:
             "context_before_span": context_text,
             "key_term": note.get("key_term", ""),
             "definition": note.get("definition", ""),
-            "key_terms": keyterms or [],
+            "spelling_hints": keyterms or [],
         }
         max_tokens = 3000 if kind == "animation" else 1400
         return await self._with_retries(
@@ -153,192 +132,20 @@ class LLMClient:
         )
 
     async def _with_retries(
-        self,
-        task: str,
-        instructions: str,
-        payload: dict,
-        model_cls: type[T],
-        max_tokens: int,
-        use_cache: bool = True,
-        timeout: float | None = None,
-        max_attempts: int | None = None,
+        self, task: str, instructions: str, payload: dict, model_cls: type[T], max_tokens: int
     ) -> tuple[T | None, str]:
         obj: T | None = None
         source = "offline"
-        timeout = timeout if timeout is not None else self.s.package_timeout_seconds
-        attempts = max_attempts if max_attempts is not None else (3 if self.enabled else 1)
+        attempts = 3 if self.enabled else 1
         for attempt in range(attempts):
             if attempt:
                 await asyncio.sleep(2.0 * attempt)
             obj, source = await self._structured(
-                task, instructions, payload, model_cls, timeout, max_tokens, use_cache
+                task, instructions, payload, model_cls, self.s.package_timeout_seconds, max_tokens
             )
             if obj is not None or time.monotonic() < self._quota_blocked_until:
                 break
         return obj, source
-
-    async def review_ask(
-        self, question: str, span_text: str, context_text: str, note: dict, shown: str
-    ) -> tuple[str | None, str]:
-        """One question about the moment on screen, one answer (Review's Ask box). No history: each ask is
-        grounded in the span, its note and the explanation the student is looking at, nothing else."""
-        payload = {
-            "question": question,
-            "missed_span": span_text,
-            "context_before": context_text,
-            "note": note,
-            "explanation_on_screen": shown,
-        }
-        obj, source = await self._with_retries(
-            "review_ask",
-            ASK_INSTRUCTIONS,
-            payload,
-            AskReply,
-            400,
-            use_cache=False,
-            timeout=20.0,
-            max_attempts=2 if self.enabled else 1,
-        )
-        return (obj.reply if obj else None), source
-
-    async def office_hours_turn(
-        self, history: list[dict], board_summary: list[dict], user_text: str, lecture_transcript: str = ""
-    ) -> tuple[OfficeHoursTurn | None, str]:
-        """One Office Hours turn (docs/PRODUCT.md §5a): a reply plus board ops. Stateless — the engine owns
-        history and re-sends it every call, since nothing in this client threads multi-turn conversation state.
-        Never cached: a turn's correct output depends on history/board that changes between identical messages."""
-        payload = {
-            "lecture_transcript": lecture_transcript,
-            "history": history[-20:],
-            "board": board_summary,
-            "message": user_text,
-        }
-        instructions = office_hours_instructions(manim_available())
-        return await self._with_retries(
-            "office_hours_turn",
-            instructions,
-            payload,
-            OfficeHoursTurn,
-            2200,
-            use_cache=False,
-            timeout=20.0,
-            max_attempts=2 if self.enabled else 1,
-        )
-
-    async def office_hours_turn_stream(
-        self, history: list[dict], board_summary: list[dict], user_text: str, lecture_transcript: str = ""
-    ) -> AsyncIterator[dict]:
-        """Same call as office_hours_turn, but yields the reply and each board op as soon as it finishes
-        generating instead of waiting for the whole structured turn. OfficeHoursTurn declares reply_text
-        before board_ops, so the model emits the reply first — it's usually readable well before the board
-        is done. Only the OpenAI provider streams the Responses API directly; other providers fall back to
-        one non-streaming call and replay its pieces as a completed "stream" (still correct, just not early).
-        Yields: {"type": "reply", "text": str} once, then {"type": "op", "op": AddElement|UpdateElement|
-        RemoveElement} per board element, in order. Emits nothing on failure/offline (the engine's fallback
-        message covers that case, same as office_hours_turn's None return)."""
-        payload = {
-            "lecture_transcript": lecture_transcript,
-            "history": history[-20:],
-            "board": board_summary,
-            "message": user_text,
-        }
-        instructions = office_hours_instructions(manim_available())
-        if self.provider != "openai":
-            turn, _source = await self._with_retries(
-                "office_hours_turn",
-                instructions,
-                payload,
-                OfficeHoursTurn,
-                2200,
-                use_cache=False,
-                timeout=20.0,
-                max_attempts=2 if self.enabled else 1,
-            )
-            if turn is None:
-                return
-            yield {"type": "reply", "text": turn.reply_text}
-            for op in turn.board_ops:
-                yield {"type": "op", "op": op}
-            return
-        if not self.enabled or self._client is None or time.monotonic() < self._quota_blocked_until:
-            return
-        await self._rate_limit()
-        fmt = {
-            "type": "json_schema",
-            "name": "OfficeHoursTurn",
-            "schema": strict_schema(OfficeHoursTurn),
-            "strict": True,
-        }
-        user_input = json.dumps(payload, ensure_ascii=False)
-        kwargs: dict[str, Any] = {
-            "model": self.model,
-            "instructions": instructions,
-            "input": user_input,
-            "text": {"format": fmt},
-            "max_output_tokens": 2200,
-            "stream": True,
-        }
-        if self._use_reasoning:
-            kwargs["reasoning"] = {"effort": "minimal"}
-        self.stats["calls"] += 1
-        buf = ""
-        reply_emitted = False
-        ops_pos: int | None = None
-        decoder = json.JSONDecoder()
-        try:
-            stream = await asyncio.wait_for(self._client.responses.create(**kwargs), timeout=20.0)
-            async for event in stream:
-                if getattr(event, "type", "") != "response.output_text.delta":
-                    continue
-                buf += event.delta
-                if not reply_emitted:
-                    m = re.search(r'"reply_text"\s*:\s*"', buf)
-                    if m:
-                        i = m.end()
-                        while i < len(buf):
-                            if buf[i] == "\\":
-                                i += 2
-                                continue
-                            if buf[i] == '"':
-                                raw = buf[m.end() : i]
-                                try:
-                                    text_val = json.loads('"' + raw + '"')
-                                except ValueError:
-                                    text_val = raw
-                                reply_emitted = True
-                                yield {"type": "reply", "text": " ".join(text_val.split())}
-                                break
-                            i += 1
-                if ops_pos is None:
-                    m2 = re.search(r'"board_ops"\s*:\s*\[', buf)
-                    if m2:
-                        ops_pos = m2.end()
-                if ops_pos is not None:
-                    pos = ops_pos
-                    while True:
-                        while pos < len(buf) and buf[pos] in " \t\n\r,":
-                            pos += 1
-                        if pos >= len(buf) or buf[pos] != "{":
-                            break
-                        try:
-                            obj, end = decoder.raw_decode(buf, pos)
-                        except ValueError:
-                            break
-                        pos = end
-                        try:
-                            op = _BOARD_OP_ADAPTER.validate_python(obj)
-                        except ValidationError as e:
-                            log.info(
-                                "office_hours_turn_stream: dropping invalid op mid-stream: %s", str(e)[:200]
-                            )
-                        else:
-                            yield {"type": "op", "op": op}
-                    ops_pos = pos
-        except Exception as e:  # noqa: BLE001
-            self.stats["errors"] += 1
-            self.last_error = str(e)[:300]
-            log.warning("office_hours_turn_stream failed: %s", e)
-            return
 
     async def board_explanation(self, transcript: str, frames: list[dict]) -> tuple[str, str]:
         fallback_text = (
@@ -414,17 +221,10 @@ class LLMClient:
         return hashlib.sha256(raw.encode()).hexdigest()
 
     async def _structured(
-        self,
-        task: str,
-        instructions: str,
-        payload: dict,
-        model_cls: type[T],
-        timeout: float,
-        max_tokens: int,
-        use_cache: bool = True,
+        self, task: str, instructions: str, payload: dict, model_cls: type[T], timeout: float, max_tokens: int
     ) -> tuple[T | None, str]:
         key = self._key(task, payload)
-        if use_cache and self.db is not None:
+        if self.db is not None:
             cached = self.db.cache_get(key)
             if cached is not None:
                 try:
@@ -463,7 +263,7 @@ class LLMClient:
             return None, "offline"
         if obj is None:
             return None, "offline"
-        if use_cache and self.db is not None:
+        if self.db is not None:
             self.db.cache_put(key, task, self.model, obj.model_dump())
         return obj, "llm"
 
@@ -543,12 +343,7 @@ class LLMClient:
 
     def _chat_options(self) -> dict:
         if self.provider == "openrouter":
-            # Many OpenRouter models (deepseek included) default to spending hidden reasoning
-            # tokens out of the same max_tokens budget as the actual answer; on a schema-heavy
-            # call that budget can be entirely consumed by reasoning, returning empty content
-            # (verified directly against this provider/model: 900+ reasoning tokens, 0 output).
-            # Disabling it is the same fix already applied below for Gemini 2.5 Flash.
-            return {"extra_body": {"provider": {"require_parameters": True}, "reasoning": {"enabled": False}}}
+            return {"extra_body": {"provider": {"require_parameters": True}}}
         # Flash 2.5 supports disabling internal thinking, keeping the narrow schema calls
         # within the output budget. Other Gemini models use their own default.
         if self.provider == "gemini" and self.model.startswith("gemini-2.5-flash"):

@@ -1,7 +1,7 @@
 import { backendFetch } from "../lib/backend";
 import DeskObject from "../components/DeskObject";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api, type SessionCreate } from "../lib/api";
 import type { Doctor, LectureFull, Learner } from "../lib/types";
 import { mmss } from "../lib/format";
@@ -95,25 +95,25 @@ export default function Setup() {
 
   const pills: ConnectionPill[] = [
     relayAddress
-      ? { key: "eeg", label: "EEG", state: "pending", detail: "UNO Q relay: connection pending, verified in live session" }
+      ? { key: "eeg", label: "EEG", state: "pending", detail: "UNO Q relay: connection pending — verified in live session" }
       : headsetChoice === "sim" || headsetChoice === "fake"
         ? { key: "eeg", label: "EEG", state: "simulated", detail: headsetChoice === "fake" ? "fake: mindwave pipeline synthetic EEG (labelled)" : "simulated: NeuroPace synthetic EEG (labelled)" }
         : headsetChoice === "custom"
-          ? { key: "eeg", label: "EEG", state: "pending", detail: `custom source: ${customHeadset || "not set"}, connection pending and verified in live session` }
+          ? { key: "eeg", label: "EEG", state: "pending", detail: `custom source: ${customHeadset || "not set"} — connection pending, verified in live session` }
           : !doctor
             ? { key: "eeg", label: "EEG", state: "pending", detail: "checking connection…" }
             : doctor.headset.kind === "real"
               ? { key: "eeg", label: "EEG", state: "connected", detail: `real headset${doctor.headset.port ? ` · ${doctor.headset.port}` : ""}` }
-              : { key: "eeg", label: "EEG", state: "simulated", detail: "no paired headset, simulation runs labelled" },
+              : { key: "eeg", label: "EEG", state: "simulated", detail: "no paired headset — simulation runs labelled" },
     relayAddress
-      ? { key: "button", label: "Button", state: "pending", detail: "UNO Q relay: connection pending, verified in live session" }
+      ? { key: "button", label: "Button", state: "pending", detail: "UNO Q relay: connection pending — verified in live session" }
       : form.totem === "sim"
         ? { key: "button", label: "Button", state: "simulated", detail: "simulated button (labelled in session)" }
         : !doctor
           ? { key: "button", label: "Button", state: "pending", detail: "checking connection…" }
           : doctor.totem.kind === "real"
             ? { key: "button", label: "Button", state: "connected", detail: `button device${doctor.totem.port ? ` · ${doctor.totem.port}` : ""}` }
-            : { key: "button", label: "Button", state: "simulated", detail: "no button detected, simulated and labelled in session" },
+            : { key: "button", label: "Button", state: "simulated", detail: "no button detected — simulated, labelled in session" },
     form.lecture_id
       ? { key: "transcription", label: "Transcription", state: "simulated", detail: "scripted lecture transcript (labelled in session)" }
       : !doctor
@@ -190,7 +190,7 @@ export default function Setup() {
                   </select>
                 </label>
               </div>
-              <p className="small muted">The physical button is still being built. Use the labelled on-screen substitute for now.</p>
+              <p className="small muted">Button not built yet — a momentary switch under a larger 3D-printed press surface is planned. Use the labelled on-screen substitute until then.</p>
               <div className="row" style={{ marginTop: "1rem" }}>
                 <button className="primary" onClick={() => setStep(2)}>Continue to lecture</button>
               </div>
@@ -198,6 +198,18 @@ export default function Setup() {
           ) : (
             <>
               <div className="form-grid">
+                <div className="full">
+                  <span className="small muted">Your profile</span>
+                  {learner ? (
+                    <p className="row" style={{ gap: "0.7rem", alignItems: "baseline", marginBottom: 0 }}>
+                      <b>{learner.name}</b>
+                      <span className="small muted">{learner.baseline_mu !== null ? "stored baseline available (labelled)" : "no stored baseline yet"}</span>
+                      <Link className="small" to="/">Switch or create profiles on the dashboard</Link>
+                    </p>
+                  ) : (
+                    <p className="small muted" style={{ marginBottom: 0 }}>No profile yet. <Link to="/">Create one on the dashboard</Link>, then come back to this window.</p>
+                  )}
+                </div>
                 <label className="full">
                   Lecture
                   <select value={form.lecture_id ?? ""} onChange={(e) => setForm({ ...form, lecture_id: e.target.value || null })}>
@@ -252,7 +264,7 @@ export default function Setup() {
                 ) : null}
                 </div>
               </details>
-              <div className="small muted device-summary">Headset: {relayAddress ? "UNO Q relay, verified in live session" : headsetChoice === "sim" || headsetChoice === "fake" ? "simulated" : headsetChoice === "custom" ? "custom source" : doctor ? (doctor.headset.kind === "real" ? "connected" : "simulated") : "checking connection"} · Button: {relayAddress ? "UNO Q relay, verified in live session" : form.totem === "sim" ? "simulated" : doctor ? (doctor.totem.kind === "real" ? "connected" : "simulated") : "checking connection"}</div>
+              <div className="small muted device-summary">Headset: {relayAddress ? "UNO Q relay (pending — verified in live session)" : headsetChoice === "sim" || headsetChoice === "fake" ? "simulated" : headsetChoice === "custom" ? "custom source" : doctor ? (doctor.headset.kind === "real" ? "connected" : "simulated") : "checking connection"} · Button: {relayAddress ? "UNO Q relay (pending — verified in live session)" : form.totem === "sim" ? "simulated" : doctor ? (doctor.totem.kind === "real" ? "connected" : "simulated") : "checking connection"}</div>
               {liveMic && doctor && !doctor.keys.deepgram ? <div className="small error">Live microphone needs DEEPGRAM_API_KEY. Pick a scripted lecture to rehearse without it.</div> : null}
               {form.lecture_id && form.mode === "live" ? <div className="small muted">Scripted lecture: the transcript is replayed in real time (labelled SCRIPTED TRANSCRIPT). Keys T / L / 1 / 2 / 3 / E drive the demo.</div> : null}
               <div className="row">
@@ -260,14 +272,16 @@ export default function Setup() {
                 <button className="primary" disabled={!form.learner_id || busy} onClick={() => void start()}>
                   {busy ? "starting…" : "Start session"}
                 </button>
+                {learner ? <Link to={`/tally/${learner.id}`}>My review preferences</Link> : null}
+                {form.lecture_id ? <Link to={`/lossmap/${form.lecture_id}`}>Lecture overview</Link> : null}
               </div>
             </>
           )}
         </div>
         <aside className="studio-guide">
           <h2>A place to focus.</h2>
-          <p className="muted">This window stays with your lecture. Your dashboard keeps your notes and review queue.</p>
-          <ol><li><b>Choose your connection.</b><p>Use the UNO Q relay, direct computer connections, or clearly labelled simulated devices.</p></li><li><b>Start listening.</b><p>Live microphone sessions stream the teacher’s voice into a transcript. Scripted lectures are labelled rehearsals.</p></li><li><b>Add the whiteboard.</b><p>Enable camera capture in the live workspace. A button press can use recent board frames and transcript together.</p></li><li><b>Save a tricky moment.</b><p>Press your physical button, or use the labelled on-screen substitute. Review the saved moments after the lecture.</p></li></ol>
+          <p className="muted">This window stays with your lecture. Your dashboard keeps your notes, review queue, and syllabus.</p>
+          <ol><li><b>Choose your connection.</b><p>Use the UNO Q relay, direct computer connections, or clearly labelled simulated devices.</p></li><li><b>Start listening.</b><p>Live microphone sessions stream the teacher’s voice into a transcript. Scripted lectures are labelled rehearsals.</p></li><li><b>Add the whiteboard.</b><p>Enable camera capture in the live workspace. A button press can use recent board frames and transcript together.</p></li><li><b>Save a tricky moment.</b><p>Press your physical button, or use the labelled on-screen substitute. Review the saved concepts after the lecture.</p></li></ol>
         </aside>
       </div>
     </div>

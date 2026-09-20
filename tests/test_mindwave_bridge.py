@@ -56,14 +56,14 @@ def test_fake_pipeline_frames_have_the_fields_neuropace_uses():
 def test_engine_external_mode_flags_a_drop_from_pipeline_frames():
     s = Settings(baseline_seconds=20)
     eng = FocusEngine(s)
-    easy = _frames("easy", 60, seed=1)
+    focused = _frames("hard", 60, seed=1)
     drowsy = _frames("drowsy", 40, seed=2)
     t = 0.0
     enters = []
     states = []
-    for f in easy + drowsy:
+    for f in focused + drowsy:
         t += 1.0
-        eng.feed_frame(f.engagement, f.quality, f.valid, f.blink_count, extra={"effort": f.effort})
+        eng.feed_frame(f.effort, f.quality, f.valid, f.blink_count, extra={"effort": f.effort})
         smp, evs = eng.tick(t)
         states.append(smp.state)
         enters += [e.t for e in evs if e.kind == "enter"]
@@ -72,7 +72,7 @@ def test_engine_external_mode_flags_a_drop_from_pipeline_frames():
     assert enters and enters[0] > 60, f"drop should be flagged after the switch at 60 s, got {enters}"
     assert eng.extra == {"effort": drowsy[-1].effort}
     # log10 index: e is 10**x
-    assert smp.e is not None and abs(smp.e - 10 ** drowsy[-1].engagement) < 1e-6
+    assert smp.e is not None and abs(smp.e - 10 ** drowsy[-1].effort) < 1e-6
 
 
 def test_engine_external_mode_gates_on_quality_and_staleness():
@@ -111,6 +111,22 @@ async def test_mindwave_headset_fake_delivers_frames_on_the_loop_and_maps_states
             hs.calibrate("nonsense")
     finally:
         await hs.stop()
+
+
+@pytest.mark.parametrize("setting", ["/dev/cu.MindWaveMobile", "replay:/tmp/recording"])
+def test_hardware_and_replay_do_not_report_or_accept_simulated_states(setting):
+    headset = make_headset(setting, lambda *_: None, on_frame=lambda *_: None)
+    assert headset.state is None
+    with pytest.raises(ValueError, match="simulated"):
+        headset.set_state("drifting")
+    assert headset.state is None
+
+
+def test_simulated_state_controls_remain_available():
+    headset = make_headset("fake", lambda *_: None, on_frame=lambda *_: None)
+    assert headset.state == "focused"
+    headset.set_state("drifting")
+    assert headset.state == "drifting"
 
 
 def test_make_headset_routing():

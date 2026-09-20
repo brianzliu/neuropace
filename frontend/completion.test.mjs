@@ -15,7 +15,6 @@ function completionText(session) {
     require(name) {
       if (name === "react") return { useEffect() {}, useState: () => [state++ === 0 ? session : "Lecture", () => {}] };
       if (name === "react-router-dom") return { useParams: () => ({ sessionId: "test" }), Link: "a" };
-      if (name === "../components/SessionNavigation") return { sessionHref: (id, tab) => `/library/${id}/${tab}` };
       if (name === "react/jsx-runtime") return { jsx: (_, props) => props.children, jsxs: (_, props) => props.children };
       return {};
     },
@@ -32,8 +31,9 @@ for (const words of [0, 42]) {
   });
 }
 
-test("saved moments lead into guided study", () => {
+test("saved moments still offer both restudy modes", () => {
   const text = completionText({ gaps: 1, words: 42, flags: [], catchups_shown: 1 });
   assert.match(text, /Each moment explained your way/);
-  assert.match(text, /Study this lecture/);
+  assert.match(text, /Private tutoring/);
+  assert.match(text, /Review on my own/);
 });

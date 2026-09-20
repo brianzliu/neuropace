@@ -211,11 +211,14 @@ Four numbers, each with an interval:
 User-directed amendment to v1.0. Earlier requirements remain in force except the hardware and
 navigation changes below. This extension is a prototype, with hardware verification outstanding.
 
-- **FR-D1:** `/` is the selected learner's dashboard: unresolved concepts first and recent
-  sessions in a side column. It never pools individual learners' notes.
+- **FR-D1:** `/` is the selected learner's dashboard: unresolved concepts first, recent sessions
+  in a side column, and curriculum coverage below. It never pools individual learners' notes.
 - **FR-D2:** The configured LLM may summarize saved notes and propose a review order. Unknown or
   repeated gap IDs invalidate the suggestion. Missing model access uses deterministic ordering.
-  Suggestions cannot modify review outcomes.
+  Suggestions cannot modify review outcomes or curriculum completion.
+- **FR-D3:** Paste a syllabus or upload PDF/TXT/Markdown, limited to 2 MB and 30 PDF pages. Preview
+  and edit extracted topics before saving. Scanned PDFs without text require pasted text.
+  Topic checkboxes track self-reported coverage, not demonstrated mastery.
 - **FR-D4:** New session opens a dedicated studio window with a same-tab popup-blocked fallback.
   Session setup, device detection, live capture, and review are separate views.
 - **FR-H1:** Current target hardware is UNO Q 4 GB and MindWave Mobile 2. A planned large printed
@@ -230,5 +233,5 @@ navigation changes below. This extension is a prototype, with hardware verificat
   Keep the immediate transcript catch-up; offer the board explanation separately, without
   replacing text mid-reading. Label generation failure as offline and board not interpreted.
 - **FR-C3:** Board explanations are model output with supplied frame timestamps, not validated
-  image understanding. Full classroom video recording, durable board-image notes, and production BLE access
-  controls are not implemented.
+  image understanding. Full classroom video recording, durable board-image notes, automatic
+  syllabus mastery inference, and production BLE access controls are not implemented.

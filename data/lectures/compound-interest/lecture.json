@@ -1,0 +1,27 @@
+{
+  "id": "lec_compound01",
+  "title": "Compound interest, the snowball",
+  "wpm": 150,
+  "keyterms": ["compound interest", "simple interest", "principal", "rule of seventy two"],
+  "segments": [
+    {"id": "seg1", "title": "Two kinds of interest", "starts_with": "Today we compare", "planted_bad": false},
+    {"id": "seg2", "title": "One thousand dollars at ten percent", "starts_with": "Let's take a concrete", "planted_bad": false},
+    {"id": "seg3", "title": "The formula, step by step", "starts_with": "Here is how to compute", "planted_bad": true},
+    {"id": "seg4", "title": "The rule of seventy two", "starts_with": "There is a shortcut", "planted_bad": false},
+    {"id": "seg5", "title": "The snowball", "starts_with": "Picture a snowball", "planted_bad": false}
+  ],
+  "taps_after": [
+    "is the interest earned on interest.",
+    "which is one thousand three hundred thirty one.",
+    "it takes about twenty four years.",
+    "once it gets rolling."
+  ],
+  "quiz": [
+    {"id": "q1", "segment": "seg1", "question": "Simple interest is computed on what?", "options": ["The original deposit only", "The deposit plus earned interest", "The bank's profit", "Last year's inflation"], "correct_index": 0},
+    {"id": "q2", "segment": "seg2", "question": "One thousand dollars at ten percent compounded for two years gives", "options": ["One thousand two hundred", "One thousand two hundred ten", "One thousand one hundred", "Two thousand"], "correct_index": 1},
+    {"id": "q3", "segment": "seg3", "question": "Ten percent written as the growth factor is", "options": ["0.10", "1.10", "10", "0.90"], "correct_index": 1},
+    {"id": "q4", "segment": "seg4", "question": "At nine percent, money doubles in about", "options": ["Twelve years", "Six years", "Eight years", "Twenty four years"], "correct_index": 2},
+    {"id": "q5", "segment": "seg5", "question": "The snowball picture shows that compound growth", "options": ["Slows down over time", "Feeds itself", "Depends on the hill only", "Stops at a fixed size"], "correct_index": 1}
+  ],
+  "text": "Today we compare two ways money can grow. Simple interest pays you a fixed amount every year, computed on the original deposit only. Compound interest pays you on the original deposit and also on the interest you have already earned. That single difference changes everything over a long time. With simple interest the growth is a straight line. With compound interest the growth curves upward, because each year's interest is added to the pile that earns interest next year. Simple interest is easy to predict. Compound interest is what your savings account and your loans actually do. Let's take a concrete case. Deposit one thousand dollars at ten percent per year. After one year, you have one thousand one hundred dollars. After two years, compounding gives you one thousand two hundred ten dollars, because the ten percent now applies to one thousand one hundred. After three years you have one thousand three hundred thirty one dollars. After ten years you have about two thousand five hundred ninety four dollars. With simple interest the same deposit would reach only two thousand dollars after ten years. The gap between two thousand and two thousand five hundred ninety four is the interest earned on interest. Here is how to compute it by hand. Start with the principal. Multiply it by one plus the interest rate written as a decimal, so ten percent becomes one point one zero. That gives the balance after one period. Multiply that balance by the same factor again for the next period. Repeat once for every period. Written compactly, the final amount equals the principal times one plus the rate, raised to the power of the number of periods. For one thousand dollars, ten percent and three years, that is one thousand times one point one cubed, which is one thousand three hundred thirty one. There is a shortcut for how long money takes to double. Divide seventy two by the interest rate in percent. At six percent, seventy two divided by six is twelve, so your money doubles in about twelve years. At nine percent it doubles in about eight years. At twelve percent, in about six years. At three percent, it takes about twenty four years. The rule is an approximation, but it is close enough for planning, and it shows how strongly the rate controls the doubling time. Picture a snowball rolling down a hill. As it rolls, it picks up snow, and a bigger snowball picks up more snow with every turn. That is compound growth in motion: the growth feeds itself. Early on the snowball is small and the change is hard to see. Late in the roll it grows fast. This is why starting early matters more than the rate you get later, and why debt that compounds against you can be so hard to stop once it gets rolling."
+}

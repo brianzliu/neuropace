@@ -15,8 +15,6 @@ TapCallback = Callable[[float], None]  # called with wall-clock monotonic time o
 
 
 ARDUINO_VID = 0x2341
-# also: Arduino.org-era UNOs and the CH340 USB-serial chip on classic UNO clones (Windows: "USB-SERIAL CH340")
-BOARD_VIDS = {ARDUINO_VID, 0x2A03, 0x1A86}
 
 
 def autodetect_totem_port(exclude: str | None = None) -> str | None:
@@ -35,7 +33,7 @@ def autodetect_totem_port(exclude: str | None = None) -> str | None:
         if "mindwave" in text or "bthenum" in text:
             continue
         if (
-            getattr(p, "vid", None) in BOARD_VIDS
+            getattr(p, "vid", None) == ARDUINO_VID
             or "usbmodem" in text
             or "arduino" in text
             or " uno" in f" {text}"
@@ -90,9 +88,6 @@ class KeyboardTotem:
 
 
 class SerialTotem:
-    """Any board that prints "TAP" (optionally followed by a count / millis) once per press: firmware/totem and
-    firmware/button_test both do. Commands we send (DOT / FIT / PULSE / CLEAR) may be ignored by the firmware."""
-
     kind = "real"
 
     def __init__(self, port: str, on_tap: TapCallback, baud: int = TOTEM_BAUD) -> None:

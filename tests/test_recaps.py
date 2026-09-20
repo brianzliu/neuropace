@@ -25,6 +25,19 @@ def test_long_span_prefers_the_recap_with_most_coverage_later_on_ties():
 
 def test_no_overlap_or_future_recaps_require_current_transcript():
     r = _ring()
-    assert r.lookup(300.0, 250.0) is None
+    assert r.lookup(300.0, 250.0) is None, (
+        "a recap from minutes ago would mislead: verbatim transcript instead"
+    )
     assert r.lookup(5.0, 0.0) is None
     assert RecapRing().lookup(10.0, 2.0) is None
+
+
+def test_a_tap_between_two_recap_cycles_still_gets_the_latest_recap():
+    """TDD §6: no overlap -> the latest recap. The last recap ended at 100; a tap at 115 whose span starts at
+    107 reaches nothing, but the point being made at 100 is what the student lost the thread of."""
+    r = _ring()
+    assert r.lookup(115.0, 107.0).t_to == 100.0
+    assert r.lookup(130.0, 122.0).t_to == 100.0, "22 s stale: still within one recap cycle plus slack"
+    assert r.lookup(140.0, 132.0) is None, "32 s stale: the verbatim transcript is more honest"
+    r.stale_seconds = 40.0
+    assert r.lookup(140.0, 132.0).t_to == 100.0, "the scheduler sets the staleness to its own period"

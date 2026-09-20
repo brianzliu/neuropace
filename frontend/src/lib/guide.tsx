@@ -35,17 +35,9 @@ export interface ReviewRecommendation {
   learner_response_count: number;
   advisory: true;
 }
-/** What the student actually got wrong on a "miss", so the whiteboard's opening line can reference
- *  the real question instead of a generic "help me understand this lecture moment". */
-export interface MissDetail {
-  question: string;
-  chosenText: string;
-  correctText: string;
-  explanation: string;
-}
 export interface GuideStepContext {
   decision: GuideDecision;
-  reportOutcome: (outcome: "hit" | "miss" | "drop" | "read" | "completed", missDetail?: MissDetail) => void;
+  reportOutcome: (outcome: "hit" | "miss" | "drop" | "read" | "completed") => void;
   paused: boolean;
 }
 export const GuideContext = createContext<GuideStepContext | null>(null);

@@ -47,6 +47,7 @@ export interface Word {
 
 export interface FocusMsg {
   type: "focus";
+  focus_enabled?: boolean;
   t: number;
   e: number | null;
   x: number | null;
@@ -83,8 +84,18 @@ export interface Flag {
   simulated?: boolean;
 }
 
+export interface CatchupExplanation {
+  flag_id: string;
+  status: "pending" | "ready" | "failed";
+  options?: { form: Form; artifact: ArtifactKind; content: ReteachContent }[];
+  plan?: Plan | null;
+  source?: PackageSource;
+  error?: string;
+}
+
 export interface CatchupMsg {
   type: "catchup";
+  rich?: boolean;
   t: number;
   flag_id: string;
   since?: number; // lecture time where the missed span starts (the EEG drop when a tap is linked)
@@ -145,6 +156,7 @@ export interface StreamHealth {
 
 export interface HeadsetStatus {
   connected: boolean;
+  focus_enabled?: boolean;
   kind: HeadsetKind;
   /** true for every kind but "real": the waves on screen are not from a headset on this student's head */
   simulated?: boolean;
@@ -226,7 +238,7 @@ export interface SessionRow {
   id: string;
   learner_id: string;
   lecture_id: string | null;
-  mode: "live" | "recorded" | "review" | "office_hours";
+  mode: "live" | "recorded" | "review";
   catchup_policy: "always" | "randomized";
   headset_kind: string | null;
   totem_kind: string | null;
@@ -238,13 +250,12 @@ export interface SessionRow {
   baseline: { mu: number | null; sigma: number | null; stored: boolean; ready?: boolean } | null;
   seed: number | null;
   auto_pause: boolean;
-  /** Dashboard one-liner (LLM prose or a rules count fallback). Absent on older payloads. */
   summary?: string;
-  summary_source?: string;
 }
 
 export interface SessionPublic extends SessionRow {
   running: boolean;
+  focus_enabled?: boolean;
   flags: Flag[];
   gaps: number;
   words: number;
@@ -255,6 +266,7 @@ export interface SessionPublic extends SessionRow {
 
 export interface StartupCalibration {
   status: "waiting" | "collecting" | "failed" | "saved" | "complete";
+  skipped?: boolean;
   clean: boolean;
   remaining_seconds: number;
   error?: string;
@@ -262,6 +274,7 @@ export interface StartupCalibration {
 
 export interface HelloMsg {
   startup_calibration?: StartupCalibration | null;
+  catchup_explanations?: CatchupExplanation[];
   type: "hello";
   session: SessionRow;
   learner: Learner;
@@ -309,6 +322,7 @@ export type ServerMsg =
   | ({ type: "flag_open"; flag: Flag; t: number })
   | ({ type: "flag_close"; flag: Flag; t: number })
   | CatchupMsg
+  | ({ type: "catchup_explanation"; t?: number } & CatchupExplanation)
   | ({ type: "catchup_withheld"; flag_id: string; reason: string; t: number })
   | ({ type: "catchup_opened"; flag_id: string; t: number })
   | ({ type: "catchup_dismissed"; flag_id: string; t: number })
@@ -338,12 +352,18 @@ export interface GapPublic {
   t_start: number;
   t_end: number;
   span_text: string;
+  context_text: string;
   flag_ids: string[];
   status: "open" | "closed" | "exhausted";
   note: GapNote | null;
+  question: { question: string; options: string[] } | null;
   package_source: PackageSource | null;
   error?: string | null;
   summary?: string | null;
+  artifacts_available?: string[];
+  forms_available?: Form[];
+  plan?: Plan | null;
+  kinds?: Record<Form, ArtifactKind> | null;
 }
 
 export interface RegenerateResponse {
@@ -354,6 +374,7 @@ export interface RegenerateResponse {
 export interface NotesResponse {
   session: SessionPublic;
   gaps: GapPublic[];
+  words: Word[];
 }
 
 export interface SceneNode {
@@ -457,46 +478,6 @@ export type ReteachContent =
   | ExampleContent
   | null;
 
-// ---------------------------------------------------------------- office hours (docs/PRODUCT.md §5a)
-/** The board's three small annotation primitives, plus "manim" (optional, math content only), alongside
- * the ten content families above. */
-export type BoardElementKind = ArtifactKind | "shape" | "arrow" | "label" | "manim";
-export interface ShapeContent { shape: "rect" | "ellipse"; label: string }
-export interface ArrowContent { from_id: string; to_id: string; label: string }
-export interface LabelContent { text: string }
-/** A Manim Community script (server-rendered, optional, docs/PRODUCT.md §5a): fetched lazily by ManimView,
- * 503s gracefully to just the caption when the server has no manim install. */
-export interface ManimContent { title: string; caption: string; scene_name: string; script: string }
-
-/** Position/size on the shared board (bounded canvas, roughly 4000x3000). */
-export interface BoardEnvelope { x: number; y: number; w: number; h: number; z: number }
-
-export interface BoardElement {
-  id: string;
-  kind: BoardElementKind;
-  envelope: BoardEnvelope;
-  content: ReteachContent | ShapeContent | ArrowContent | LabelContent | ManimContent;
-  /** Spoken-register narration shown as a caption while this element draws in (add ops only). */
-  caption?: string | null;
-}
-
-export interface OHMessage {
-  id: string;
-  session_id: string;
-  ord: number;
-  role: "user" | "agent";
-  text: string;
-  related_element_ids: string[] | null;
-  source: "llm" | "cache" | "offline" | "failed" | null;
-  created_at: number;
-}
-
-export interface OHSnapshot {
-  messages: OHMessage[];
-  board: BoardElement[];
-  ord: number;
-}
-
 /** GET /api/sessions/{id}/artifacts: every artifact of every moment, for the team's preview. */
 export interface GapArtifacts extends GapPublic {
   artifacts: Record<string, unknown> & { summary?: string; key_idea?: KeyIdea; plan?: Plan };
@@ -525,6 +506,8 @@ export interface Card {
     said: string;
     /** the tutor's reason for this family: preferred, untried, or exploring */
     why: string;
+    plan_reason?: string;
+    visual_unavailable?: boolean;
   };
 }
 
@@ -664,15 +647,6 @@ export interface QuizGet {
   items: QuizItem[];
   answers: QuizAnswerRow[];
 }
-export interface QuizPrompt {
-  text: string;
-  source: string;
-}
-export interface QuizExplanation {
-  text: string;
-  correct: boolean;
-  source: string;
-}
 export interface QuizResult {
   phase: string;
   score: number;
@@ -690,74 +664,4 @@ export interface LectureFull extends LectureLite {
 export interface EventsResponse {
   session_id: string;
   events: (ServerMsg & { t?: number; wall?: number })[];
-}
-
-// ---- scholar sidecar (neuropace/scholar): OpenAlex references under gap notes ----
-export type ScholarSource = "openalex" | "cache" | "unavailable" | "disabled" | "empty" | "local";
-
-export interface ScholarTopic {
-  id: string;
-  name: string;
-  score: number | null;
-  subfield: string;
-  field: string;
-  domain: string;
-  path: string;
-}
-
-export interface ScholarRef {
-  id: string;
-  title: string;
-  year: number | null;
-  cited_by: number;
-  doi: string | null;
-  kind: string;
-  venue: string | null;
-  authors: string[];
-  more_authors: number;
-  url: string;
-  why: string;
-}
-
-export interface ScholarGap {
-  gap_id: string;
-  query: string;
-  source: ScholarSource;
-  topics: ScholarTopic[];
-  items: ScholarRef[];
-  error: string | null;
-}
-
-export interface ScholarResponse {
-  session_id: string;
-  lecture_id: string | null;
-  topics: { source: ScholarSource; topics: ScholarTopic[] };
-  budget: { limit: number | null; remaining: number | null; reset_seconds: number | null; remaining_usd: number | null };
-  gaps: ScholarGap[];
-  attribution: string;
-}
-
-export interface JargonTerm {
-  term: string;
-  spec: number;
-  field: string | null;
-  known: boolean;
-}
-
-export interface JargonSpan {
-  t_start: number;
-  t_end: number;
-  peak_z: number;
-  terms: JargonTerm[];
-}
-
-export interface JargonResponse {
-  table: { available: boolean; works_used?: number; terms?: number; dev_sized?: boolean };
-  window?: number;
-  step?: number;
-  windows: { t0: number; t1: number; score: number | null; z: number | null; top: JargonTerm[] }[];
-  spans: JargonSpan[];
-  fields: { field: string; share: number }[];
-  segments: { id: string | null; title: string | null; t_start: number; t_end: number; planted_bad: boolean; mean_score: number | null; rank?: number }[];
-  attribution?: string;
 }

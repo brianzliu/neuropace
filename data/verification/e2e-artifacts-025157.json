@@ -1,0 +1,1150 @@
+{
+ "A first tap (GPS)": [
+  {
+   "id": "gap_ccb9edea",
+   "ord": 0,
+   "t_start": 0.0,
+   "t_end": 14.006,
+   "span_text": "Let's start with what a GPS satellite actually does, because it is simpler than people think. Every GPS satellite does one thing all day long. It broadcasts the current time, over and over,",
+   "context_text": "",
+   "flag_ids": [
+    "flag_804cb7ce"
+   ],
+   "status": "open",
+   "note": {
+    "what_was_said": "Let's start with what a GPS satellite actually does, because it is simpler than people think. Every GPS satellite does one thing all day long. It broadcasts the current time, over and over.",
+    "key_term": "GPS satellite",
+    "definition": "A GPS satellite continuously broadcasts the current time to help determine positions.",
+    "connection": "This span introduces the basic function of a GPS satellite, setting the foundation for understanding concepts like trilateration discussed later."
+   },
+   "summary": "A GPS satellite's primary task is to continuously broadcast the current time. This function is simpler than most people think and is fundamental to how GPS works.",
+   "artifacts_available": [
+    "analogy",
+    "diagram",
+    "example",
+    "key_idea",
+    "summary"
+   ],
+   "plan": {
+    "visual": "diagram",
+    "doing": "example",
+    "why": "The lecturer explained what a GPS satellite does and how it broadcasts time, which is a basic conceptual explanation best shown in a diagram connecting ideas, illustrated with the example of continuous broadcasting."
+   },
+   "kinds": {
+    "words": "words",
+    "analogy": "analogy",
+    "visual": "diagram",
+    "doing": "example"
+   },
+   "question": {
+    "question": "What is the primary function of a GPS satellite as described in the lecture?",
+    "options": [
+     "It calculates your exact location on Earth.",
+     "It broadcasts the current time repeatedly.",
+     "It tracks other satellites in orbit.",
+     "It adjusts for ionospheric delay constantly."
+    ]
+   },
+   "package_source": "llm",
+   "error": null,
+   "forms_available": [],
+   "artifacts": {
+    "summary": "A GPS satellite's primary task is to continuously broadcast the current time. This function is simpler than most people think and is fundamental to how GPS works.",
+    "key_idea": {
+     "term": "GPS satellite",
+     "definition": "A GPS satellite continuously broadcasts the current time to allow position calculation on Earth.",
+     "example": "Every GPS satellite does one thing all day long: it broadcasts the current time over and over."
+    },
+    "plan": {
+     "visual": "diagram",
+     "doing": "example",
+     "why": "The lecturer explained what a GPS satellite does and how it broadcasts time, which is a basic conceptual explanation best shown in a diagram connecting ideas, illustrated with the example of continuous broadcasting."
+    },
+    "example": {
+     "title": "How a GPS Satellite Works by Broadcasting Time",
+     "lines": [
+      "A GPS satellite does one thing all day long: broadcasts the current time repeatedly.",
+      "It sends out the current time over and over to devices on Earth.",
+      "This continuous time broadcast allows devices to calculate their position.",
+      "The lecturer said it is simpler than people think—the satellite just transmits time.",
+      "No mention of other tasks from the satellite was given in this segment."
+     ],
+     "result": "A GPS satellite continuously broadcasts the current time to help determine positions."
+    },
+    "analogy": {
+     "story": "Imagine a lighthouse that doesn’t flash a pattern of colors or send complicated signals—it simply shines a steady light continuously every second. Ships use the timing of that light to figure out how far they are from the lighthouse and thus navigate their position.",
+     "mapping": [
+      {
+       "idea": "GPS satellite",
+       "everyday": "lighthouse that shines steady light"
+      },
+      {
+       "idea": "broadcasts the current time",
+       "everyday": "emits light steadily each second"
+      },
+      {
+       "idea": "position determination by timing",
+       "everyday": "ships determine distance by the timing of the light received"
+      }
+     ],
+     "caveat": "Unlike a lighthouse, a GPS satellite’s 'light' is a precise time signal rather than a visible beacon, so the comparison fails to capture the signal’s complexity and frequency details."
+    },
+    "diagram": {
+     "title": "GPS Satellite Function",
+     "nodes": [
+      {
+       "id": "n1",
+       "label": "GPS Satellite",
+       "shape": "card",
+       "tone": "mint"
+      },
+      {
+       "id": "n2",
+       "label": "Broadcast Current Time",
+       "shape": "pill",
+       "tone": "mint"
+      },
+      {
+       "id": "n3",
+       "label": "Continuous Signal",
+       "shape": "pill",
+       "tone": "mint"
+      }
+     ],
+     "edges": [
+      {
+       "from_id": "n1",
+       "to_id": "n2",
+       "label": "does"
+      },
+      {
+       "from_id": "n2",
+       "to_id": "n3",
+       "label": "by sending"
+      }
+     ],
+     "steps": [
+      {
+       "highlight": [
+        "n1"
+       ],
+       "caption": "The GPS satellite is the subject of explanation."
+      },
+      {
+       "highlight": [
+        "n1",
+        "n2"
+       ],
+       "caption": "GPS satellite does one thing all day long: broadcasts current time."
+      },
+      {
+       "highlight": [
+        "n2",
+        "n3"
+       ],
+       "caption": "It broadcasts the current time continuously, over and over."
+      }
+     ]
+    }
+   },
+   "sources": {
+    "core": "llm",
+    "example": "llm",
+    "analogy": "llm",
+    "diagram": "llm"
+   }
+  }
+ ],
+ "N live microphone (battery)": [
+  {
+   "id": "gap_1333d0e7",
+   "ord": 0,
+   "t_start": 7.594,
+   "t_end": 28.297,
+   "span_text": "Chemical reactions push electrons out of one electrode and pull them into the other. That flow of electrons through your device is the current. When the reaction run out of material, the battery is flat. Charging reverses the reactions and stores the energy again.",
+   "context_text": "Let us talk about how a battery stores energy. Inside the cell too, electrodes sit in an electrolyte.",
+   "flag_ids": [
+    "flag_2156441c",
+    "flag_9381aeba"
+   ],
+   "status": "open",
+   "note": {
+    "what_was_said": "Chemical reactions push electrons out of one electrode and pull them into the other. That flow of electrons through your device is the current.",
+    "key_term": "Current",
+    "definition": "Current is the flow of electrons through your device caused by chemical reactions pushing electrons out of one electrode and pulling them into the other.",
+    "connection": "The explanation of chemical reactions causing electron movement elaborates on how electrodes inside the cell produce electrical current, connecting to the prior mention of electrodes in an electrolyte."
+   },
+   "summary": "Chemical reactions inside the battery cause electrons to move from one electrode to the other, producing an electric current through the device. When these reactions run out of material, the battery is flat. Charging reverses the reactions to store energy again.",
+   "artifacts_available": [
+    "analogy",
+    "diagram",
+    "example",
+    "key_idea",
+    "summary"
+   ],
+   "plan": {
+    "visual": "diagram",
+    "doing": "example",
+    "why": "The span explains the mechanism of current flow by chemical reactions and describes charging reversing reactions, so a diagram of the concepts and an example fit best."
+   },
+   "kinds": {
+    "words": "words",
+    "analogy": "analogy",
+    "visual": "diagram",
+    "doing": "example"
+   },
+   "question": {
+    "question": "What causes the flow of electrons, or current, in a battery?",
+    "options": [
+     "Chemical reactions push electrons from one electrode to another",
+     "Magnetic forces inside the battery",
+     "Electricity is generated by the movement of ions in the electrolyte",
+     "Charging the battery causes current flow"
+    ]
+   },
+   "package_source": "llm",
+   "error": null,
+   "forms_available": [],
+   "artifacts": {
+    "summary": "Chemical reactions inside the battery cause electrons to move from one electrode to the other, producing an electric current through the device. When these reactions run out of material, the battery is flat. Charging reverses the reactions to store energy again.",
+    "key_idea": {
+     "term": "Current",
+     "definition": "The flow of electrons through a device caused by chemical reactions moving electrons between electrodes.",
+     "example": "Chemical reactions push electrons out of one electrode and pull them into the other, creating current."
+    },
+    "plan": {
+     "visual": "diagram",
+     "doing": "example",
+     "why": "The span explains the mechanism of current flow by chemical reactions and describes charging reversing reactions, so a diagram of the concepts and an example fit best."
+    },
+    "example": {
+     "title": "How a Battery Produces Current",
+     "lines": [
+      "Chemical reactions push electrons out of one electrode.",
+      "They pull electrons into the other electrode.",
+      "That flow of electrons through your device is the current.",
+      "When the reaction runs out of material, the battery is flat.",
+      "Charging reverses the reactions and stores the energy again."
+     ],
+     "result": "Current is the flow of electrons caused by chemical reactions in the battery."
+    },
+    "analogy": {
+     "story": "Imagine a water park where pumps push water from one pool and pull it into another pool through tubes. The flowing water represents energy moving between pools. If the pumps stop running or water runs out, the flow stops. When powered again in reverse, water is pumped back, refilling the pools.",
+     "mapping": [
+      {
+       "idea": "Chemical reactions push electrons out of one electrode and pull them into the other",
+       "everyday": "Pumps push water out of one pool and pull it into the other"
+      },
+      {
+       "idea": "Current",
+       "everyday": "Flow of water through tubes connecting the pools"
+      },
+      {
+       "idea": "Battery is flat when reaction runs out of material",
+       "everyday": "Flow stops when pumps stop or water runs out"
+      },
+      {
+       "idea": "Charging reverses reactions and stores energy",
+       "everyday": "Powering pumps in reverse pumps water back to refill pools"
+      }
+     ],
+     "caveat": "Unlike water, electrons move through conductors without bulk fluid flow, and chemical reactions directly drive electron movement rather than pumps moving water."
+    },
+    "diagram": {
+     "title": "Battery Current and Chemical Reactions",
+     "nodes": [
+      {
+       "id": "n1",
+       "label": "Chemical Reactions",
+       "shape": "card",
+       "tone": "peach"
+      },
+      {
+       "id": "n2",
+       "label": "Electrons Flow",
+       "shape": "pill",
+       "tone": "mint"
+      },
+      {
+       "id": "n3",
+       "label": "Current",
+       "shape": "ellipse",
+       "tone": "lilac"
+      },
+      {
+       "id": "n4",
+       "label": "Battery Flat",
+       "shape": "card",
+       "tone": "butter"
+      },
+      {
+       "id": "n5",
+       "label": "Charging Reverses",
+       "shape": "card",
+       "tone": "butter"
+      }
+     ],
+     "edges": [
+      {
+       "from_id": "n1",
+       "to_id": "n2",
+       "label": "push and pull"
+      },
+      {
+       "from_id": "n2",
+       "to_id": "n3",
+       "label": "causes"
+      },
+      {
+       "from_id": "n1",
+       "to_id": "n4",
+       "label": "material runs out"
+      },
+      {
+       "from_id": "n5",
+       "to_id": "n1",
+       "label": "reaction reverses"
+      },
+      {
+       "from_id": "n5",
+       "to_id": "n4",
+       "label": "restores energy"
+      }
+     ],
+     "steps": [
+      {
+       "highlight": [
+        "n1",
+        "n2"
+       ],
+       "caption": "Chemical reactions push electrons out of one electrode and pull into the other."
+      },
+      {
+       "highlight": [
+        "n3"
+       ],
+       "caption": "This flow of electrons through your device is the current."
+      },
+      {
+       "highlight": [
+        "n4"
+       ],
+       "caption": "When the reaction runs out of material, the battery is flat."
+      },
+      {
+       "highlight": [
+        "n5",
+        "n1"
+       ],
+       "caption": "Charging reverses the reactions and stores the energy again."
+      }
+     ]
+    }
+   },
+   "sources": {
+    "core": "llm",
+    "example": "llm",
+    "analogy": "llm",
+    "diagram": "llm"
+   }
+  }
+ ],
+ "B drifts (GPS)": [
+  {
+   "id": "gap_ed94f245",
+   "ord": 0,
+   "t_start": 11.06,
+   "t_end": 50.005,
+   "span_text": "It broadcasts the current time, over and over, along with where it is in its orbit. That's it. It does not know where you are. It does not track you. It is a very precise clock in space, shouting the time. There are about thirty of these satellites, arranged so that from any point on Earth you can usually see at least six of them above the horizon. Each one carries an atomic clock, accurate to a few billionths of a second. Your phone has a cheap quartz clock, and that",
+   "context_text": "Let's start with what a GPS satellite actually does, because it is simpler than people think. Every GPS satellite does one thing all day long.",
+   "flag_ids": [
+    "flag_2f82927b"
+   ],
+   "status": "open",
+   "note": {
+    "what_was_said": "It broadcasts the current time, over and over, along with where it is in its orbit. That's it. It does not know where you are. It does not track you. It is a very precise clock in space, shouting the time.",
+    "key_term": "GPS satellite time broadcast",
+    "definition": "The GPS satellite continuously transmits its very precise current time and its position in orbit, without tracking or knowing the receiver's location.",
+    "connection": "The explanation builds directly on the context that each GPS satellite does a single task, clarifying what that task involves."
+   },
+   "summary": "Each GPS satellite continuously broadcasts its current time and its orbital position. It does not track or know where receivers are. There are about thirty satellites orbiting so that usually at least six are visible from anywhere on Earth, each carrying a very precise atomic clock.",
+   "artifacts_available": [
+    "analogy",
+    "diagram",
+    "example",
+    "key_idea",
+    "summary"
+   ],
+   "plan": {
+    "visual": "diagram",
+    "doing": "example",
+    "why": "The lecturer explains the function of GPS satellites conceptually ('It broadcasts the current time... along with where it is in its orbit') rather than giving numbers or a process, so a diagram showing how time broadcast relates to positioning is best, and an example clarifies the precise clock's role."
+   },
+   "kinds": {
+    "words": "words",
+    "analogy": "analogy",
+    "visual": "diagram",
+    "doing": "example"
+   },
+   "question": {
+    "question": "What is the primary function of a GPS satellite according to the lecturer?",
+    "options": [
+     "To track your location and send it to Earth",
+     "To broadcast its current time and orbital position repeatedly",
+     "To receive signals from phones and calculate their positions",
+     "To monitor atmospheric conditions affecting satellite signals"
+    ]
+   },
+   "package_source": "llm",
+   "error": null,
+   "forms_available": [],
+   "artifacts": {
+    "summary": "Each GPS satellite continuously broadcasts its current time and its orbital position. It does not track or know where receivers are. There are about thirty satellites orbiting so that usually at least six are visible from anywhere on Earth, each carrying a very precise atomic clock.",
+    "key_idea": {
+     "term": "GPS satellite time broadcast",
+     "definition": "A continuous transmission by each GPS satellite of its precise current time and position to enable receivers to determine their location.",
+     "example": "The satellite broadcasts time accurate to a few billionths of a second using its atomic clock."
+    },
+    "plan": {
+     "visual": "diagram",
+     "doing": "example",
+     "why": "The lecturer explains the function of GPS satellites conceptually ('It broadcasts the current time... along with where it is in its orbit') rather than giving numbers or a process, so a diagram showing how time broadcast relates to positioning is best, and an example clarifies the precise clock's role."
+    },
+    "example": {
+     "title": "GPS Satellite Time Broadcast Example",
+     "lines": [
+      "A GPS satellite broadcasts the current time repeatedly, with its orbit position.",
+      "It does not know or track where you are on Earth.",
+      "Each satellite has an atomic clock, accurate to billionths of a second.",
+      "There are about thirty satellites positioned so you can see six at once.",
+      "Your phone has a cheap quartz clock, needing the satellite's precise time.",
+      "The phone uses these signals to determine its location by comparing times."
+     ],
+     "result": "The GPS satellite acts as a precise clock in space broadcasting time, enabling location detection without tracking the receiver."
+    },
+    "analogy": {
+     "story": "Imagine a weather station on a hill that continuously announces the exact time and its own location, without tracking where listeners are. Listeners at various points use these broadcasts from several stations to figure out their own location by comparing the times they receive.",
+     "mapping": [
+      {
+       "idea": "GPS satellite time broadcast",
+       "everyday": "weather station announcing time and location"
+      },
+      {
+       "idea": "about thirty of these satellites arranged so that from any point on Earth you can usually see at least six of them above the horizon",
+       "everyday": "multiple weather stations spread so listeners always hear several from different directions"
+      },
+      {
+       "idea": "Your phone has a cheap quartz clock",
+       "everyday": "listener's own less precise watch compared to the weather station's exact time"
+      }
+     ],
+     "caveat": "The weather stations don't broadcast signals traveling at light-speed or require relativistic corrections, unlike GPS satellites."
+    },
+    "diagram": {
+     "title": "GPS Satellite Time Broadcast",
+     "nodes": [
+      {
+       "id": "n1",
+       "label": "GPS Satellite",
+       "shape": "card",
+       "tone": "mint"
+      },
+      {
+       "id": "n2",
+       "label": "Broadcast Current Time",
+       "shape": "pill",
+       "tone": "butter"
+      },
+      {
+       "id": "n3",
+       "label": "Broadcast Orbit Position",
+       "shape": "pill",
+       "tone": "butter"
+      },
+      {
+       "id": "n4",
+       "label": "No Tracking of Receiver",
+       "shape": "ellipse",
+       "tone": "lilac"
+      },
+      {
+       "id": "n5",
+       "label": "Atomic Clock Precision",
+       "shape": "card",
+       "tone": "peach"
+      },
+      {
+       "id": "n6",
+       "label": "Multiple Satellites Visible",
+       "shape": "card",
+       "tone": "mint"
+      }
+     ],
+     "edges": [
+      {
+       "from_id": "n1",
+       "to_id": "n2",
+       "label": "does"
+      },
+      {
+       "from_id": "n1",
+       "to_id": "n3",
+       "label": "does"
+      },
+      {
+       "from_id": "n1",
+       "to_id": "n4",
+       "label": "does not"
+      },
+      {
+       "from_id": "n1",
+       "to_id": "n5",
+       "label": "contains"
+      },
+      {
+       "from_id": "n1",
+       "to_id": "n6",
+       "label": "arranged as"
+      }
+     ],
+     "steps": [
+      {
+       "highlight": [
+        "n1",
+        "n2",
+        "n3"
+       ],
+       "caption": "GPS satellite broadcasts current time and orbit position repeatedly."
+      },
+      {
+       "highlight": [
+        "n4"
+       ],
+       "caption": "It does not track or know where the receiver is located."
+      },
+      {
+       "highlight": [
+        "n5"
+       ],
+       "caption": "Each satellite carries an atomic clock accurate to billionths of a second."
+      },
+      {
+       "highlight": [
+        "n6"
+       ],
+       "caption": "About thirty satellites are arranged for visibility from Earth."
+      }
+     ]
+    }
+   },
+   "sources": {
+    "core": "llm",
+    "example": "llm",
+    "analogy": "llm",
+    "diagram": "llm"
+   }
+  },
+  {
+   "id": "gap_3e3840c6",
+   "ord": 1,
+   "t_start": 74.12,
+   "t_end": 86.032,
+   "span_text": "When your phone receives a satellite's message, it compares the time stamped inside the message with the time it was received. The difference is how long",
+   "context_text": "over, along with where it is in its orbit. That's it. It does not know where you are. It does not track you. It is a very precise clock in space, shouting the time. There are about thirty of these satellites, arranged so that from any point on Earth you can usually see at least six of them above the horizon. Each one carries an atomic clock, accurate to a few billionths of a second. Your phone has a cheap quartz clock, and that difference is going to matter later. So remember the picture: thirty flying clocks, each announcing the time and its own position, and your phone just listening. Now, how does listening to a clock tell you where you are? Radio travels at the speed of light, about three hundred thousand kilometers per second.",
+   "flag_ids": [
+    "flag_3d337285"
+   ],
+   "status": "open",
+   "note": {
+    "what_was_said": "When your phone receives a satellite's message, it compares the time stamped inside the message with the time it was received. The difference is how long",
+    "key_term": "pseudorange",
+    "definition": "The time difference between the satellite's timestamp in the message and the time the phone receives that message, representing the travel time of the radio signal from satellite to phone.",
+    "connection": "This span explains how the phone uses the satellite's precise clock time, introduced in the context, to measure the signal travel time essential for locating the phone."
+   },
+   "summary": "The phone determines how long a satellite's radio message took to reach it by comparing the satellite's timestamp in the message with the phone's reception time. This timing difference is key to calculating distance to the satellite.",
+   "artifacts_available": [
+    "analogy",
+    "diagram",
+    "example",
+    "key_idea",
+    "summary"
+   ],
+   "plan": {
+    "visual": "diagram",
+    "doing": "example",
+    "why": "The lecturer explains how the phone calculates time difference using satellite clock signals, focusing on the concept rather than multiple values or steps."
+   },
+   "kinds": {
+    "words": "words",
+    "analogy": "analogy",
+    "visual": "diagram",
+    "doing": "example"
+   },
+   "question": {
+    "question": "What does the phone use to determine the time a satellite signal took to reach it?",
+    "options": [
+     "It compares the satellite's timestamp to the phone's current time upon message reception",
+     "It measures the signal strength received from the satellite",
+     "It calculates the satellite's orbital position",
+     "It uses the phone's atomic clock to check the signal time"
+    ]
+   },
+   "package_source": "llm",
+   "error": null,
+   "forms_available": [],
+   "artifacts": {
+    "summary": "The phone determines how long a satellite's radio message took to reach it by comparing the satellite's timestamp in the message with the phone's reception time. This timing difference is key to calculating distance to the satellite.",
+    "key_idea": {
+     "term": "pseudorange",
+     "definition": "The time difference between the satellite's sent time and the phone's received time for the signal, used to estimate distance to the satellite.",
+     "example": "Your phone compares the time stamped inside the satellite's message with the time it was received to find this difference."
+    },
+    "plan": {
+     "visual": "diagram",
+     "doing": "example",
+     "why": "The lecturer explains how the phone calculates time difference using satellite clock signals, focusing on the concept rather than multiple values or steps."
+    },
+    "example": {
+     "title": "Using Pseudorange to Determine Position",
+     "lines": [
+      "Each satellite sends a message with a precise time stamp from its atomic clock.",
+      "Your phone receives that message and notes the time using its quartz clock.",
+      "When your phone receives a satellite's message, it compares the time stamped inside the message with the time it was received.",
+      "The difference between these times is the travel time of the radio signal, called the pseudorange.",
+      "This pseudorange tells how far away that satellite is from your phone.",
+      "By measuring pseudoranges from multiple satellites, your phone can determine its position through trilateration."
+     ],
+     "result": "The time difference, pseudorange, is key to calculating your phone's distance from satellites and thus your location."
+    },
+    "analogy": {
+     "story": "Imagine you are waiting for a friend to call and your watch is not perfectly synced with the world clock. When you get the call, you check the time your friend says they called and your watch's time, and the difference tells you how long the call signal took to reach you.",
+     "mapping": [
+      {
+       "idea": "pseudorange",
+       "everyday": "the time difference between your friend's call time and your watch time"
+      },
+      {
+       "idea": "satellite's timestamp in the message",
+       "everyday": "the time your friend says they called"
+      },
+      {
+       "idea": "time phone receives the message",
+       "everyday": "the actual time you see on your watch when receiving the call"
+      },
+      {
+       "idea": "radio signal travel time",
+       "everyday": "the time taken by the phone call signal to reach you"
+      }
+     ],
+     "caveat": "Unlike the friends' call times, the satellite timestamps are extremely precise atomic clocks, so errors due to clock inaccuracies are much smaller and carefully accounted for."
+    },
+    "diagram": {
+     "title": "Understanding Pseudorange in GPS",
+     "nodes": [
+      {
+       "id": "n1",
+       "label": "Satellite Message Received",
+       "shape": "pill",
+       "tone": "mint"
+      },
+      {
+       "id": "n2",
+       "label": "Timestamp in Message",
+       "shape": "card",
+       "tone": "mint"
+      },
+      {
+       "id": "n3",
+       "label": "Phone Receive Time",
+       "shape": "card",
+       "tone": "mint"
+      },
+      {
+       "id": "n4",
+       "label": "Calculate Time Difference",
+       "shape": "diamond",
+       "tone": "peach"
+      },
+      {
+       "id": "n5",
+       "label": "Pseudorange (Travel Time)",
+       "shape": "card",
+       "tone": "butter"
+      }
+     ],
+     "edges": [
+      {
+       "from_id": "n1",
+       "to_id": "n2",
+       "label": "contains"
+      },
+      {
+       "from_id": "n1",
+       "to_id": "n3",
+       "label": "compared with"
+      },
+      {
+       "from_id": "n2",
+       "to_id": "n4",
+       "label": "input"
+      },
+      {
+       "from_id": "n3",
+       "to_id": "n4",
+       "label": "input"
+      },
+      {
+       "from_id": "n4",
+       "to_id": "n5",
+       "label": "determines"
+      }
+     ],
+     "steps": [
+      {
+       "highlight": [
+        "n1",
+        "n2",
+        "n3"
+       ],
+       "caption": "Phone receives satellite message with timestamp and records receive time."
+      },
+      {
+       "highlight": [
+        "n4"
+       ],
+       "caption": "Phone compares timestamp with receive time to calculate difference."
+      },
+      {
+       "highlight": [
+        "n5"
+       ],
+       "caption": "This time difference is the pseudorange, the signal travel time."
+      }
+     ]
+    }
+   },
+   "sources": {
+    "core": "llm",
+    "example": "llm",
+    "analogy": "llm",
+    "diagram": "llm"
+   }
+  }
+ ],
+ "H compound interest": [
+  {
+   "id": "gap_52a113ce",
+   "ord": 0,
+   "t_start": 54.71,
+   "t_end": 138.005,
+   "span_text": "After two years, compounding gives you one thousand two hundred ten dollars, because the ten percent now applies to one thousand one hundred. After three years you have one thousand three hundred thirty one dollars. After ten years you have about two thousand five hundred ninety four dollars. With simple interest the same deposit would reach only two thousand dollars after ten years. The gap between two thousand and two thousand five hundred ninety four is the interest earned on interest. Here is how to compute it by hand. Start with the principal. Multiply it by one plus the interest rate written as a decimal, so ten percent becomes one point one zero. That gives the balance after one period. Multiply that balance by the same factor again for the next period. Repeat once for every period. Written compactly, the final amount equals the principal times one plus the rate, raised to the power of the number of periods. For one thousand dollars, ten percent and three years, that is one thousand times one point one cubed, which is one thousand three hundred thirty one. There is a shortcut for",
+   "context_text": "Today we compare two ways money can grow. Simple interest pays you a fixed amount every year, computed on the original deposit only. Compound interest pays you on the original deposit and also on the interest you have already earned. That single difference changes everything over a long time. With simple interest the growth is a straight line. With compound interest the growth curves upward, because each year's interest is added to the pile that earns interest next year. Simple interest is easy to predict. Compound interest is what your savings account and your loans actually do. Let's take a concrete case. Deposit one thousand dollars at ten percent per year. After one year, you have one thousand one hundred dollars.",
+   "flag_ids": [
+    "flag_986146b4",
+    "flag_efc02a97",
+    "flag_d8d99c41",
+    "flag_9159e5c1"
+   ],
+   "status": "open",
+   "note": {
+    "what_was_said": "After ten years you have about two thousand five hundred ninety four dollars. With simple interest the same deposit would reach only two thousand dollars after ten years. The gap between two thousand and two thousand five hundred ninety four is the interest earned on interest.",
+    "key_term": "compound interest",
+    "definition": "Compound interest means that each year's interest is added to the principal, so the interest itself earns interest in subsequent periods.",
+    "connection": "This extends the comparison from simple interest to compound interest over multiple years, showing how the amounts differ and why."
+   },
+   "summary": "Compound interest causes your investment to grow faster than simple interest because interest is earned on both the original amount and the accumulated interest. Over ten years, this adds up to a larger total balance compared to simple interest. The computation involves multiplying the principal by (1 plus the interest rate) raised to the number of periods.",
+   "artifacts_available": [
+    "analogy",
+    "key_idea",
+    "plot",
+    "steps",
+    "summary"
+   ],
+   "plan": {
+    "visual": "plot",
+    "doing": "steps",
+    "why": "The span describes how the amount grows over years with compound interest and how to compute it, including repeating multiplication and an exponential formula, indicating a growth curve and method steps."
+   },
+   "kinds": {
+    "words": "words",
+    "analogy": "analogy",
+    "visual": "plot",
+    "doing": "steps"
+   },
+   "question": {
+    "question": "What causes the gap between the compound interest amount and the simple interest amount after ten years?",
+    "options": [
+     "The principal amount increases over time.",
+     "The interest rate changes each year.",
+     "Interest is earned on previously accumulated interest.",
+     "Only the original deposit earns interest."
+    ]
+   },
+   "package_source": "llm",
+   "error": null,
+   "forms_available": [],
+   "artifacts": {
+    "summary": "Compound interest causes your investment to grow faster than simple interest because interest is earned on both the original amount and the accumulated interest. Over ten years, this adds up to a larger total balance compared to simple interest. The computation involves multiplying the principal by (1 plus the interest rate) raised to the number of periods.",
+    "key_idea": {
+     "term": "compound interest",
+     "definition": "Interest calculated on the initial principal and also on the accumulated interest from previous periods.",
+     "example": "After three years with 10% interest compounded annually on $1000, the balance is $1331 (i.e., 1000 * 1.1^3)."
+    },
+    "plan": {
+     "visual": "plot",
+     "doing": "steps",
+     "why": "The span describes how the amount grows over years with compound interest and how to compute it, including repeating multiplication and an exponential formula, indicating a growth curve and method steps."
+    },
+    "steps": {
+     "title": "How to compute compound interest by hand",
+     "steps": [
+      "Start with the principal amount.",
+      "Multiply principal by one plus interest rate as a decimal.",
+      "This gives balance after one period.",
+      "Multiply that balance by the same factor again for next period.",
+      "Repeat multiplication once for every period.",
+      "Or use the formula: principal times one plus rate raised to number of periods.",
+      "For example, 1000 times 1.1 cubed equals 1331 after three years.",
+      "This method accounts for interest earned on interest."
+     ]
+    },
+    "analogy": {
+     "story": "Imagine planting a fruit tree that grows apples. In the first year, it produces 10 apples. Next year, the tree not only grows 10 more apples but also the new branches from last year produce apples too. Over the years, the total apples increase faster because the tree's growth builds on last year's growth, not just the original branches.",
+     "mapping": [
+      {
+       "idea": "compound interest",
+       "everyday": "apple production growing on both original and new branches"
+      },
+      {
+       "idea": "principal",
+       "everyday": "original fruit tree branches"
+      },
+      {
+       "idea": "interest earned on interest",
+       "everyday": "apples produced from new branches, not only original branches"
+      },
+      {
+       "idea": "simple interest",
+       "everyday": "constant 10 apples every year only from original branches"
+      }
+     ],
+     "caveat": "Unlike money, apple production depends on biology and seasons, not fixed rates and precise calculations."
+    },
+    "plot": {
+     "title": "Growth of $1000 at 10% Interest: Simple vs Compound",
+     "x_label": "Years",
+     "y_label": "Amount ($)",
+     "series": [
+      {
+       "name": "Compound Interest",
+       "points": [
+        {
+         "x": 0.0,
+         "y": 1000.0
+        },
+        {
+         "x": 1.0,
+         "y": 1100.0
+        },
+        {
+         "x": 2.0,
+         "y": 1210.0
+        },
+        {
+         "x": 3.0,
+         "y": 1331.0
+        },
+        {
+         "x": 10.0,
+         "y": 2594.0
+        }
+       ]
+      },
+      {
+       "name": "Simple Interest",
+       "points": [
+        {
+         "x": 0.0,
+         "y": 1000.0
+        },
+        {
+         "x": 1.0,
+         "y": 1100.0
+        },
+        {
+         "x": 2.0,
+         "y": 1200.0
+        },
+        {
+         "x": 3.0,
+         "y": 1300.0
+        },
+        {
+         "x": 10.0,
+         "y": 2000.0
+        }
+       ]
+      }
+     ],
+     "annotations": [
+      {
+       "x": 10.0,
+       "y": 2594.0,
+       "text": "Compound: $2594 after 10 years"
+      },
+      {
+       "x": 10.0,
+       "y": 2000.0,
+       "text": "Simple: $2000 after 10 years"
+      },
+      {
+       "x": 2.0,
+       "y": 1210.0,
+       "text": "Compound at 2 years: $1210"
+      },
+      {
+       "x": 3.0,
+       "y": 1331.0,
+       "text": "Compound at 3 years: $1331"
+      }
+     ],
+     "illustrative": false,
+     "takeaway": "Compound interest causes growth to curve upward over time, surpassing the linear growth of simple interest due to interest earned on interest."
+    }
+   },
+   "sources": {
+    "core": "llm",
+    "steps": "llm",
+    "analogy": "llm",
+    "plot": "llm"
+   }
+  },
+  {
+   "id": "gap_0171d330",
+   "ord": 1,
+   "t_start": 156.98,
+   "t_end": 165.008,
+   "span_text": "At twelve percent, in about six years. At three percent, it takes about twenty four years. The rule",
+   "context_text": "it by one plus the interest rate written as a decimal, so ten percent becomes one point one zero. That gives the balance after one period. Multiply that balance by the same factor again for the next period. Repeat once for every period. Written compactly, the final amount equals the principal times one plus the rate, raised to the power of the number of periods. For one thousand dollars, ten percent and three years, that is one thousand times one point one cubed, which is one thousand three hundred thirty one. There is a shortcut for how long money takes to double. Divide seventy two by the interest rate in percent. At six percent, seventy two divided by six is twelve, so your money doubles in about twelve years. At nine percent it doubles in about eight years.",
+   "flag_ids": [
+    "flag_529fb4b4"
+   ],
+   "status": "open",
+   "note": {
+    "what_was_said": "At twelve percent, in about six years. At three percent, it takes about twenty four years. The rule",
+    "key_term": "rule of seventy two",
+    "definition": "The rule of seventy two is a shortcut to estimate how long money takes to double by dividing seventy two by the interest rate in percent.",
+    "connection": "The span follows the explanation of how to calculate compound interest and introduces the rule of seventy two as a shortcut to find doubling time at different interest rates."
+   },
+   "summary": "The lecturer explains that according to the rule of seventy two, money doubles in about six years at twelve percent interest and about twenty four years at three percent. This rule provides a quick estimate of doubling time at various interest rates.",
+   "artifacts_available": [
+    "analogy",
+    "chart",
+    "example",
+    "key_idea",
+    "summary"
+   ],
+   "plan": {
+    "visual": "chart",
+    "doing": "example",
+    "why": "The span gives several specific numbers comparing doubling times (six years, twenty four years) at different interest rates using the rule."
+   },
+   "kinds": {
+    "words": "words",
+    "analogy": "analogy",
+    "visual": "chart",
+    "doing": "example"
+   },
+   "question": {
+    "question": "According to the rule of seventy two, approximately how long does it take for money to double at a twelve percent interest rate?",
+    "options": [
+     "Six years",
+     "Twelve years",
+     "Twenty four years",
+     "Eight years"
+    ]
+   },
+   "package_source": "llm",
+   "error": null,
+   "forms_available": [],
+   "artifacts": {
+    "summary": "The lecturer explains that according to the rule of seventy two, money doubles in about six years at twelve percent interest and about twenty four years at three percent. This rule provides a quick estimate of doubling time at various interest rates.",
+    "key_idea": {
+     "term": "rule of seventy two",
+     "definition": "A shortcut formula for estimating the doubling time of money by dividing 72 by the interest rate in percent.",
+     "example": "At twelve percent interest, dividing 72 by 12 gives six years for doubling."
+    },
+    "plan": {
+     "visual": "chart",
+     "doing": "example",
+     "why": "The span gives several specific numbers comparing doubling times (six years, twenty four years) at different interest rates using the rule."
+    },
+    "chart": {
+     "kind": "bar",
+     "title": "Doubling Time of Money at Different Interest Rates",
+     "unit": "years",
+     "points": [
+      {
+       "label": "6% interest",
+       "value": 12.0
+      },
+      {
+       "label": "9% interest",
+       "value": 8.0
+      },
+      {
+       "label": "12% interest",
+       "value": 6.0
+      },
+      {
+       "label": "3% interest",
+       "value": 24.0
+      }
+     ],
+     "takeaway": "The rule of seventy two estimates how many years it takes for money to double by dividing seventy-two by the interest rate; higher rates lead to faster doubling times."
+    },
+    "example": {
+     "title": "Using the Rule of Seventy-Two to Estimate Doubling Time",
+     "lines": [
+      "At twelve percent, money doubles in about six years using the rule of seventy-two.",
+      "At three percent, money doubles in about twenty four years, according to the rule.",
+      "The rule says to divide seventy-two by the interest rate in percent to find doubling time."
+     ],
+     "result": "The rule of seventy-two provides a quick estimate of how long money takes to double at given interest rates."
+    },
+    "analogy": {
+     "story": "Imagine planting a seed that doubles in size over time depending on how fast it grows. If it grows fast, like six inches per year, it doubles in about twelve years. If it grows slower, like three inches per year, it takes about twenty-four years to double. There's a quick trick: divide seventy-two by the growth rate to estimate doubling time without measuring every inch.",
+     "mapping": [
+      {
+       "idea": "rule of seventy two",
+       "everyday": "quick trick to estimate plant doubling time"
+      },
+      {
+       "idea": "interest rate in percent",
+       "everyday": "plant growth rate in inches per year"
+      },
+      {
+       "idea": "money doubles",
+       "everyday": "plant size doubles"
+      },
+      {
+       "idea": "time periods (years)",
+       "everyday": "years the plant grows"
+      }
+     ],
+     "caveat": "The rule of seventy two only roughly estimates doubling time; real growth can vary and isn’t always smooth like the seed analogy."
+    }
+   },
+   "sources": {
+    "core": "llm",
+    "chart": "llm",
+    "example": "llm",
+    "analogy": "llm"
+   }
+  },
+  {
+   "id": "gap_e5f64a5d",
+   "ord": 2,
+   "t_start": 194.93,
+   "t_end": 214.014,
+   "span_text": "Late in the roll it grows fast. This is why starting early matters more than the rate you get later, and why debt that compounds against you can be so hard to stop once it gets rolling.",
+   "context_text": "hundred thirty one. There is a shortcut for how long money takes to double. Divide seventy two by the interest rate in percent. At six percent, seventy two divided by six is twelve, so your money doubles in about twelve years. At nine percent it doubles in about eight years. At twelve percent, in about six years. At three percent, it takes about twenty four years. The rule is an approximation, but it is close enough for planning, and it shows how strongly the rate controls the doubling time. Picture a snowball rolling down a hill. As it rolls, it picks up snow, and a bigger snowball picks up more snow with every turn. That is compound growth in motion: the growth feeds itself. Early on the snowball is small and the change is hard to see.",
+   "flag_ids": [
+    "flag_79335661",
+    "flag_11764f0a"
+   ],
+   "status": "open",
+   "note": {
+    "what_was_said": "Late in the roll it grows fast. This is why starting early matters more than the rate you get later, and why debt that compounds against you can be so hard to stop once it gets rolling.",
+    "key_term": "compound growth",
+    "definition": "Compound growth is the process where growth feeds itself, making the quantity grow faster over time as it accumulates more.",
+    "connection": "The span continues the snowball metaphor introduced just before, emphasizing how compound growth accelerates late in the process and why early start matters."
+   },
+   "summary": "Compound growth accelerates over time like a snowball picking up more snow as it rolls. Starting early is more important because growth increases faster later. Similarly, debt compounding against you becomes hard to stop once it grows larger.",
+   "artifacts_available": [
+    "analogy",
+    "animation",
+    "example",
+    "key_idea",
+    "summary"
+   ],
+   "plan": {
+    "visual": "animation",
+    "doing": "example",
+    "why": "The lecturer used the snowball rolling down a hill metaphor to explain compound growth in motion and its accelerating nature."
+   },
+   "kinds": {
+    "words": "words",
+    "analogy": "analogy",
+    "visual": "animation",
+    "doing": "example"
+   },
+   "question": {
+    "question": "Why does starting early in compound growth have more impact than having a higher rate later?",
+    "options": [
+     "Because compound growth is linear and steady throughout",
+     "Because growth only happens at the end of the period",
+     "Because late growth accelerates, so early accumulation leads to bigger later gains",
+     "Because the interest rate does not affect doubling time"
+    ]
+   },
+   "package_source": "llm",
+   "error": null,
+   "forms_available": [],
+   "artifacts": {
+    "summary": "Compound growth accelerates over time like a snowball picking up more snow as it rolls. Starting early is more important because growth increases faster later. Similarly, debt compounding against you becomes hard to stop once it grows larger.",
+    "key_idea": {
+     "term": "compound growth",
+     "definition": "Growth that feeds itself, leading to faster increase over time as the growing amount becomes larger.",
+     "example": "The snowball that picks up more snow each turn as it grows bigger, illustrating compound growth accelerating later."
+    },
+    "plan": {
+     "visual": "animation",
+     "doing": "example",
+     "why": "The lecturer used the snowball rolling down a hill metaphor to explain compound growth in motion and its accelerating nature."
+    },
+    "example": {
+     "title": "Why Starting Early in Compound Growth Matters",
+     "lines": [
+      "A snowball rolling down a hill picks up more snow as it grows.",
+      "Early on, the snowball is small and the change is hard to see.",
+      "Late in the roll it grows fast, picking up a lot more snow each turn.",
+      "This shows why starting early matters more than the rate you get later.",
+      "Once compound growth gets rolling, it feeds itself and accelerates.",
+      "Similarly, debt that compounds against you can be hard to stop once it grows."
+     ],
+     "result": "Compound growth accelerates over time, making early investment crucial and late debt dangerous."
+    },
+    "analogy": {
+     "story": "Imagine you start saving marbles in a jar, adding just one marble a day. At first, the increase seems slow because the jar is mostly empty. But once the jar starts to fill up, each new marble makes the pile noticeably bigger, encouraging you to add even more quickly, causing the jar to fill much faster later on.",
+     "mapping": [
+      {
+       "idea": "compound growth",
+       "everyday": "marbles piling up faster as the jar fills"
+      },
+      {
+       "idea": "growth feeds itself",
+       "everyday": "larger marble pile makes each addition more impactful"
+      },
+      {
+       "idea": "Early on the snowball is small and the change is hard to see",
+       "everyday": "initially slow marble accumulation is barely noticeable"
+      }
+     ],
+     "caveat": "Unlike the jar, which requires active marble addition, compound growth accelerates automatically without extra input once started."
+    },
+    "animation": {
+     "title": "Compound Growth Snowball Animation",
+     "caption": "This animation shows a snowball growing faster as it rolls downhill, illustrating compound growth accelerating over time.",
+     "html": "<div><svg viewBox='0 0 600 260' width='100%' style='background:#fefefe'><circle cx='90' cy='200' r='30' fill='#1cb0f6'/><circle cx='90' cy='200' r='4' fill='#ff9600'/><text x='40' y='260' fill='currentColor' font-size='14'>Snowball (small)</text><text x='170' y='260' fill='currentColor' font-size='14'>Snowball (grows faster)</text><g id='snowballGroup'><circle r='30' fill='#1cb0f6'/><circle r='4' fill='#ff9600' cx='0' cy='0'/><text x='-25' y='50' fill='currentColor' font-size='14'>Snowball</text></g></svg><script>const svg=document.querySelector('svg'), g=svg.getElementById('snowballGroup');const period=6000;const startX=90,startY=200;function easeSin(t){return 0.5 - 0.5*Math.cos(Math.PI*t);}function draw(timestamp){const t=timestamp%period;const progress=t/period;const posX=startX+progress*400;const baseRadius=10;const growthExponent=1.7;const radius=baseRadius*Math.pow(progress+0.02,growthExponent)*6;const posY=startY-20*easeSin(progress);g.setAttribute('transform',`translate(${posX},${posY})`);g.querySelector('circle').setAttribute('r',radius);requestAnimationFrame(draw);}requestAnimationFrame(draw);</script></div>"
+    }
+   },
+   "sources": {
+    "core": "llm",
+    "example": "llm",
+    "analogy": "llm",
+    "animation": "llm"
+   }
+  }
+ ]
+}

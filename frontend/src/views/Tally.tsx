@@ -18,7 +18,7 @@ export function TallyCard({ tally, onReset }: { tally: TallySummary; onReset?: (
     return { form, correct, attempts, rate: attempts > 0 ? correct / attempts : null };
   });
   const best = tally.enough_data
-    ? scored.filter(item => item.rate !== null).sort((a, b) => (b.rate as number) - (a.rate as number) || b.attempts - a.attempts)[0] ?? null
+    ? scored.find(item => item.form === tally.preferred) ?? null
     : null;
   const answered = scored.reduce((sum, item) => sum + item.attempts, 0);
 

@@ -14,13 +14,16 @@ export default function PersonalCalibration({ sessionId, calibration, headset, c
   const [error, setError] = useState("");
   const collecting = calibration.status === "collecting";
   const saved = calibration.status === "saved";
+  const canSkip = calibration.status === "waiting" || collecting || calibration.status === "failed";
   const signal = !connected ? "Connection lost. Reconnecting…" : !headset?.stream?.live
     ? "Waiting for the headset. Check its power and Bluetooth connection."
     : !calibration.clean ? "Adjust the forehead sensor and ear clip. Keep still." : "Clean headset signal.";
-  const proceed = async () => {
+  const proceed = async (skip = false) => {
+    if (busy || ending || !connected) return;
     setBusy(true); setError("");
     try {
-      if (saved) await api.continueCalibration(sessionId);
+      if (skip) await api.skipCalibration(sessionId);
+      else if (saved) await api.continueCalibration(sessionId);
       else await api.beginCalibration(sessionId);
     } catch (e) { setError(errorText(e)); }
     finally { setBusy(false); }
@@ -35,7 +38,11 @@ export default function PersonalCalibration({ sessionId, calibration, headset, c
     {calibration.status === "failed" && <p role="alert">{calibration.error}. Your previous baseline has not been changed.</p>}
     {error && <p role="alert" className="error-text">{error}</p>}
     {!collecting && <button className="btn btn-primary btn-lg" disabled={busy || ending || !connected || (!saved && !calibration.clean)} onClick={() => void proceed()}>{busy ? "Please wait…" : saved ? "Start lecture" : calibration.status === "failed" ? "Retry 30-second calibration" : "Begin 30-second calibration"}</button>}
-    <p className="small muted">The microphone and lecture start after calibration. No lesson or quiz here.</p>
+    {canSkip && <>
+      <p className="small muted">Button-only mode turns off automatic focus detection for this session. Recording and Catch me up still work. Your previous baseline stays unchanged.</p>
+      <button className="btn btn-plain" disabled={busy || ending || !connected} onClick={() => void proceed(true)}>Continue with button only</button>
+    </>}
+    <p className="small muted">The microphone and lecture start after calibration or when you continue with button only. No lesson or quiz here.</p>
     <button className="btn btn-plain" disabled={ending || busy} onClick={onEnd}>{ending ? "Ending…" : "Cancel session"}</button>
   </section>;
 }

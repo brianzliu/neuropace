@@ -52,7 +52,9 @@ unverified. Direct laptop EEG remains an explicit fallback, not the target archi
 
 The app now separates a learner-owned review dashboard from `/session/new` and the live session
 window. The dashboard prioritizes saved concepts, optionally summarizes/reorders them with the
-configured LLM, and lists recent sessions on the side. No teacher view is added.
+configured LLM, lists recent sessions on the side, and accepts pasted or uploaded PDF/TXT/Markdown
+syllabi. Learners review extracted topics before saving; curriculum completion is self-reported,
+separate from concepts cleared by check questions. No teacher view is added.
 
 **Current authoritative direction:** Part II's architecture (lecture capture → gap notes →
 adaptive review) with Part III's additions layered on top (content-based risk flagging as a third
@@ -1007,7 +1009,7 @@ plugged in), and press Space or `T` to tap. Press `1`/`2` to switch the simulate
 focused and drifting and watch the EEG flag arrive as a chip and a totem pulse.
 
 The dashboard's **Show sample data** switch opens an isolated synthetic workspace with three past
-lectures, review concepts, and activity. Switching it off returns to the learner's original data.
+lectures, review concepts, activity, and syllabus progress. Switching it off returns to the learner's original data.
 Its database (`data/neuropace-demo.db`) and switch state (`data/demo-mode.json`) are local runtime
 files covered by `.gitignore`.
 
@@ -1034,9 +1036,9 @@ editing `.env` and pushing is how the team adds or rotates a key. Real environme
 win over `.env`, so keep personal overrides (`NEUROPACE_BASELINE_SECONDS=30`, serial ports)
 in your shell rather than in the shared file. `git-crypt status` lists what is encrypted.
 
-Without the key, replace the encrypted files with your own credentials:
-`cp .env.example .env && : > .env.tts`. Everything still runs without keys (simulated
-transcript and offline recaps).
+Without the team key, ask an approved collaborator for access. Do not replace the tracked
+encrypted files with plaintext or bypass encryption. A configured language-model provider
+is required to start a session; live transcription and narration also require their provider keys.
 
 #### Entering a Deepgram key in the app
 

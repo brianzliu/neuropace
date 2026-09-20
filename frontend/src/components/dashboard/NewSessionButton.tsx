@@ -1,13 +1,10 @@
-export function openStudio() {
-  const studio = window.open("/session/new", "neuropace-studio", "popup,width=1320,height=900");
-  if (studio) studio.focus();
-  else window.location.assign("/session/new");
-}
+import { useNavigate } from "react-router-dom";
 
 export default function NewSessionButton() {
+  const navigate = useNavigate();
   return (
-    <button className="primary new-session" onClick={openStudio}>
-      <span aria-hidden="true">＋</span> New session
+    <button className="primary new-session" onClick={() => navigate("/session/new")}>
+      <span aria-hidden="true">＋</span> Start session
     </button>
   );
 }

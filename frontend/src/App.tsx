@@ -10,7 +10,7 @@ import AdvancedSetup from "./views/AdvancedSetup";
 import Live from "./views/Live";
 import Done from "./views/Done";
 import Lecture from "./views/Lecture";
-import ReviewWorkspace from "./components/ReviewWorkspace";
+import Restudy from "./views/Restudy";
 import Team from "./views/Team";
 import Replay from "./views/Replay";
 import Quiz from "./views/Quiz";
@@ -21,7 +21,8 @@ import Artifacts from "./views/Artifacts";
 
 function LegacySession({ tab }: { tab: string }) {
   const { sessionId = "" } = useParams();
-  return <Navigate to={`/library/${sessionId}/${tab}`} replace />;
+  const { search } = useLocation();
+  return <Navigate to={`/library/${encodeURIComponent(sessionId)}/${tab}${search}`} replace />;
 }
 
 export default function App() {
@@ -49,7 +50,7 @@ export default function App() {
         <Route path="/library" element={<Library />} />
         <Route path="/library/:sessionId" element={<Library />}>
           <Route path="notes" element={<Lecture />} />
-          <Route path="review" element={<ReviewWorkspace />} />
+          <Route path="review" element={<Restudy />} />
           <Route path="replay" element={<Replay />} />
           <Route path="quiz" element={<Quiz />} />
           <Route path="artifacts" element={<Artifacts />} />

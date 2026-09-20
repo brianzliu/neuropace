@@ -439,7 +439,10 @@ This addendum overrides the original home-screen and current hardware-target des
 
 - `Home.tsx` reads `/api/learners/{id}/dashboard`. Its backend joins only that learner's sessions
   and unresolved gaps; optional `organize=true` uses the cached structured-output client.
-  No authentication is added to this local demo.
+  `curricula` stores learner-keyed topic JSON. PUT replaces that learner's curriculum.
+- `/api/learners/{id}/syllabus/parse` accepts multipart file/text. pypdf extracts text from PDFs;
+  the model extracts topics when available, otherwise lines are returned for manual editing.
+  Parsing never persists or marks topics complete. No authentication is added to this local demo.
 - `/session/new` owns setup; `/live/{id}` owns capture. The dashboard opens a named browser
   window and refreshes when focused again. The browser may choose a tab instead of a window.
 - `/api/devices/status` polls local port discovery without provider calls. `/api/devices/uno-q`

@@ -1,4 +1,4 @@
-"""Focus index pipeline (TDD §3.2): band powers -> E = beta/(alpha+theta) -> ln -> EMA -> baseline z -> 15 s window
+"""Focus index pipeline: band powers -> effort = log10(theta/alpha) -> EMA -> baseline z -> 15 s window
 -> drop detector with hysteresis, cap, refractory, lead-in.
 
 Blinks are blanked (linear interpolation over +-150 ms) before the FFT; segments whose residual peak-to-peak is still
@@ -14,7 +14,7 @@ from dataclasses import asdict, dataclass
 
 import numpy as np
 
-from ..config import Settings
+from ..config import FOCUS_METRIC, Settings
 from .blinks import BlinkDetector
 
 BANDS = {"theta": (4.0, 8.0), "alpha": (8.0, 13.0), "beta": (13.0, 30.0)}
@@ -36,6 +36,7 @@ class FocusSample:
     paused: bool
     poor_signal: int
     attention: int | None = None
+    metric: str = FOCUS_METRIC
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -210,7 +211,7 @@ class FocusEngine:
     def feed_frame(
         self, x: float | None, quality: int, valid: bool, blinks: int = 0, extra: dict | None = None
     ) -> None:
-        """One frame from the mindwave pipeline: x = engagement index (log10 beta - log10(alpha+theta)),
+        """One frame from the mindwave pipeline: x = effort index (log10 theta - log10 alpha),
         quality = poor_signal, valid = the pipeline's contact + artifact gate, blinks = blinks that began in this hop."""
         self._external = True
         self._received_any = True
@@ -272,7 +273,7 @@ class FocusEngine:
 
     # ---- per-second update ----
     def _segment_features(self) -> tuple[float | None, bool]:
-        """Returns (x = ln E or None, artifact)."""
+        """Returns (x = log10 theta/alpha or None, artifact)."""
         if self._raw.size < self._win:
             return None, False
         seg = self._raw[-self._win :]
@@ -295,13 +296,13 @@ class FocusEngine:
             return None, True
         self._p2p_hist.append(p2p)
         bp = band_powers(clean, self.fs)
-        denom = bp["alpha"] + bp["theta"]
-        if denom <= 0 or bp["beta"] <= 0:
+        denom = bp["alpha"]
+        if denom <= 0 or bp["theta"] <= 0:
             return None, True
-        e = bp["beta"] / denom
+        e = bp["theta"] / denom
         tot = bp["theta"] + bp["alpha"] + bp["beta"]
         self.bands = {k: round(bp[k] / tot, 3) for k in ("theta", "alpha", "beta")} if tot > 0 else None
-        return math.log(e), False
+        return math.log10(e), False
 
     def tick(self, t: float, paused: bool = False) -> tuple[FocusSample, list[DetectorEvent]]:
         s = self.s
@@ -345,7 +346,7 @@ class FocusEngine:
             state = "ok"
         sample = FocusSample(
             t=round(t, 3),
-            e=((10.0**x if self._external else math.exp(x)) if x is not None else None),
+            e=(10.0**x if x is not None else None),
             x=(round(x_ema, 4) if x_ema is not None else None),
             z=(round(z, 3) if z is not None else None),
             w15=(round(w15, 3) if w15 is not None else None),

@@ -21,6 +21,18 @@ def test_band_powers_isolate_tones():
     assert bp["beta"] > 20 * (bp["alpha"] + bp["theta"])
 
 
+def test_raw_focus_uses_theta_alpha_and_not_forehead_beta():
+    values = []
+    for beta in (2.0, 35.0):
+        engine = FocusEngine(Settings())
+        engine.feed_poor_signal(0)
+        engine.feed_raw(tone(6, amp=20) + tone(10, amp=10) + tone(20, amp=beta))
+        sample, _ = engine.tick(1)
+        values.append(sample.x)
+    assert values[0] == values[1]
+    assert math.isclose(values[0], math.log10(4), abs_tol=0.001)
+
+
 def test_blank_blinks_removes_bump():
     x = tone(10.0)
     x[400:460] += 500.0

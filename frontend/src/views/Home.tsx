@@ -55,7 +55,7 @@ export default function Home() {
 
   // Office Hours and review-only sessions aren't lectures: they never transition to "ended" the way a
   // recorded/live capture does and would sit here as a phantom "running" row forever.
-  const sessions = data?.sessions.filter(s => s.mode !== "review" && s.mode !== "office_hours");
+  const sessions = data?.sessions.filter(s => s.mode !== "review");
 
   return <div className="dashboard">
     <div className="dashboard-toolbar">
