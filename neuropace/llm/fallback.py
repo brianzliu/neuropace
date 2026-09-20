@@ -46,6 +46,22 @@ STOP = set(
     thing things get got make made does did do done here now well say said says one two three first second next""".split()
 )
 
+# rare_terms() picks a "key term" purely by length + corpus rarity; without this, a common linking
+# verb or adverb that only happens to appear once in a short transcript (e.g. "transfers", "usually")
+# outranks the real named concept just for being an unusually long word. -ly words are excluded by
+# suffix below; these are the common verb forms that survive that filter.
+_GENERIC_FILLER = set(
+    """transfers transfer reduces reduce increases increase shows show means mean causes cause
+    creates create produces produce provides provide allows allow requires require involves involve
+    includes include affects affect changes change carries carry becomes become remains remain
+    appears appear occurs occur happens happen results result leads lead gives give takes take
+    describes describe explains explain represents represent determines determine depends depend
+    relates relate connects connect combines combine reflects reflect suggests suggest indicates
+    indicate demonstrates demonstrate reveals reveal captures capture builds build moves move
+    larger smaller higher lower greater faster slower similar several various particular specific
+    general common important significant possible current recent previous following different""".split()
+)
+
 _SENT = re.compile(r"(?<=[.!?])\s+")
 
 
@@ -60,11 +76,21 @@ def tokens(text: str) -> list[str]:
 def rare_terms(span_text: str, corpus_text: str, k: int = 4, min_len: int = 6) -> list[str]:
     corpus = Counter(t.lower() for t in tokens(corpus_text))
     seen: dict[str, str] = {}
-    for t in tokens(span_text):
+    order: dict[str, int] = {}
+    for i, t in enumerate(tokens(span_text)):
         lt = t.lower()
-        if len(lt) >= min_len and lt not in STOP and lt not in seen:
+        if (
+            len(lt) >= min_len
+            and lt not in STOP
+            and lt not in _GENERIC_FILLER
+            and not lt.endswith("ly")
+            and lt not in seen
+        ):
             seen[lt] = t
-    ranked = sorted(seen.items(), key=lambda kv: (corpus.get(kv[0], 0), -len(kv[0])))
+            order[lt] = i
+    # Tiebreak on where the word first appears, not its length: preferring the longest word among
+    # equally-rare candidates is what let long common words like "transfers" outrank a real term.
+    ranked = sorted(seen.items(), key=lambda kv: (corpus.get(kv[0], 0), order[kv[0]]))
     return [orig for _, orig in ranked[:k]] or [t for t in tokens(span_text)[:k]] or ["this idea"]
 
 

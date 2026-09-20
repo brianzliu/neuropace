@@ -226,10 +226,9 @@ select {
 .concept-box h3 { margin: .2rem 0 .25rem; font-size: 1.08rem; font-weight: 500; }
 .concept-box-description { margin: .2rem 0 0; font-size: .86rem; line-height: 1.6; color: var(--text); }
 .concept-box-note { margin: .45rem 0 0; font-size: .74rem; line-height: 1.5; color: var(--muted); }
-/* The suggestion itself is signalled by the card's left accent bar (.has-suggestion), not by
-   shouting the reason in a labelled sentence — the text stays a quiet, unlabelled footnote. */
+/* The suggestion itself is signalled by the card's left accent bar; the reason it exists at all
+   is a tooltip on the numbered badge, not a sentence competing with the description for attention. */
 .concept-box.has-suggestion { border-left: 3px solid var(--accent); padding-left: calc(1.25rem - 2px); }
-.concept-box-note.is-suggested { font-size: .72rem; font-style: italic; color: color-mix(in srgb, var(--accent) 55%, var(--muted)); }
 /* Gentle severity: exhausted concepts (every re-teach tried, still open)
    get a deeper honey tint and warm copy. No red anywhere — harshness
    turns people away. The note text carries the meaning, never color alone. */
@@ -238,7 +237,6 @@ select {
 [data-theme="paper"] .concept-box.is-warm { background: color-mix(in srgb, var(--cap) 35%, var(--bg-2)); }
 .concept-box-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .6rem; padding-top: .3rem; margin-top: auto; }
 .concept-source { font-size: .74rem; color: var(--muted); }
-.concept-source span { display: block; font-size: .68rem; color: var(--dim); }
 /* Side blobs (user-directed polish): organic shapes flanking the content in
    wide-screen margins only. Fixed layer behind everything (content stays
    above via .topbar/.main stacking), clicks pass through, hidden in compact
