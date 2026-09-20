@@ -32,7 +32,7 @@ Everything runs with no hardware (simulated headset, keyboard totem, scripted tr
 ```bash
 # backend (Python 3.13 via uv)
 uv sync
-cp .env.example .env            # add Deepgram and either OpenAI or OpenRouter credentials
+git-crypt unlock ~/Downloads/neuropace.git-crypt.key   # team key decrypts .env + .env.tts (see "API keys")
 uv run neuropace doctor            # keys, services, serial ports, frontend build
 
 # frontend (built once, served by the backend)
@@ -47,6 +47,30 @@ Open the URL, pick the demo lecture ("How GPS finds you", scripted, with a plant
 The dashboard's **Show sample data** switch opens an isolated synthetic workspace with three past lectures, review concepts, activity, and syllabus progress. Switching it off returns to the learner's original data. Its database (`data/neuropace-demo.db`) and switch state (`data/demo-mode.json`) are local runtime files covered by `.gitignore`.
 
 Frontend development with hot reload: `cd frontend && pnpm dev` (proxies `/api`, `/ws`, `/media` to the backend on 8765).
+
+## API keys
+
+`.env` (Deepgram, OpenRouter, OpenAI, Gemini) and `.env.tts` (Deepgram TTS voice) are
+committed, but encrypted with [git-crypt](https://github.com/AGWA/git-crypt): the repo is
+public and both files are unreadable without the team key. Approved collaborators receive
+`neuropace.git-crypt.key` by direct message from Joaquin. Never commit, upload or post that
+file anywhere.
+
+```bash
+brew install git-crypt        # Windows: scoop install git-crypt (or use WSL); Linux: apt install git-crypt
+git pull
+git-crypt unlock ~/Downloads/neuropace.git-crypt.key
+uv run neuropace doctor       # confirms the keys are picked up
+```
+
+After `unlock`, both files are plaintext on disk and stay encrypted in every commit, so
+editing `.env` and pushing is how the team adds or rotates a key. Real environment variables
+win over `.env`, so keep personal overrides (`NEUROPACE_BASELINE_SECONDS=30`, serial ports)
+in your shell rather than in the shared file. `git-crypt status` lists what is encrypted.
+
+Without the team key, ask an approved collaborator for access. Do not replace the tracked
+encrypted files with plaintext or bypass encryption. A configured language-model provider
+is required to start a session; live transcription and narration also require their provider keys.
 
 ## Hosted interface
 
@@ -160,8 +184,8 @@ Open **Start session → Lecture transcription**, paste your Deepgram API key, a
 choose **Save key**. It applies to new sessions immediately. The key is held only
 in the local backend process and must be entered again after restarting it. Saving
 does not validate the key with Deepgram; authentication happens when transcription
-connects. For configuration that survives restarts, set `DEEPGRAM_API_KEY` in your
-local `.env` file. Never commit that file.
+connects. For configuration that survives restarts, set `DEEPGRAM_API_KEY` in `.env`,
+which is git-crypt encrypted in the repo (see "API keys" above).
 
 ### Choosing OpenAI or OpenRouter
 

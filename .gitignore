@@ -5,9 +5,10 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 *.egg-info/
-# env / secrets
-.env
-.env.tts
+# env / secrets: .env and .env.tts are tracked but git-crypt encrypted (see README "API keys").
+# The git-crypt key file itself must never be committed.
+*.git-crypt.key
+.env.local
 # runtime data (sessions, sqlite, llm cache, recordings)
 data/*.db
 data/*.db-journal
