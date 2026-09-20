@@ -1,23 +1,33 @@
 import { useState } from "react";
 import { backendFetch } from "../../lib/backend";
-import type { Curriculum } from "../../lib/dashboardTypes";
+import type { Curriculum, Understanding, UnderstandingStage } from "../../lib/dashboardTypes";
 
 interface CurriculumSectionProps {
   curriculum: Curriculum | undefined;
+  understanding: Understanding | undefined;
+  organizing: boolean;
   learnerId: string;
   onSave: (curriculum: Curriculum) => Promise<void>;
 }
 
+const STAGE_ORDER: UnderstandingStage[] = ["review", "beginner", "intermediate", "advanced", "no_evidence"];
+const STAGE_LABEL: Record<UnderstandingStage, string> = {
+  review: "To review",
+  beginner: "Beginner",
+  intermediate: "Intermediate",
+  advanced: "Advanced",
+  no_evidence: "No evidence yet",
+};
+
 /**
- * Dashboard compartment 3: curriculum progress + syllabus editor.
- * Checkboxes are self-reported coverage only — review results are tracked
- * separately and the LLM never writes completion. Parse errors surface via
- * role="status". Server caps (2 MB / 30 pages / 30k chars / 100 topics) stay
- * enforced backend-side; this form just previews before saving.
+ * Dashboard compartment 3: curriculum stages estimated from the learner's own
+ * saved moments and review outcomes, plus the syllabus editor. Stages are
+ * coaching estimates labelled with their source ("Model reading" vs "Rules
+ * estimate"); they never set completion, review outcomes, or grades. The
+ * stored checkbox field is legacy only and is no longer shown or toggled.
  */
-export default function CurriculumSection({ curriculum, learnerId, onSave }: CurriculumSectionProps) {
+export default function CurriculumSection({ curriculum, understanding, organizing, learnerId, onSave }: CurriculumSectionProps) {
   const topics = curriculum?.topics ?? [];
-  const completed = topics.filter((t) => t.completed).length;
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [syllabus, setSyllabus] = useState("");
@@ -50,23 +60,10 @@ export default function CurriculumSection({ curriculum, learnerId, onSave }: Cur
       setSyllabusMessage(
         result.source === "lines"
           ? "Imported as text lines. Edit these into topics before saving."
-          : "Topics extracted. Check and edit them before saving.",
+          : "Topics extracted. Review and edit them before saving.",
       );
     } catch (e) {
       setSyllabusMessage(String(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const toggleTopic = async (index: number) => {
-    if (!curriculum || busy) return;
-    setBusy(true);
-    try {
-      await onSave({
-        ...curriculum,
-        topics: topics.map((t, i) => (i === index ? { ...t, completed: !t.completed } : t)),
-      });
     } finally {
       setBusy(false);
     }
@@ -87,6 +84,25 @@ export default function CurriculumSection({ curriculum, learnerId, onSave }: Cur
       setBusy(false);
     }
   };
+
+  const rows = topics.map(
+    (topic) =>
+      understanding?.topics.find((row) => row.topic === topic.title) ?? {
+        topic: topic.title,
+        stage: "no_evidence" as UnderstandingStage,
+        reason: "No saved moments mention this topic yet.",
+        gap_ids: [],
+        evidence: { resolved: 0, open: 0, exhausted: 0, total: 0 },
+      },
+  );
+  const counts = Object.fromEntries(
+    STAGE_ORDER.map((stage) => [stage, rows.filter((row) => row.stage === stage).length]),
+  ) as Record<UnderstandingStage, number>;
+  const organized = understanding?.source === "llm" || understanding?.source === "cache";
+  const sourceLabel = organizing ? "Organizing…" : organized ? "Model reading" : "Rules estimate";
+  const barLabel = STAGE_ORDER.filter((stage) => counts[stage] > 0)
+    .map((stage) => `${counts[stage]} ${STAGE_LABEL[stage].toLowerCase()}`)
+    .join(", ");
 
   return (
     <section className="curriculum-section" aria-label="Curriculum">
@@ -151,7 +167,8 @@ export default function CurriculumSection({ curriculum, learnerId, onSave }: Cur
             </p>
           )}
           <p className="small muted">
-            Your checkmarks track coverage, not mastery. Up to 100 topics.
+            Topics are labels for grouping. Your stage is estimated from saved moments and review
+            results — editing this list never sets it. Up to 100 topics.
           </p>
           <div className="row">
             <button className="primary" disabled={busy}>
@@ -164,32 +181,58 @@ export default function CurriculumSection({ curriculum, learnerId, onSave }: Cur
         </form>
       ) : curriculum === undefined ? (
         <p className="muted" role="status">
-          Loading…
+          Loading your saved moments…
         </p>
       ) : topics.length ? (
         <>
-          <div className="curriculum-progress">
-            <progress value={completed} max={topics.length} />
-            <span>
-              {completed} of {topics.length} covered
+          <div className="understanding-head">
+            <p className="coverage-note">
+              <span>Estimated from your saved moments and review results.</span>
+              <span>Not a grade — your own review changes it.</span>
+            </p>
+            <span className={"organize-source" + (organized ? " is-suggested" : organizing ? " is-organizing" : "")}>
+              {sourceLabel}
             </span>
           </div>
-          <p className="coverage-note"><span>Your own checkmarks</span><span>Review results tracked separately</span></p>
-          <div className="topic-list">
-            {topics.map((topic, index) => (
-              <label key={index}>
-                <input
-                  type="checkbox"
-                  checked={topic.completed}
-                  disabled={busy}
-                  onChange={() => void toggleTopic(index)}
-                />
-                <span>{topic.title}</span>
-              </label>
+          <div className="stage-bar" role="img" aria-label={barLabel}>
+            {STAGE_ORDER.filter((stage) => counts[stage] > 0).map((stage) => (
+              <i key={stage} className={"stage-seg is-" + stage} style={{ flexGrow: counts[stage] }} />
             ))}
           </div>
+          <ul className="stage-legend">
+            {STAGE_ORDER.map((stage) => (
+              <li key={stage} className={"is-" + stage}>
+                <i aria-hidden="true" />
+                {STAGE_LABEL[stage]} <b>{counts[stage]}</b>
+              </li>
+            ))}
+          </ul>
+          {STAGE_ORDER.map((stage) => {
+            const group = rows.filter((row) => row.stage === stage);
+            if (!group.length) return null;
+            return (
+              <section className={"stage-group is-" + stage} key={stage}>
+                <h3 className={"stage-heading is-" + stage}>
+                  {STAGE_LABEL[stage]}
+                  <span>{group.length}</span>
+                </h3>
+                <ul className="stage-topics">
+                  {group.map((row) => (
+                    <li key={row.topic} className="stage-topic">
+                      <b>{row.topic}</b>
+                      <p>{row.reason}</p>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            );
+          })}
         </>
-      ) : null}
+      ) : (
+        <p className="muted">
+          Add your syllabus topics to see how each one looks after review.
+        </p>
+      )}
     </section>
   );
 }

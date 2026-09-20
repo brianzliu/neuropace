@@ -275,25 +275,40 @@ select {
 .practice-go:hover { text-decoration: none; transform: translateY(-1px); }
 .practice-go:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--surface-edge); }
 .curriculum-section { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--line); }
-.curriculum-progress { display: flex; align-items: center; gap: 1rem; font-size: .75rem; margin-top: 1.5rem; }
-.curriculum-progress progress { accent-color: var(--accent); flex: 1; min-width: 0; height: 10px; }
-.topic-list { display: grid; gap: .6rem; padding-top: .75rem; }
-.topic-list label { position: relative; display: flex; flex-direction: row; align-items: center; gap: .7rem; font-weight: 400; min-height: 44px; padding: .45rem .4rem; border-radius: 12px; }
-.topic-list label:hover { background: var(--bg-3); }
-/* Tactile toggle: the native checkbox itself, restyled with theme tokens.
-   Stays in the DOM so keyboard, screen readers, and Space keep working. */
-.topic-list input[type="checkbox"] { appearance: none; -webkit-appearance: none; width: 28px; height: 28px; min-height: 0; margin: 0; flex-shrink: 0; border-radius: 9px; border: 2px solid var(--surface-edge); background: var(--bg-2); box-shadow: 0 3px 0 var(--surface-edge); cursor: pointer; transition: transform .08s ease, box-shadow .08s ease, background-color .08s ease; }
-.topic-list input[type="checkbox"]:checked { background: var(--object); border-color: var(--object-dark); }
-.topic-list input[type="checkbox"]:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 var(--surface-edge); }
-.topic-list input[type="checkbox"]:disabled { opacity: .55; cursor: default; box-shadow: none; }
-.topic-list label:has(> input[type="checkbox"]:checked)::after { content: "✓"; position: absolute; left: .4rem; top: 50%; transform: translateY(-50%); width: 28px; line-height: 28px; text-align: center; font-size: 1.05rem; font-weight: 700; color: var(--text); pointer-events: none; }
+/* Curriculum stages: one segmented bar plus grouped topic rows, estimated
+   from saved moments + review outcomes. Every stage is named in text too,
+   never color-alone; no motion is added, so reduced-motion needs no guard. */
+.understanding-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: .6rem 1rem; margin-top: .9rem; }
+.understanding-head .coverage-note { flex: 1 1 260px; margin: 0; }
+.stage-bar { display: flex; height: 14px; margin-top: .9rem; border: 1px solid var(--line); border-radius: 99px; overflow: hidden; background: var(--bg-2); }
+.stage-seg { flex: 0 1 0; min-width: 8px; }
+.stage-seg.is-review, .stage-legend .is-review i { background: var(--warn); }
+.stage-seg.is-beginner, .stage-legend .is-beginner i { background: var(--object); }
+.stage-seg.is-intermediate, .stage-legend .is-intermediate i { background: var(--accent); }
+.stage-seg.is-advanced, .stage-legend .is-advanced i { background: var(--good); }
+.stage-seg.is-no_evidence, .stage-legend .is-no_evidence i { background: var(--line); }
+.stage-legend { display: flex; flex-wrap: wrap; gap: .35rem 1rem; list-style: none; margin: .7rem 0 0; padding: 0; font-size: .74rem; color: var(--muted); }
+.stage-legend li { display: flex; align-items: center; gap: .35rem; }
+.stage-legend i { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.stage-legend b { color: var(--text); }
+.stage-group { margin-top: 1.3rem; }
+.stage-heading { display: flex; align-items: center; gap: .5rem; font-family: var(--display); font-size: 1rem; font-weight: 400; margin: 0 0 .45rem; }
+.stage-heading > span { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 .35rem; border-radius: 99px; background: var(--bg-3); color: var(--muted); font-size: .7rem; font-weight: 700; }
+.stage-heading.is-review { color: var(--warn); }
+.stage-heading.is-intermediate { color: var(--accent); }
+.stage-heading.is-advanced { color: var(--good); }
+.stage-heading.is-no_evidence { color: var(--muted); }
+.stage-topics { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+.stage-topic { border: 1px solid var(--line); border-left: 4px solid var(--surface-edge); border-radius: 12px; background: var(--bg-2); padding: .65rem .85rem; }
+.stage-topic b { display: block; font-size: .88rem; font-weight: 600; }
+.stage-topic p { margin: .2rem 0 0; font-size: .76rem; line-height: 1.5; color: var(--muted); }
+.stage-group.is-review .stage-topic { border-left-color: var(--warn); }
+.stage-group.is-beginner .stage-topic { border-left-color: var(--object); }
+.stage-group.is-intermediate .stage-topic { border-left-color: var(--accent); }
+.stage-group.is-advanced .stage-topic { border-left-color: var(--good); }
 /* Footnote captions (no middots): two short stacked lines, honest + muted. */
 .coverage-note, .activity-note { display: grid; gap: .15rem; margin: .6rem 0 0; font-size: .78rem; line-height: 1.5; color: var(--muted); }
 .coverage-note span:last-child, .activity-note span:last-child { color: var(--dim); }
-@media (prefers-reduced-motion: reduce) {
-  .topic-list input[type="checkbox"] { transition: none; }
-  .topic-list input[type="checkbox"]:active:not(:disabled) { transform: none; }
-}
 .syllabus-form { display: grid; gap: 1rem; }
 textarea { font: inherit; width: 100%; padding: .8rem; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 10px; resize: vertical; }
 @media(max-width: 1050px) { .dashboard-grid { grid-template-columns: minmax(0,1fr) 235px; gap: 1.5rem; } .idea-sculpture { width: 100px; transform: scale(.8); transform-origin: right center; } }

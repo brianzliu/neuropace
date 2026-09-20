@@ -85,6 +85,8 @@ export default function Home() {
         <SessionActivity sessions={data?.sessions} />
         <CurriculumSection
           curriculum={data?.curriculum}
+          understanding={data?.understanding}
+          organizing={organizing}
           learnerId={learnerId}
           onSave={saveCurriculum}
         />

@@ -218,7 +218,9 @@ navigation changes below. This extension is a prototype, with hardware verificat
   Suggestions cannot modify review outcomes or curriculum completion.
 - **FR-D3:** Paste a syllabus or upload PDF/TXT/Markdown, limited to 2 MB and 30 PDF pages. Preview
   and edit extracted topics before saving. Scanned PDFs without text require pasted text.
-  Topic checkboxes track self-reported coverage, not demonstrated mastery.
+  Topic stages are coaching estimates from the learner's own saved moments, review outcomes, and
+  quiz results, labelled with their source (model reading or rules estimate); they never set
+  completion, review outcomes, or grades.
 - **FR-D4:** New session opens a dedicated studio window with a same-tab popup-blocked fallback.
   Session setup, device detection, live capture, and review are separate views.
 - **FR-H1:** Current target hardware is UNO Q 4 GB and MindWave Mobile 2. A planned large printed
