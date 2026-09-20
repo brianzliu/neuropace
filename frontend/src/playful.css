@@ -267,7 +267,10 @@ body { overflow-x: clip; }
 .dashboard-empty h3 { font-family: var(--display); font-weight: 400; font-size: 1.35rem; margin: .5rem 0; }
 .dashboard-empty p { font-size: .85rem; color: var(--muted); max-width: 340px; margin: .6rem auto 1rem; }
 .session-sidebar { border-left: 1px solid var(--line); padding-left: 1.8rem; }
-.session-history-item { border: 1px solid var(--line); border-radius: 16px; background: var(--bg-2); padding: .9rem 1rem 1rem; margin-bottom: .75rem; box-shadow: 0 3px 0 var(--surface-edge); }
+.session-history-item { border: 1px solid var(--line); border-radius: 16px; background: var(--bg-2); padding: .7rem .9rem .8rem; box-shadow: 0 3px 0 var(--surface-edge); }
+/* The session list is its own scroll window (Practice card stays pinned
+   below it, outside the scroll). Capped to the viewport so long histories
+   never push past the bottom of the screen. */
 /* Whole-card status wash keyed off the pill inside — playful but soft.
    Meaning still rides on the pill's dot + word, never color alone. */
 .session-history-item.is-ended { background: color-mix(in srgb, var(--good) 9%, var(--bg-2)); border-color: color-mix(in srgb, var(--good) 38%, var(--line)); }
@@ -296,8 +299,9 @@ body { overflow-x: clip; }
 .concept-box-index { transform: rotate(-3deg); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .session-date { display: flex; justify-content: space-between; font-size: .7rem; color: var(--muted); }
-.session-history-item h3 { font-size: .97rem; font-weight: 500; margin: .5rem 0 .8rem; }
-.session-summary { font-size: .78rem; line-height: 1.5; color: var(--muted); margin: -.45rem 0 .7rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.session-list { display: grid; gap: .75rem; align-content: start; overflow-y: auto; overscroll-behavior-y: contain; max-height: min(62vh, 620px); margin-bottom: 1.5rem; padding: .25rem .25rem .5rem; }
+.session-history-item h3 { font-size: .97rem; font-weight: 500; margin: .35rem 0 .6rem; }
+.session-summary { font-size: .78rem; line-height: 1.5; color: var(--muted); margin: -.3rem 0 .6rem; }
 .session-history-item a { font-size: .77rem; }
 .session-placeholder { padding: 2rem 0; color: var(--muted); font-size: .85rem; }
 .session-placeholder > span { font-size: 2.5rem; color: var(--accent); }
@@ -311,8 +315,8 @@ body { overflow-x: clip; }
 .session-status.is-other i { background: var(--dim); }
 /* Session icon actions (Agent 2): compact tactile buttons, one wrapped row.
    Real links keep the global :focus-visible outline; 44px touch targets. */
-.session-actions { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
-.session-actions .icon-button { width: 100%; min-height: 54px; }
+.session-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem; }
+.session-actions .icon-button { width: 100%; min-width: 0; min-height: 44px; padding: .5rem .25rem; }
 .session-actions .live-open { grid-column: 1 / -1; justify-content: center; }
 /* One hue per action, carried by the icon so the pads stay clean.
    Theme tokens remap every hue in Paper and Orbit automatically. */

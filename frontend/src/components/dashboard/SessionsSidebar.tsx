@@ -45,7 +45,8 @@ export default function SessionsSidebar({ sessions, concepts, closed }: Sessions
           Loading…
         </p>
       ) : sessions.length ? (
-        sessions.map((session) => {
+        <div className="session-list">
+          {sessions.map((session) => {
           // Color speaks: status lives on the card as a class (tinted wash),
           // with the word kept screen-reader-only so color is never the sole
           // carrier for assistive tech.
@@ -88,7 +89,8 @@ export default function SessionsSidebar({ sessions, concepts, closed }: Sessions
             </div>
           </article>
           );
-        })
+          })}
+        </div>
       ) : (
         <div className="session-placeholder">
           <span aria-hidden="true">↶</span>
