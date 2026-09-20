@@ -181,7 +181,7 @@ select {
 .theme-pocket .theme-miniature i { background: #f4d76a; box-shadow: 0 4px 0 #b9a046; }
 .theme-pocket .theme-miniature b { background: #fff3b5; box-shadow: 0 2px 0 #c6ac4d; }
 .dashboard { padding-top: 1.8rem; }
-.dashboard-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 2rem; margin-bottom: 1.8rem; }
+.dashboard-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 1.5rem 2rem; flex-wrap: wrap; margin-bottom: 1.5rem; background: var(--bg-3); border: 1px solid var(--line); border-bottom: 4px solid var(--surface-edge); border-radius: var(--radius); padding: 1.2rem 1.5rem; box-shadow: 0 8px 20px var(--shadow); }
 .dashboard-toolbar h1 { font-size: clamp(2rem, 3.5vw, 3rem); margin: .5rem 0; font-weight: 400; }
 .dashboard-toolbar p { margin: 0; }
 .new-session { min-width: 175px; flex-shrink: 0; }
@@ -219,7 +219,12 @@ select {
 .organize-source { flex-shrink: 0; display: inline-flex; align-items: center; min-height: 26px; padding: .2rem .65rem; border: 1px solid var(--line); border-radius: 99px; background: var(--bg-2); color: var(--muted); font-size: .68rem; font-weight: 700; letter-spacing: .03em; }
 .organize-source.is-suggested { border-color: var(--accent); color: var(--accent); }
 .organize-source.is-organizing { border-style: dashed; }
-.concept-list { display: grid; gap: 1rem; max-width: 860px; }
+.concept-list { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+/* Playful card wall: alternating sticky-note tilt plus a sticker index.
+   Static rotation only — no motion, so reduced-motion needs no exception. */
+.concept-list > :nth-child(odd) { transform: rotate(-.45deg); }
+.concept-list > :nth-child(even) { transform: rotate(.45deg); }
+.concept-box-index { background: var(--object); color: var(--cap-text); font-weight: 700; border: 1px solid var(--surface-edge); box-shadow: 0 2px 0 var(--surface-edge); }
 .concept-box { display: flex; flex-direction: column; gap: .55rem; padding: 1rem 1.25rem .95rem; border: 1px solid var(--line); border-bottom: 4px solid var(--surface-edge); border-radius: var(--radius); background: color-mix(in srgb, var(--object) 16%, var(--bg-2)); box-shadow: 0 8px 20px var(--shadow); }
 .concept-box-top { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: .8rem; align-items: start; }
 .concept-box-index { background: var(--bg-3); border-radius: 50%; width: 30px; height: 30px; display: grid; place-items: center; font-size: .75rem; color: var(--muted); }
