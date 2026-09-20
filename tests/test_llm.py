@@ -217,3 +217,20 @@ async def test_schema_retry_quota_wait_does_not_consume_network_timeout(tmp_path
     monkeypatch.setattr(client, "_rate_limit", quota_wait)
     forms, source = await client.recap("span", "")
     assert source == "llm" and forms.words == "p"
+
+
+def test_scene_node_palette_is_bounded_and_legacy_nodes_work():
+    from neuropace.llm.schemas import SceneNode
+
+    legacy = SceneNode(id="n1", label="Clock")
+    assert legacy.shape == "card"
+    assert legacy.tone == "butter"
+    for shape in ("card", "pill", "ellipse", "diamond"):
+        assert SceneNode(id="n1", label="Clock", shape=shape, tone="mint").shape == shape
+    with pytest.raises(ValidationError):
+        SceneNode(id="n1", label="Clock", shape="<svg>")
+    with pytest.raises(ValidationError):
+        SceneNode(id="n1", label="Clock", tone="url(https://example.com)")
+    schema = strict_schema(SceneNode)
+    assert {"shape", "tone"} <= set(schema["required"])
+    assert "default" not in schema["properties"]["shape"]

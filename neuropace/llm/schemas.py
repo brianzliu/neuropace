@@ -7,7 +7,7 @@ Strict mode rules: every field required, additionalProperties false, no array-le
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
@@ -39,6 +39,8 @@ class RecapForms(Strict):
 class SceneNode(Strict):
     id: str
     label: str
+    shape: Literal["card", "pill", "ellipse", "diamond"] = "card"
+    tone: Literal["butter", "peach", "mint", "lilac"] = "butter"
 
 
 class SceneEdge(Strict):

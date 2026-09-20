@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import type { SceneGraph } from "../lib/types";
+import { useId, useMemo } from "react";
+import type { SceneGraph, SceneNode } from "../lib/types";
 
 interface Props {
   graph: SceneGraph;
@@ -13,6 +13,8 @@ interface Laid {
   y: number;
   w: number;
   h: number;
+  shape: SceneNode["shape"];
+  tone: SceneNode["tone"];
 }
 
 const W = 720;
@@ -56,14 +58,17 @@ function layout(graph: SceneGraph): { nodes: Laid[]; height: number } {
   const height = Math.max(200, 60 + maxPerLayer * (NODE_H + 34));
   const colW = W / nLayers;
   const nodes: Laid[] = [];
-  const labelOf = new Map(graph.nodes.map((n) => [n.id, n.label]));
-  for (const [l, members] of [...byLayer.entries()].sort((a, b) => a[0] - b[0])) {
+  const nodeOf = new Map(graph.nodes.map((n) => [n.id, n]));
+  let column = 0;
+  for (const [, members] of [...byLayer.entries()].sort((a, b) => a[0] - b[0])) {
     const rowH = (height - 40) / members.length;
     members.forEach((id, i) => {
-      const label = labelOf.get(id) ?? id;
+      const node = nodeOf.get(id)!;
+      const label = node.label;
       const w = Math.min(colW - 24, Math.max(90, label.length * 8.6 + 26));
-      nodes.push({ id, label, x: colW * l + colW / 2 - w / 2, y: 30 + rowH * i + rowH / 2 - NODE_H / 2, w, h: NODE_H });
+      nodes.push({ id, label, x: colW * column + colW / 2 - w / 2, y: 30 + rowH * i + rowH / 2 - NODE_H / 2, w, h: NODE_H, shape: node.shape ?? "card", tone: node.tone ?? "butter" });
     });
+    column += 1;
   }
   return { nodes, height };
 }
@@ -74,6 +79,7 @@ function trunc(s: string, n: number): string {
 
 /** Animated scene graph: nodes fade in when first highlighted, edges draw once both ends are visible. */
 export default function Diagram({ graph, step }: Props) {
+  const arrowId = useId().replace(/:/g, "");
   const { nodes, height } = useMemo(() => layout(graph), [graph]);
   const pos = new Map(nodes.map((n) => [n.id, n]));
   const revealed = new Set<string>();
@@ -84,7 +90,7 @@ export default function Diagram({ graph, step }: Props) {
   return (
     <svg className="diagram" viewBox={`0 0 ${W} ${height}`} role="img" aria-label={graph.title}>
       <defs>
-        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+        <marker id={arrowId} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
           <path d="M 0 0 L 10 5 L 0 10 z" style={{ fill: "var(--label-3)" }} />
         </marker>
       </defs>
@@ -108,7 +114,7 @@ export default function Diagram({ graph, step }: Props) {
         const d = `M ${sx} ${y1} C ${cx} ${y1}, ${cx} ${y2}, ${ex} ${y2}`;
         return (
           <g key={i} className={"edge" + (on ? " on" : "") + (isHot ? " hot" : "")}>
-            <path d={d} pathLength={1} markerEnd="url(#arrow)" />
+            <path d={d} pathLength={1} markerEnd={`url(#${arrowId})`} />
             {e.label ? (
               <text x={cx} y={(y1 + y2) / 2 - 6} textAnchor="middle">
                 {trunc(e.label, 18)}
@@ -118,10 +124,13 @@ export default function Diagram({ graph, step }: Props) {
         );
       })}
       {nodes.map((n) => (
-        <g key={n.id} className={"node" + (revealed.has(n.id) ? " on" : "") + (hot.has(n.id) ? " hot" : "")}>
-          <rect x={n.x} y={n.y} width={n.w} height={n.h} rx={10} />
+        <g key={n.id} className={"node tone-" + n.tone + (revealed.has(n.id) ? " on" : "") + (hot.has(n.id) ? " hot" : "")}>
+          <title>{n.label}</title>
+          {n.shape === "ellipse" ? <ellipse className="node-shape" cx={n.x + n.w / 2} cy={n.y + n.h / 2} rx={n.w / 2} ry={n.h / 2} />
+            : n.shape === "diamond" ? <polygon className="node-shape" points={`${n.x + n.w / 2},${n.y - 8} ${n.x + n.w},${n.y + n.h / 2} ${n.x + n.w / 2},${n.y + n.h + 8} ${n.x},${n.y + n.h / 2}`} />
+            : <rect className="node-shape" x={n.x} y={n.y} width={n.w} height={n.h} rx={n.shape === "pill" ? n.h / 2 : 10} /> }
           <text x={n.x + n.w / 2} y={n.y + n.h / 2 + 5} textAnchor="middle">
-            {trunc(n.label, Math.max(8, Math.floor((n.w - 20) / 8.6)))}
+            {trunc(n.label, Math.max(8, Math.floor((n.w * (n.shape === "diamond" ? .65 : .9) - 16) / 8.6)))}
           </text>
         </g>
       ))}

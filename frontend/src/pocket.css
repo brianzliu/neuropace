@@ -28,6 +28,19 @@ a { font-weight: 500; }
 .app-compact .main { max-width: 1440px; }
 .dashboard-toolbar h1 { font-size: clamp(2rem, 3.5vw, 3rem); }
 .dashboard-toolbar .new-session { min-width: 200px; min-height: 62px; font-size: 1.2rem; font-weight: 500; }
+.dashboard-actions { display: flex; align-items: center; gap: .8rem; }
+.demo-toggle-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: .3rem; }
+.demo-toggle { appearance: none; border: 1px solid var(--line); border-bottom-width: 3px; border-radius: 14px; background: var(--bg-2); color: var(--muted); min-height: 42px; padding: .55rem .75rem; display: inline-flex; align-items: center; gap: .55rem; font: 500 .82rem var(--sans); cursor: pointer; }
+.demo-toggle:hover { background: #fff9dd; color: var(--text); }
+.demo-toggle:focus-visible { outline: 3px solid #f4d76a; outline-offset: 3px; }
+.demo-toggle:disabled { cursor: wait; opacity: .65; }
+.demo-toggle-track { width: 34px; height: 20px; padding: 2px; border-radius: 999px; background: var(--line); display: flex; align-items: center; transition: background .18s ease; }
+.demo-toggle-track span { width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px #3b321f33; transition: transform .18s ease; }
+.demo-toggle.is-on { background: #fff6c9; border-color: #dec557; color: var(--text); }
+.demo-toggle.is-on .demo-toggle-track { background: #c6a82d; }
+.demo-toggle.is-on .demo-toggle-track span { transform: translateX(14px); }
+.demo-data-note { color: var(--muted); font-size: .7rem; }
+.demo-toggle-error { max-width: 240px; color: var(--danger); font-size: .72rem; text-align: right; }
 .quick-start { max-width: 480px; margin: 5vh auto; display: flex; flex-direction: column; align-items: stretch; gap: 1.25rem; text-align: center; }
 .quick-start h1 { font-size: 2.6rem; margin: .7rem 0 0; }
 .quick-start > p { margin: 0; color: var(--muted); line-height: 1.6; }
@@ -58,6 +71,10 @@ a { font-weight: 500; }
 @media (max-width: 640px) {
   .quick-start { margin: 2rem auto; }
   .dashboard-toolbar .new-session { width: 100%; }
+  .dashboard-actions { width: 100%; flex-direction: column-reverse; align-items: stretch; }
+  .demo-toggle-wrap { align-items: stretch; }
+  .demo-toggle { justify-content: center; }
+  .demo-toggle-error { max-width: none; text-align: left; }
   .session-activity { padding: 1rem; }
   .activity-chart { gap: 8px; }
   .main > .page { padding: 1rem 0; }

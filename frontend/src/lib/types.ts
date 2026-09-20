@@ -363,6 +363,8 @@ export interface NotesResponse {
 export interface SceneNode {
   id: string;
   label: string;
+  shape?: "card" | "pill" | "ellipse" | "diamond";
+  tone?: "butter" | "peach" | "mint" | "lilac";
 }
 export interface SceneEdge {
   from_id: string;
