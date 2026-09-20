@@ -600,7 +600,7 @@ a.linklike { font-size: var(--fs-subhead); }
 .why-line, .context-line, .caption, .step-item, .ex-line, .map-row, .cmp-row { border-radius: 8px; transition: background 0.3s; }
 .spoken { background: color-mix(in srgb, var(--brand) 14%, transparent); box-shadow: 0 0 0 6px color-mix(in srgb, var(--brand) 14%, transparent); }
 .said { font-size: var(--fs-subhead); color: var(--label-2); }
-.said summary { cursor: pointer; font-weight: 800; font-size: var(--fs-caption); text-transform: uppercase; letter-spacing: 0.08em; color: var(--label-3); list-style: none; }
+.said summary { cursor: pointer; font-weight: 600; color: var(--label-2); list-style: none; }
 .said summary::before { content: "▸ "; }
 .said[open] summary::before { content: "▾ "; }
 .said p { margin: 8px 0 0; line-height: 1.5; font-weight: 600; }

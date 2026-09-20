@@ -50,9 +50,7 @@ function sessionTitle(session: SessionPublic, titles: Record<string, string>) {
 }
 
 function sessionMeta(session: SessionPublic) {
-  const when = new Date(session.started_at * 1000).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  const status = session.status === "running" ? "in progress" : session.status;
-  return `${when} · ${status}`;
+  return new Date(session.started_at * 1000).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 function useLibraryIndex() {
@@ -116,24 +114,23 @@ export function LibraryFrame({ sessionId, tab, children }: { sessionId: string; 
       <div className={"library" + (tab === "replay" ? " library-replay" : "")}>
         <div className="library-head" style={{ display: "flex", flexWrap: "wrap", gap: ".6rem", alignItems: "center", justifyContent: "space-between", marginBottom: ".6rem" }}>
           <div className="row" style={{ gap: ".6rem" }}>
-            <Link to="/library" className="library-back">
-              ← Library
+            <Link to="/library" className="icon-button" aria-label="Back to Library" title="Back to Library">
+              <span aria-hidden="true">←</span>
             </Link>
             <h1 className="library-title" style={{ margin: 0, fontSize: "1.35rem" }}>
               {title}
             </h1>
-            {session ? <span className={"badge " + (session.status === "reviewed" ? "good" : "")}>{session.status === "running" ? "in progress" : session.status}</span> : null}
             <span className="muted small mono">{sessionId}</span>
           </div>
           <div className="row" style={{ gap: ".6rem" }}>
             {sessions && sessions.length ? (
               <label className="small muted">
-                session
+                <span className="visually-hidden">Choose session</span>
                 <select value={known ? sessionId : ""} onChange={(e) => { if (e.target.value) nav(libraryHref(e.target.value, tab, inLibrary)); }}>
                   {!known && sessionId ? <option value="">{title}</option> : null}
                   {sessions.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {sessionTitle(s, titles)} · {sessionMeta(s)}
+                      {sessionTitle(s, titles)}, {sessionMeta(s)}
                     </option>
                   ))}
                 </select>
