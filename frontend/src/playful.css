@@ -297,7 +297,13 @@ body { overflow-x: clip; }
 .concept-box-index { transform: rotate(-3deg); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .session-date-tab { position: absolute; top: -13px; left: 0; border: 1px solid; border-color: inherit; border-bottom: 0; border-radius: 8px 8px 0 0; background: inherit; padding: 3px 10px 6px; font-size: .68rem; font-weight: 700; color: var(--muted); }
-.session-list { display: grid; gap: .75rem; align-content: start; overflow-y: auto; overscroll-behavior-y: contain; max-height: min(62vh, 620px); margin-bottom: 1.5rem; padding: .25rem .25rem .5rem; }
+.session-list { display: grid; gap: .75rem; align-content: start; overflow-y: auto; overscroll-behavior-y: contain; max-height: min(62vh, 620px); margin-bottom: 1.5rem; padding: .25rem .25rem .5rem; scrollbar-width: thin; scrollbar-color: var(--object-dark) transparent; scrollbar-gutter: stable; }
+/* Visible tactile scrollbar: butter thumb with a chunky rounded shape that
+   reads in every theme. Hover deepens it; the track stays transparent. */
+.session-list::-webkit-scrollbar { width: 12px; }
+.session-list::-webkit-scrollbar-track { background: transparent; }
+.session-list::-webkit-scrollbar-thumb { background: var(--object); border-radius: 99px; border: 3px solid var(--bg); box-shadow: inset 0 0 0 1px var(--surface-edge); }
+.session-list::-webkit-scrollbar-thumb:hover { background: var(--object-dark); }
 .session-history-item h3 { font-size: .97rem; font-weight: 500; margin: .35rem 0 .6rem; }
 .session-summary { font-size: .78rem; line-height: 1.5; color: var(--muted); margin: -.3rem 0 .6rem; }
 .session-history-item a { font-size: .77rem; }
