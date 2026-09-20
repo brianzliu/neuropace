@@ -151,8 +151,7 @@ export default function CurriculumSection({ curriculum, learnerId, onSave }: Cur
             </p>
           )}
           <p className="small muted">
-            Check off topics you’ve covered. This tracks your own progress, not tested mastery. Up
-            to 100 topics.
+            Your checkmarks track coverage, not mastery. Up to 100 topics.
           </p>
           <div className="row">
             <button className="primary" disabled={busy}>
@@ -165,7 +164,7 @@ export default function CurriculumSection({ curriculum, learnerId, onSave }: Cur
         </form>
       ) : curriculum === undefined ? (
         <p className="muted" role="status">
-          Loading your saved moments…
+          Loading…
         </p>
       ) : topics.length ? (
         <>
@@ -190,11 +189,7 @@ export default function CurriculumSection({ curriculum, learnerId, onSave }: Cur
             ))}
           </div>
         </>
-      ) : (
-        <p className="muted">
-          Add your syllabus topics to see the course at a glance and track what you’ve covered.
-        </p>
-      )}
+      ) : null}
     </section>
   );
 }

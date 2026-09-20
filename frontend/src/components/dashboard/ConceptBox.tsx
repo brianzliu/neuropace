@@ -36,7 +36,7 @@ export default function ConceptBox({ concept, index, organized }: ConceptBoxProp
           to={`/notes/${concept.session_id}`}
           aria-label={`Open notes for ${concept.title}`}
         >
-          {concept.lecture} <span>Saved at {mmss(concept.t_start)}</span>
+          {concept.lecture} <span>{mmss(concept.t_start)}</span>
         </Link>
         <Link
           className="concept-review"

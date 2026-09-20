@@ -67,7 +67,6 @@ export default function Home() {
 
   return <div className="dashboard">
     <div className="dashboard-toolbar">
-      <div><h1>Ready for your next idea?</h1></div>
       <div className="dashboard-actions">
         <DemoModeToggle />
         <NewSessionButton />
@@ -79,7 +78,6 @@ export default function Home() {
         <ReviewQueue
           concepts={data?.concepts}
           closed={data?.closed ?? 0}
-          hasLearner={Boolean(learnerId)}
           summary={data?.summary}
           organizationSource={data?.organization_source}
           organizing={organizing}

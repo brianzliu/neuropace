@@ -51,7 +51,7 @@ export default function SessionsSidebar({ sessions, concepts, closed }: Sessions
       </div>
       {sessions === undefined ? (
         <p className="small muted" role="status">
-          Loading your saved moments…
+          Loading…
         </p>
       ) : sessions.length ? (
         sessions.map((session) => {
@@ -94,7 +94,6 @@ export default function SessionsSidebar({ sessions, concepts, closed }: Sessions
       ) : (
         <div className="session-placeholder">
           <span aria-hidden="true">↶</span>
-          <p>Your first lecture starts a new thread.</p>
         </div>
       )}
       <PracticeCard concepts={concepts} closed={closed} />
