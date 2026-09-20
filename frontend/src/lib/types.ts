@@ -121,7 +121,7 @@ export interface TotemStatus {
   hint?: string | null;
 }
 
-export type HeadsetKind = "real" | "simulated" | "fake" | "replay";
+export type HeadsetKind = "real" | "simulated" | "fake" | "replay" | "virtual";
 
 /** Status of the team's mindwave pipeline (three-anchor calibration), present for real, fake and replay headsets. */
 export interface MindwaveStatus {
@@ -250,7 +250,15 @@ export interface SessionPublic extends SessionRow {
   totem?: TotemStatus;
 }
 
+export interface StartupCalibration {
+  status: "waiting" | "collecting" | "failed" | "saved" | "complete";
+  clean: boolean;
+  remaining_seconds: number;
+  error?: string;
+}
+
 export interface HelloMsg {
+  startup_calibration?: StartupCalibration | null;
   type: "hello";
   session: SessionRow;
   learner: Learner;
@@ -289,6 +297,7 @@ export interface SessionEndedMsg {
 export interface BoardExplanation { type: "board_explanation"; status: "pending" | "ready"; flag_id: string; text: string; source: "pending" | "llm" | "offline"; frames: {id: string; t: number}[]; t?: number }
 
 export type ServerMsg =
+  | ({ type: "startup_calibration" } & StartupCalibration)
   | BoardExplanation
   | HelloMsg
   | ({ type: "words"; words: Word[]; final: boolean; t: number })
@@ -584,12 +593,13 @@ export interface LossMap {
 }
 
 export interface Doctor {
-  keys: { deepgram: boolean; openai: boolean; openrouter: boolean };
+  keys: { deepgram: boolean; openai: boolean; openrouter: boolean; gemini: boolean };
   deepgram: { ok: boolean; reason?: string; status?: number };
   tts?: { ok: boolean; model: string };
   openai: { ok: boolean; model: string; reason?: string; alternatives?: string[]; required?: boolean };
   openrouter: { ok: boolean; model: string; reason?: string; required?: boolean };
-  llm_provider: "openai" | "openrouter";
+  gemini: { ok: boolean; model: string; reason?: string; required?: boolean };
+  llm_provider: "openai" | "openrouter" | "gemini";
   headset: { port: string | null; kind: string; setting: string | null; bridge?: string | null };
   totem: { port: string | null; kind: string; setting: string | null; hint?: string | null };
   serial_ports: { device: string; description: string; hwid?: string; vid?: number | null }[];

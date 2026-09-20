@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import re
 import time
 from collections.abc import Callable
 
@@ -40,9 +41,20 @@ def resolve_headset(setting: str | None, probe: bool = True) -> str:
     "auto"/None becomes a device path (probing may take a second or two per candidate) or "sim"."""
     s = (setting or "auto").strip()
     if s != "auto":
-        return s
+        from mindwave.ports import normalize
+
+        return "serial:" + normalize(s[7:]) if s.startswith("serial:") else normalize(s)
     port = autodetect_headset_port(probe=probe)
     return port or "sim"
+
+
+def headset_port_key(setting: str | None) -> str | None:
+    """One serial device has one owner, regardless of adapter or macOS tty/cu alias."""
+    from mindwave.ports import normalize
+
+    if not setting or setting in ("auto", "sim", "fake") or setting.startswith("replay:"):
+        return None
+    return normalize(setting.removeprefix("serial:"))
 
 
 class SimulatedHeadset:
@@ -163,6 +175,8 @@ class MindwaveHeadset:
         self._mode = "fake" if fake else ("replay" if replay_dir else "real")
         self.kind = self._mode  # what the app shows; the routing below follows _mode
         self.port = port or (f"replay:{replay_dir}" if replay_dir else "fake")
+        if self._mode == "real" and re.fullmatch(r"/dev/(?:ttys\d+|pts/\d+)", self.port):
+            self.kind = "virtual"
         self.replay_dir = replay_dir
         self.replay_speed = replay_speed
         self.log_dir = log_dir

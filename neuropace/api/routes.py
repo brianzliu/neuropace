@@ -26,7 +26,7 @@ from ..core.study import analyze, lossmap_inputs
 from ..doctor import detect_devices, run_doctor
 from ..ids import new_id
 from ..llm.artifacts import package_artifact_kinds
-from ..signal.headset import resolve_headset
+from ..signal.headset import headset_port_key, resolve_headset
 from ..transcribe.scripted import script_from_text
 
 router = APIRouter()
@@ -48,7 +48,7 @@ def health(request: Request):
         "ok": True,
         "version": __version__,
         "time": time.time(),
-        "voice": bool(_s(request).deepgram_api_key),
+        "voice": bool(_s(request).tts_api_key),
     }
 
 
@@ -110,12 +110,9 @@ def _model_settings(request: Request) -> dict:
     s = _s(request)
     return {
         "provider": s.llm_provider,
-        "model": s.openrouter_model if s.llm_provider == "openrouter" else s.openai_model,
-        "models": {"openai": s.openai_model, "openrouter": s.openrouter_model},
-        "configured": {
-            "openai": bool(s.openai_api_key),
-            "openrouter": bool(s.openrouter_api_key),
-        },
+        "model": s.llm_model,
+        "models": {p: getattr(s, f"{p}_model") for p in ("openai", "openrouter", "gemini")},
+        "configured": {p: bool(getattr(s, f"{p}_api_key")) for p in ("openai", "openrouter", "gemini")},
     }
 
 
@@ -129,8 +126,8 @@ def set_model_settings(body: ModelSettingsIn, request: Request):
     from ..llm.client import LLMClient
 
     provider = body.provider.lower().strip()
-    if provider not in ("openai", "openrouter"):
-        raise HTTPException(400, "Provider must be OpenAI or OpenRouter.")
+    if provider not in ("openai", "openrouter", "gemini"):
+        raise HTTPException(400, "Provider must be OpenAI, OpenRouter or Gemini.")
     key = body.api_key.strip() if isinstance(body.api_key, str) else ""
     if key and (len(key) > 512 or any(c.isspace() for c in key)):
         raise HTTPException(400, "Enter a valid API key.")
@@ -138,21 +135,19 @@ def set_model_settings(body: ModelSettingsIn, request: Request):
     if not model or len(model) > 200 or any(c.isspace() for c in model):
         raise HTTPException(400, "Enter a valid model name.")
     s = _s(request)
-    if provider == "openai":
-        if key:
-            s.openai_api_key = key
-        s.openai_model = model
-        configured = bool(s.openai_api_key)
-    else:
-        if key:
-            s.openrouter_api_key = key
-        s.openrouter_model = model
-        configured = bool(s.openrouter_api_key)
-    if not configured:
+    if not (key or getattr(s, f"{provider}_api_key")):
         raise HTTPException(400, f"Enter an API key for {provider.title()}.")
+    if key:
+        setattr(s, f"{provider}_api_key", key)
+    setattr(s, f"{provider}_model", model)
     s.llm_provider = provider
-    # Existing live sessions keep their client; all new work uses the selected provider.
-    request.app.state.llm = LLMClient(s, _db(request))
+    # A key/model change can repair an outage during a lecture. In-flight calls
+    # finish on their original client; subsequent work shares the new quota queue.
+    llm = LLMClient(s, _db(request))
+    request.app.state.llm = llm
+    for runtime in request.app.state.runtimes.values():
+        runtime.llm = llm
+        runtime.recaps.llm = llm
     return _model_settings(request)
 
 
@@ -436,7 +431,8 @@ class SessionIn(BaseModel):
     mode: str = "live"
     catchup_policy: str = "always"
     baseline_seconds: float | None = None
-    use_stored_baseline: bool = False
+    use_stored_baseline: bool | None = None
+    startup_calibration: bool = True
     auto_pause: bool = True
     headset: str = "auto"  # auto | sim | fake | replay:<dir> | serial:<port> | <device path>
     totem: str = "auto"  # auto | keyboard | <serial port>
@@ -457,6 +453,7 @@ def _session_public(request: Request, sess: dict) -> dict:
     )
     if rt:
         out["headset"] = rt.headset_status()
+        out["startup_calibration"] = rt.startup_calibration_status()
         out["totem"] = rt.totem.status()
         out["best_form"] = rt.best_form
         out["transcript_kind"] = rt.transcript_kind
@@ -472,6 +469,12 @@ def list_sessions(request: Request, lecture_id: str | None = None, learner_id: s
 
 @router.post("/sessions")
 async def create_session(body: SessionIn, request: Request):
+    # Resolve and reserve devices atomically: parallel requests must not open two readers.
+    async with request.app.state.session_start_lock:
+        return await _create_session(body, request)
+
+
+async def _create_session(body: SessionIn, request: Request):
     app = request.app
     s, db = _s(request), _db(request)
     if body.learner_name and body.learner_name.strip():
@@ -490,8 +493,8 @@ async def create_session(body: SessionIn, request: Request):
     if not app.state.llm.enabled and not s.allow_offline_llm:
         raise HTTPException(
             400,
-            "An OpenAI or OpenRouter API key is missing: recaps, gap notes and review cards need one. "
-            "Add a key on the Start session screen or to .env and restart "
+            "An OpenAI, OpenRouter or Gemini API key is missing: recaps, gap notes and review cards need one. "
+            "Add a key on the Team page or to .env and restart "
             "(NEUROPACE_ALLOW_OFFLINE_LLM=1 is for automated tests only).",
         )
     if body.catchup_policy not in ("always", "randomized"):
@@ -519,7 +522,10 @@ async def create_session(body: SessionIn, request: Request):
     if body.baseline_seconds is not None:
         settings.baseline_seconds = max(5.0, float(body.baseline_seconds))
     baseline = None
-    if body.use_stored_baseline and learner.get("baseline_mu") is not None:
+    use_stored = body.use_stored_baseline
+    if use_stored is None:
+        use_stored = learner.get("baseline_source") == "personal"
+    if use_stored and learner.get("baseline_mu") is not None:
         baseline = {"mu": learner["baseline_mu"], "sigma": learner["baseline_sigma"], "stored": True}
     seed = body.seed if body.seed is not None else int(time.time() * 1000) % 2_000_000_000
     sess = db.create_session(
@@ -541,8 +547,8 @@ async def create_session(body: SessionIn, request: Request):
         holders = [
             o
             for o in app.state.runtimes.values()
-            if o.headset.kind == "real"
-            and getattr(o.headset, "port", None) == hp
+            if o.headset.kind in ("real", "virtual")
+            and headset_port_key(getattr(o.headset, "port", None)) == headset_port_key(hp)
             and o.status in ("running", "ending")
         ]
         lectures = [o for o in holders if o.status == "running" and o.mode != "review"]
@@ -552,8 +558,13 @@ async def create_session(body: SessionIn, request: Request):
                 409,
                 f"The headset is already in use by a lecture that is still recording ({lectures[0].id}). End it first.",
             )
-        if not holders or time.monotonic() > deadline:
+        if not holders:
             break
+        if time.monotonic() > deadline:
+            db.update_session(sess["id"], status="ended", ended_at=time.time())
+            raise HTTPException(
+                409, "The headset is still in use by another session. Close it and try again."
+            )
         await asyncio.sleep(0.1)
     tp = (settings.totem_port or "auto") if body.totem == "auto" else body.totem
     rt = SessionRuntime(
@@ -567,6 +578,9 @@ async def create_session(body: SessionIn, request: Request):
         headset_port=hp,
         totem_port=tp,
         headset_auto=(headset_setting or "auto") == "auto",
+        device_lock=app.state.session_start_lock,
+        runtimes=app.state.runtimes,
+        startup_calibration=body.startup_calibration,
     )
     app.state.runtimes[sess["id"]] = rt
     await rt.start()
@@ -625,6 +639,8 @@ def session_tap(session_id: str, request: Request):
     rt = request.app.state.runtimes.get(session_id)
     if not rt:
         raise HTTPException(404, "session is not running")
+    if rt.calibration_pending:
+        raise HTTPException(409, "Finish calibration before requesting a catch-up")
     return rt._flag_public(rt.tap(source="key"))
 
 
@@ -642,6 +658,43 @@ def sim_headset(session_id: str, body: SimHeadsetIn, request: Request):
     except ValueError as e:
         raise HTTPException(400, str(e)) from e
     return rt.headset_status()
+
+
+class PersonalCalibrationIn(BaseModel):
+    apply: bool = False
+
+
+@router.post("/sessions/{session_id}/personal-calibration/start")
+async def personal_calibration_start(session_id: str, request: Request):
+    rt = request.app.state.runtimes.get(session_id)
+    if rt is None:
+        raise HTTPException(404, "session is not running")
+    try:
+        return rt.begin_personal_calibration()
+    except ValueError as error:
+        raise HTTPException(409, str(error)) from error
+
+
+@router.post("/sessions/{session_id}/personal-calibration/finish")
+async def personal_calibration_finish(session_id: str, body: PersonalCalibrationIn, request: Request):
+    rt = request.app.state.runtimes.get(session_id)
+    if rt is None:
+        raise HTTPException(404, "session is not running")
+    try:
+        return rt.finish_personal_calibration(apply=body.apply)
+    except ValueError as error:
+        raise HTTPException(409, str(error)) from error
+
+
+@router.post("/sessions/{session_id}/personal-calibration/continue")
+async def personal_calibration_continue(session_id: str, request: Request):
+    rt = request.app.state.runtimes.get(session_id)
+    if rt is None:
+        raise HTTPException(404, "session is not running")
+    try:
+        return await rt.complete_startup_calibration()
+    except ValueError as error:
+        raise HTTPException(409, str(error)) from error
 
 
 class CalibrateIn(BaseModel):

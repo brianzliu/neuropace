@@ -36,8 +36,12 @@ def test_model_provider_can_save_and_switch_keys_without_returning_them(app, set
         assert status == {
             "provider": "openai",
             "model": "gpt-5-mini",
-            "models": {"openai": "gpt-5-mini", "openrouter": "openai/gpt-4o-mini"},
-            "configured": {"openai": False, "openrouter": False},
+            "models": {
+                "openai": "gpt-5-mini",
+                "openrouter": "openai/gpt-4o-mini",
+                "gemini": "gemini-2.5-flash",
+            },
+            "configured": {"openai": False, "openrouter": False, "gemini": False},
         }
         response = client.put(
             "/api/settings/model",
@@ -106,3 +110,36 @@ def test_model_provider_rejects_missing_or_invalid_settings(app):
             ).status_code
             == 400
         )
+
+
+def test_gemini_provider_switch_never_returns_secret(app, settings):
+    with TestClient(app) as client:
+        response = client.put(
+            "/api/settings/model",
+            json={"provider": "gemini", "model": "gemini-2.5-flash", "api_key": "gemini-test-secret"},
+        )
+        assert response.status_code == 200 and response.json()["configured"]["gemini"]
+        assert settings.llm_provider == "gemini" and app.state.llm.model == "gemini-2.5-flash"
+        assert "gemini-test-secret" not in response.text
+        assert str(app.state.llm._client.base_url).startswith("https://generativelanguage.googleapis.com/")
+
+
+def test_provider_change_repairs_running_session(app):
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/sessions", json={"mode": "review", "headset": "sim", "totem": "keyboard"}
+        )
+        assert response.status_code == 200
+        runtime = app.state.runtimes[response.json()["id"]]
+        original = runtime.llm
+        response = client.put(
+            "/api/settings/model",
+            json={
+                "provider": "openrouter",
+                "model": "openai/gpt-4.1-mini",
+                "api_key": "synthetic-key",
+            },
+        )
+        assert response.status_code == 200
+        assert runtime.llm is app.state.llm and runtime.llm is not original
+        assert runtime.recaps.llm is runtime.llm

@@ -48,6 +48,23 @@ def test_synthesize_is_unavailable_without_a_key_or_on_failure(tmp_path):
         asyncio.run(synthesize(s, "   ", client=FakeSpeak()))
 
 
+def test_flux_uses_separate_key_endpoint_and_expressivity(tmp_path):
+    s = Settings(data_dir=tmp_path, deepgram_api_key="stt", deepgram_tts_api_key="tts")
+    fake = FakeSpeak()
+    asyncio.run(synthesize(s, "Focus on one idea at a time.", client=fake))
+    url, kw = fake.calls[0]
+    assert url == "https://api.deepgram.com/v2/speak"
+    assert kw["headers"]["Authorization"] == "Token tts"
+    assert kw["params"] == {"model": "flux-cole-en", "encoding": "mp3", "expressivity": "2"}
+    animated = cache_path(s, "hello")
+    s.tts_expressivity = 0
+    assert cache_path(s, "hello") != animated
+    s.tts_model = "aura-2-thalia-en"
+    asyncio.run(synthesize(s, "Aura compatibility.", client=fake))
+    assert fake.calls[-1][0] == "https://api.deepgram.com/v1/speak"
+    assert "expressivity" not in fake.calls[-1][1]["params"]
+
+
 def test_tts_endpoint_returns_503_without_a_key(app):
     with TestClient(app) as c:
         r = c.post("/api/tts", json={"text": "hello"})

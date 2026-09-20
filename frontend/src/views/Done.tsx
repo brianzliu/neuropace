@@ -41,7 +41,7 @@ export default function Done() {
             <div className="k">catch-ups</div>
           </div>
         </div>
-        <p className="sub">{sess.gaps ? "Each moment explained your way, then one quick question. About five minutes." : "You stayed with it the whole way. Nothing to restudy this time."}</p>        {sess.gaps ? (
+        <p className="sub">{sess.gaps ? "Each moment explained your way, then one quick question. About five minutes." : sess.words ? "No moments were saved for restudy this time." : "No transcript was captured. Check your microphone before starting another lecture."}</p>        {sess.gaps ? (
           <>
             <Link className="btn btn-primary btn-lg" to={`/restudy/${sessionId}?mode=tutor`}>
               Private tutoring

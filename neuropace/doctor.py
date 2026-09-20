@@ -5,17 +5,15 @@ from __future__ import annotations
 import asyncio
 import sys
 import time
-from pathlib import Path
 
 import httpx
 
 from mindwave.ports import list_serial_ports
 
 from .config import Settings
+from .resources import FRONTEND_DIST
 from .signal.headset import autodetect_headset_port
 from .totem.bridge import autodetect_totem_port
-
-FRONTEND_DIST = Path(__file__).resolve().parents[1] / "frontend" / "dist"
 
 
 async def check_deepgram(key: str | None) -> dict:
@@ -111,10 +109,12 @@ async def check_openrouter(key: str | None, model: str) -> dict:
 
 
 async def run_doctor(s: Settings) -> dict:
-    dg, oa, router, dev = await asyncio.gather(
+    dg, tts, oa, router, gemini, dev = await asyncio.gather(
         check_deepgram(s.deepgram_api_key),
+        check_deepgram(s.tts_api_key),
         check_openai(s.openai_api_key, s.openai_model),
         check_openrouter(s.openrouter_api_key, s.openrouter_model),
+        check_gemini(s.gemini_api_key, s.gemini_model),
         detect_devices(s, max_age_s=0.0),
     )
     return {
@@ -122,11 +122,13 @@ async def run_doctor(s: Settings) -> dict:
             "deepgram": bool(s.deepgram_api_key),
             "openai": bool(s.openai_api_key),
             "openrouter": bool(s.openrouter_api_key),
+            "gemini": bool(s.gemini_api_key),
         },
         "deepgram": dg,
-        "tts": {"ok": bool(s.deepgram_api_key) and dg.get("ok", False), "model": s.tts_model},
-        "openai": {**oa, "required": not s.allow_offline_llm},
-        "openrouter": {**router, "required": not s.allow_offline_llm},
+        "tts": {**tts, "model": s.tts_model, "expressivity": s.tts_expressivity},
+        "openai": {**oa, "required": not s.allow_offline_llm and s.llm_provider == "openai"},
+        "openrouter": {**router, "required": not s.allow_offline_llm and s.llm_provider == "openrouter"},
+        "gemini": {**gemini, "required": not s.allow_offline_llm and s.llm_provider == "gemini"},
         "llm_provider": s.llm_provider,
         "headset": dev["headset"],
         "totem": dev["totem"],
@@ -139,3 +141,17 @@ async def run_doctor(s: Settings) -> dict:
         "data_dir": str(s.data_dir.resolve()),
         "baseline_seconds": s.baseline_seconds,
     }
+
+
+async def check_gemini(key: str | None, model: str) -> dict:
+    if not key:
+        return {"ok": False, "reason": "no GEMINI_API_KEY", "model": model}
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            response = await client.get(
+                "https://generativelanguage.googleapis.com/v1beta/models/" + model,
+                headers={"x-goog-api-key": key},
+            )
+        return {"ok": response.is_success, "model": model, "status": response.status_code}
+    except Exception as e:
+        return {"ok": False, "model": model, "reason": str(e)[:200]}

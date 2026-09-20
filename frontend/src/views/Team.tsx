@@ -53,11 +53,9 @@ export default function Team() {
               <div className="status-list">
                 <Line ok={d.keys.deepgram && d.deepgram.ok} label="Deepgram (transcription)" value={d.keys.deepgram ? (d.deepgram.ok ? "reachable" : d.deepgram.reason ?? "unreachable") : "no key: set DEEPGRAM_API_KEY in .env"} />
                 <Line
-                  ok={d.llm_provider === "openrouter" ? d.keys.openrouter && d.openrouter.ok : d.keys.openai && d.openai.ok}
-                  label={`${d.llm_provider === "openrouter" ? "OpenRouter" : "OpenAI"} (recaps, notes, artifacts)`}
-                  value={d.llm_provider === "openrouter"
-                    ? (d.keys.openrouter ? (d.openrouter.ok ? d.openrouter.model : `${d.openrouter.model} unavailable`) : "no OpenRouter key")
-                    : (d.keys.openai ? (d.openai.ok ? d.openai.model : `${d.openai.model} unavailable`) : "no OpenAI key")}
+                  ok={d.keys[d.llm_provider] && d[d.llm_provider].ok}
+                  label={`${d.llm_provider === "gemini" ? "Gemini" : d.llm_provider === "openrouter" ? "OpenRouter" : "OpenAI"} (recaps, notes, artifacts)`}
+                  value={d.keys[d.llm_provider] ? (d[d.llm_provider].ok ? d[d.llm_provider].model : `${d[d.llm_provider].model} unavailable`) : "no model key"}
                 />
                 <Line ok={d.headset.kind === "real"} warn label="Headset" value={d.headset.kind === "real" ? `MindWave on ${d.headset.port}` : "none found: sessions simulate one"} />
                 <Line ok={d.totem.kind === "real"} accent label="Totem" value={d.totem.kind === "real" ? `Arduino on ${d.totem.port}` : "none found: keyboard fallback (Space/T, terminal keys)"} />

@@ -297,8 +297,8 @@ function DoctorStrip({ d }: { d: Doctor | null }) {
         Transcription <b>{d.keys.deepgram ? (d.deepgram.ok ? "ok" : d.deepgram.reason ?? "key set, not reachable") : "no key"}</b>
       </span>
       <span className="item">
-        <span className={"dotled " + (d.keys.openai ? (d.openai.ok ? "on" : "warn") : "off")} />
-        Recaps <b>{d.keys.openai ? (d.openai.ok ? "ready" : "unavailable") : "no key (offline recaps)"}</b>
+        <span className={"dotled " + (d.keys[d.llm_provider] ? (d[d.llm_provider].ok ? "on" : "warn") : "off")} />
+        Recaps <b>{d.keys[d.llm_provider] ? (d[d.llm_provider].ok ? "ready" : "unavailable") : "no model key"}</b>
       </span>
       <span className="item">
         <span className={"dotled " + (d.headset.kind === "real" ? "on" : "warn")} />

@@ -13,6 +13,7 @@ Payload rows: code < 0x80 carries one value byte; code >= 0x80 carries a length 
 from __future__ import annotations
 
 import queue
+import sys
 import threading
 import time
 from dataclasses import dataclass
@@ -152,34 +153,49 @@ class ThinkGearReader(threading.Thread):
     def __init__(self, port: str, out: queue.Queue, baud: int = 57600, retry_s: float = 2.0) -> None:
         super().__init__(daemon=True, name=f"thinkgear-{port}")
         self.port, self.baud, self.out, self.retry_s = port, baud, out, retry_s
-        self._stop = threading.Event()
+        self._stop_event = threading.Event()
+        self._serial = None
         self.last_data_t = 0.0
         self.error: str | None = None
         self.samples = 0
         self.dropped = 0
+        self.transport = "serial"
 
     @property
     def connected(self) -> bool:
-        return time.time() - self.last_data_t < 3.0
+        return not self._stop_event.is_set() and time.time() - self.last_data_t < 3.0
 
     def stop(self) -> None:
-        self._stop.set()
+        self._stop_event.set()
+        ser = self._serial
+        if ser is not None:
+            try:
+                ser.cancel_read()
+            except (AttributeError, OSError):
+                pass
+        if self.is_alive() and threading.current_thread() is not self:
+            self.join(timeout=2)
 
     def run(self) -> None:
         import serial  # pyserial
 
-        while not self._stop.is_set():
+        while not self._stop_event.is_set():
             try:
-                with serial.Serial(self.port, self.baud, timeout=1) as ser:
+                factory = serial.Serial
+                if self.transport == "native Bluetooth":
+                    from .macos_transport import MacRFCOMMTransport
+                    factory = MacRFCOMMTransport
+                with factory(self.port, self.baud, timeout=1) as ser:
+                    self._serial = ser
                     self.error = None
                     parser = PacketParser()
-                    while not self._stop.is_set():
+                    last_packet = time.monotonic()
+                    while not self._stop_event.is_set():
                         data = ser.read(max(1, ser.in_waiting))
-                        if not data:
-                            continue
                         t = time.time()
-                        self.last_data_t = t
                         for payload in parser.feed(data):
+                            last_packet = time.monotonic()
+                            self.last_data_t = t
                             for ev in events_from_payload(parse_payload(payload), t):
                                 if isinstance(ev, Raw):
                                     self.samples += 1
@@ -187,6 +203,14 @@ class ThinkGearReader(threading.Thread):
                                     self.out.put_nowait(ev)
                                 except queue.Full:
                                     self.dropped += 1
+                        if time.monotonic() - last_packet > 5:
+                            raise serial.SerialException("No valid ThinkGear packets for 5 seconds; reopening port")
             except (serial.SerialException, OSError) as e:
                 self.error = str(e)
-                self._stop.wait(self.retry_s)
+                if sys.platform == "darwin" and self.port.startswith(("/dev/cu.", "/dev/tty.")) and any(
+                    name in self.port.lower() for name in ("mindwave", "neurosky", "thinkgear")
+                ):
+                    self.transport = "native Bluetooth"
+                self._stop_event.wait(self.retry_s)
+            finally:
+                self._serial = None

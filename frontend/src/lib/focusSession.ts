@@ -59,7 +59,7 @@ export function useFocusSession(enabled: boolean, learnerId?: string): FocusSess
               const c = card.current;
               if (c) {
                 c.total += 1;
-                if (m.quality === "good" && m.baseline_ready) {
+                if (!m.sim && !m.artifact && !m.paused && m.x != null && m.quality === "good" && m.baseline_ready) {
                   c.valid += 1;
                   if (m.state === "drop") c.dropped += 1;
                 }
@@ -68,7 +68,7 @@ export function useFocusSession(enabled: boolean, learnerId?: string): FocusSess
               setRaw((r) => (r.length > 512 ? r.slice(-512 + m.uv.length).concat(m.uv) : r.concat(m.uv)));
               setRawAt(Date.now());
             } else if (m.type === "flag_open" && (m.flag.source === "eeg" || m.flag.source === "forced")) {
-              if (card.current) setDriftSeq((n) => n + 1);
+              if (card.current && !m.flag.simulated) setDriftSeq((n) => n + 1);
             }
           },
           () => undefined,

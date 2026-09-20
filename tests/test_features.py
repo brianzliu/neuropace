@@ -148,3 +148,48 @@ def test_stored_baseline_is_ready_immediately():
     assert eng.baseline.ready and eng.baseline.stored
     smp, _ = eng.tick(1.0)
     assert smp.state == "nosignal"
+
+
+def test_serial_silence_does_not_reuse_old_samples(monkeypatch):
+    now = [10.0]
+    monkeypatch.setattr("neuropace.signal.features.time.monotonic", lambda: now[0])
+    eng = FocusEngine(Settings(), stored_baseline=(0.0, 0.1))
+    eng.feed_poor_signal(0)
+    eng.feed_raw(tone(10) + tone(20))
+    sample, _ = eng.tick(1)
+    assert sample.x is not None
+    now[0] += 4
+    sample, events = eng.tick(2)
+    assert sample.quality == "bad" and sample.x is None and not events
+
+
+def test_artifact_cannot_open_a_drop_from_old_window_values():
+    eng = FocusEngine(Settings(), stored_baseline=(0.0, 0.1))
+    eng._zwin.extend([-3.0] * 15)
+    eng.feed_frame(-0.5, 0, False)
+    sample, events = eng.tick(20)
+    assert sample.artifact and sample.state == "bad" and sample.x is None
+    assert not events and not eng.detector.in_drop
+
+
+def test_diagnostic_phases_do_not_poison_the_focused_baseline():
+    engine = FocusEngine(Settings(baseline_seconds=10))
+    for second in range(10):
+        engine.feed_frame(-5.0, 0, True, extra={"cal_phase": "eyes_closed"})
+        engine.tick(second)
+    assert not engine.baseline.ready
+    for second in range(10, 20):
+        engine.feed_frame(-0.3, 0, True, extra={"cal_phase": None})
+        engine.tick(second)
+    assert engine.baseline.ready
+    assert math.isclose(engine.baseline.mu, -0.3)
+
+
+def test_diagnostic_phases_are_not_automatic_attention_lapses():
+    engine = FocusEngine(Settings(), stored_baseline=(0.0, 0.1))
+    engine._zwin.extend([-3.0] * 15)
+    engine.feed_frame(-0.5, 0, True, extra={"cal_phase": "hard"})
+    sample, events = engine.tick(20)
+    assert not events
+    assert sample.x is None and sample.z is None
+    assert sample.state == "baseline"

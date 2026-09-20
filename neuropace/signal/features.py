@@ -192,6 +192,7 @@ class FocusEngine:
         self._zwin: deque[float | None] = deque(maxlen=s.window_seconds)
         self._blinks_since_tick = 0
         self._received_any = False
+        self._raw_t = 0.0
         self.samples_total = 0
         self.artifacts = 0
         self.last: FocusSample | None = None
@@ -250,6 +251,7 @@ class FocusEngine:
             return
         self._received_any = True
         self.samples_total += x.size
+        self._raw_t = time.monotonic()
         self._blinks_since_tick += self.blinks.feed(x)
         self._raw = np.concatenate([self._raw, x])
         keep = self._win * 2
@@ -306,16 +308,21 @@ class FocusEngine:
         if self._external:
             quality_ok, x, artifact = self._external_features()
         else:
-            quality_ok = self._received_any and self.poor_signal <= s.poor_signal_gate
+            quality_ok = (
+                self.samples_total > 0
+                and time.monotonic() - self._raw_t <= 3.0
+                and self.poor_signal <= s.poor_signal_gate
+            )
             x, artifact = self._segment_features() if quality_ok else (None, False)
         blink = self._blinks_since_tick > 0
         self._blinks_since_tick = 0
-        valid = quality_ok and x is not None and not paused
+        diagnostic = self._external and bool(self.extra.get("cal_phase"))
+        valid = quality_ok and x is not None and not paused and not diagnostic
         if valid:
             assert x is not None
             self._x_ema = x if self._x_ema is None else self._x_ema + self._alpha * (x - self._x_ema)
         x_ema = self._x_ema if valid else None
-        listening = quality_ok and not paused
+        listening = quality_ok and not paused and not diagnostic
         self.baseline.add(x_ema, listening)
         z: float | None = None
         if self.baseline.ready and x_ema is not None:
@@ -324,13 +331,13 @@ class FocusEngine:
         self._zwin.append(z)
         vals = [v for v in self._zwin if v is not None]
         w15 = float(np.mean(vals)) if len(vals) >= s.window_min_valid else None
-        allowed = self.baseline.ready and quality_ok and not paused
+        allowed = self.baseline.ready and valid
         events = self.detector.update(t, w15, allowed)
         if not self._received_any:
             state = "nosignal"
-        elif not quality_ok:
+        elif not quality_ok or artifact:
             state = "bad"
-        elif not self.baseline.ready:
+        elif diagnostic or not self.baseline.ready:
             state = "baseline"
         elif self.detector.in_drop:
             state = "drop"

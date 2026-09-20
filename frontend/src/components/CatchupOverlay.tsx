@@ -22,7 +22,7 @@ export default function CatchupOverlay({ card, onExpire, onDismiss, cycleToken, 
     setForm(null);
   }, [card?.key]);
   useEffect(() => {
-    if (!card || cycleToken === 0) return;
+    if (!card || card.source === "transcript" || cycleToken === 0) return;
     setForm((f) => {
       const cur = f ?? card.form;
       const i = FORMS.indexOf(cur);
@@ -55,8 +55,8 @@ export default function CatchupOverlay({ card, onExpire, onDismiss, cycleToken, 
       </div>
       <div className="meta">
         <span>
-          {FORM_LABEL[f]}
-          {f !== card.form ? " · F for another way" : " · your best way"}
+          {verbatim ? "Lecture transcript" : FORM_LABEL[f]}
+          {!verbatim && (f !== card.form ? " · F for another way" : " · your best way")}
         </span>
         {card.reason === "video_pause" ? <Badge tone="accent">video paused</Badge> : null}
         {card.reason === "eeg" ? <Badge>you drifted</Badge> : null}

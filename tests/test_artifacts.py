@@ -189,6 +189,16 @@ def test_template_validators_reject_thin_or_unsafe_data():
             title="t",
             x_label="x",
             y_label="y",
+            series=[{"name": "s", "points": [{"x": 0, "y": 0}, {"x": 1, "y": float("nan")}]}],
+            annotations=[],
+            illustrative=True,
+            takeaway="t",
+        )
+    with pytest.raises(ValidationError):
+        Plot(
+            title="t",
+            x_label="x",
+            y_label="y",
             series=[{"name": "s", "points": [{"x": 1, "y": 1}]}],
             annotations=[],
             illustrative=True,

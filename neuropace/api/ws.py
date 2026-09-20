@@ -70,6 +70,8 @@ async def session_ws(websocket: WebSocket, session_id: str) -> None:
 
 async def handle_client_message(app, rt, data: dict) -> None:
     t = data.get("type")
+    if rt.calibration_pending and t not in ("end", "ping", "audio_stop"):
+        return
     if t == "tap":
         rt.tap(source="key")
     elif t == "force_flag":

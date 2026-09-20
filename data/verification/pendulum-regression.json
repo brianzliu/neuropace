@@ -1,0 +1,7 @@
+{
+  "animation": {
+    "content": {
+      "html": "<div><svg viewBox='0 0 600 260' width='100%' aria-label='Pendulum animation'><line x1='300' y1='20' x2='300' y2='80' stroke='#ff9600' stroke-width='4' stroke-linecap='round'/><circle id='bob' cx='300' cy='180' r='40' fill='#1cb0f6' stroke='currentColor' stroke-width='2'/><line id='rod' x1='300' y1='20' x2='300' y2='180' stroke='#1cb0f6' stroke-width='4' stroke-linecap='round'/><text x='300' y='15' text-anchor='middle' fill='currentColor' font-size='16' font-family='sans-serif'>Pivot</text><text id='label' x='300' y='235' text-anchor='middle' fill='currentColor' font-size='16' font-family='sans-serif'>Pendulum bob</text></svg><script>(()=>{const svg=document.querySelector('svg');const pivotX=300;const pivotY=20;const length=160;const maxAngle=Math.PI/6;const duration=6000;const bob=document.getElementById('bob');const rod=document.getElementById('rod');const label=document.getElementById('label');function easeSin(t){return Math.sin(t*Math.PI/2);}function animate(t){let time=t%duration/duration;let angle=0;if(time<0.5){let p=time/0.5;angle=maxAngle*easeSin(p);}else{let p=(time-0.5)/0.5;angle=maxAngle*(1-easeSin(p));}let x=pivotX+length*Math.sin(angle);let y=pivotY+length*Math.cos(angle);rod.setAttribute('x1',pivotX);rod.setAttribute('y1',pivotY);rod.setAttribute('x2',x);rod.setAttribute('y2',y);bob.setAttribute('cx',x);bob.setAttribute('cy',y);label.setAttribute('x',x);requestAnimationFrame(animate);}requestAnimationFrame(animate);})();</script></div>"
+    }
+  }
+}

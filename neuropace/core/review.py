@@ -87,6 +87,12 @@ class ReviewEngine:
         artifact_kind = None
         if kind == "reteach" and form:
             artifact_kind = pick_artifact((gap.get("package") or {}).get("artifacts") or {}, form)[0]
+            if artifact_kind == "words":
+                form = "words"
+                self._form_before[gap["id"]] = form
+                used = self._forms_used.setdefault(gap["id"], [])
+                if form not in used:
+                    used.append(form)
         card = {
             "id": new_id("card"),
             "session_id": self.session_id,

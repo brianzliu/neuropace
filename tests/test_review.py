@@ -174,3 +174,18 @@ def test_manual_review_checks_first_and_explains_only_after_a_miss(tmp_path):
     assert r3["credited_form"] == r2["next"]["form"] and r3["done"]
     with pytest.raises(ValueError):
         ReviewEngine(db, s, sess["id"], lr["id"], mode="nope")
+
+
+def test_missing_family_shows_words_and_scores_what_was_actually_shown(tmp_path):
+    s, db, lr, sess = _setup(tmp_path, n_gaps=1)
+    rows = db.get_gaps(sess["id"])
+    rows[0]["package"]["artifacts"] = {"summary": "The grounded explanation.", "key_idea": {}}
+    db.replace_gaps(sess["id"], rows)
+    eng = ReviewEngine(db, s, sess["id"], lr["id"])
+    card = eng._new_card(eng.gaps[0], "reteach", "analogy")
+    shown = eng._present(card)
+    assert shown["form"] == "words" and shown["reteach"]["content"]["summary"]
+    q = eng.advance(card["id"])["next"]
+    result = eng.answer(q["id"], _correct_choice(db, q))
+    assert result["credited_form"] == "words"
+    assert db.get_tally(lr["id"])["analogy"]["attempts"] == 0

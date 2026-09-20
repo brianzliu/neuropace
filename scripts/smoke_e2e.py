@@ -1,4 +1,4 @@
-"""End-to-end smoke against a running server (default http://127.0.0.1:8765), everything simulated.
+"""End-to-end smoke against a running server (default http://127.0.0.1:8765), with a simulated headset and scripted lecture.
 
 Creates a learner and a scripted live session, connects the WebSocket, waits for the baseline, taps, measures tap-to-catch-up
 latency, forces an EEG-style flag, ends the session, walks the review, and prints the timings. Exit code 1 on any failure.
@@ -46,8 +46,9 @@ def main() -> int:
     h = c.get("/api/health").json()
     check(h.get("ok") is True, f"health {h.get('version')}")
     d = c.get("/api/doctor").json()
+    selected = c.get("/api/settings/model").json()
     print(
-        f"     keys deepgram={d['keys']['deepgram']} openai={d['keys']['openai']} model={d['openai'].get('model')} ok={d['openai'].get('ok')} headset={d['headset']['kind']} totem={d['totem']['kind']} frontend_built={d['frontend_built']}"
+        f"     provider={selected['provider']} model={selected['model']} deepgram={d['keys']['deepgram']} headset={d['headset']['kind']} frontend_built={d['frontend_built']}"
     )
     lecs = c.get("/api/lectures").json()["lectures"]
     check(bool(lecs), f"lectures: {[lr['title'] for lr in lecs]}")
@@ -93,7 +94,7 @@ def main() -> int:
         chip = read_until(ws, "chip")
         check(chip["flag_id"].startswith("flag_"), "forced flag -> chip (no auto-show)")
         rec = read_until(ws, "recap", timeout=30)
-        check(bool(rec["forms"]["plain"]), f"rolling recap arrived (source={rec['source']})")
+        check(bool(rec["forms"]["words"]), f"rolling recap arrived (source={rec['source']})")
     end = c.post(f"/api/sessions/{sess['id']}/end").json()
     check(
         len(end["gaps"]) >= 1,
@@ -101,7 +102,7 @@ def main() -> int:
     )
     st = c.post(f"/api/sessions/{sess['id']}/review/start").json()
     card = st["card"]
-    check(card is not None and card["kind"] == "question", "review starts with a question")
+    check(card is not None and card["kind"] == "reteach", "private tutoring starts with an explanation")
     steps = 0
     while card and steps < 12:
         steps += 1

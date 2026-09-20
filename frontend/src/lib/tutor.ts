@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { backendFetch } from "./backend";
 import type { AnalogyContent, AnimationContent, ArtifactKind, Card, ChartContent, CompareContent, ExampleContent, PlotContent, ReteachContent, SceneGraph, StepsContent, TimelineContent, WordsContent } from "./types";
 
 /** One spoken beat of an explanation and the reveal step the template should be at while it is read. */
@@ -106,6 +107,7 @@ export interface Tutor {
   enabled: boolean;
   setEnabled: (on: boolean) => void;
   speaking: boolean;
+  error: string | null;
   /** Index into the beats being read, or -1. */
   beat: number;
   /** Reads the beats in order; resolves when done or stopped. onBeat fires as each beat starts. */
@@ -115,7 +117,7 @@ export interface Tutor {
 
 async function fetchBeat(text: string): Promise<string | null> {
   try {
-    const res = await fetch("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+    const res = await backendFetch("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }), signal: AbortSignal.timeout(25000) });
     if (!res.ok) return null;
     const blob = await res.blob();
     return URL.createObjectURL(blob);
@@ -124,27 +126,27 @@ async function fetchBeat(text: string): Promise<string | null> {
   }
 }
 
-function playUrl(url: string, gen: () => boolean): Promise<void> {
+export function playUrl(url: string, gen: () => boolean): Promise<boolean> {
   return new Promise((resolve) => {
     const a = new Audio(url);
-    const done = () => {
-      URL.revokeObjectURL(url);
-      resolve();
-    };
-    a.onended = done;
-    a.onerror = done;
-    const tick = window.setInterval(() => {
-      if (!gen()) {
-        window.clearInterval(tick);
-        a.pause();
-        done();
-      }
-    }, 100);
-    a.onended = () => {
+    let finished = false;
+    const started = Date.now();
+    const done = (played: boolean) => {
+      if (finished) return;
+      finished = true;
       window.clearInterval(tick);
-      done();
+      a.pause();
+      URL.revokeObjectURL(url);
+      resolve(played);
     };
-    void a.play().catch(done);
+    a.onended = () => done(true);
+    a.onerror = () => done(false);
+    const tick = window.setInterval(() => {
+      const elapsed = Date.now() - started;
+      if (!gen() || (a.currentTime === 0 && elapsed > 10000) || elapsed > 120000) done(false);
+    }, 100);
+    if (!gen()) { done(false); return; }
+    void a.play().catch(() => done(false));
   });
 }
 
@@ -158,6 +160,7 @@ export function useTutor(supported: boolean): Tutor {
     }
   });
   const [speaking, setSpeaking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [beat, setBeat] = useState(-1);
   const gen = useRef(0);
 
@@ -168,7 +171,11 @@ export function useTutor(supported: boolean): Tutor {
     } catch {
       // ignore
     }
-    if (!on) gen.current += 1;
+    if (!on) {
+      gen.current += 1;
+      setSpeaking(false);
+      setBeat(-1);
+    }
   }, []);
 
   const stop = useCallback(() => {
@@ -183,16 +190,22 @@ export function useTutor(supported: boolean): Tutor {
       const my = ++gen.current;
       const alive = () => gen.current === my;
       setSpeaking(true);
+      setError(null);
       let next: Promise<string | null> = fetchBeat(beats[0].text);
       for (let i = 0; i < beats.length; i++) {
         const url = await next;
-        if (!alive()) break;
+        if (!alive()) { if (url) URL.revokeObjectURL(url); break; }
         if (i + 1 < beats.length) next = fetchBeat(beats[i + 1].text);
         setBeat(i);
         onBeat?.(i, beats[i]);
-        if (url) await playUrl(url, alive);
+        let played = false;
+        if (url) played = await playUrl(url, alive);
         else await new Promise((r) => window.setTimeout(r, 1200)); // no audio for this beat: keep the pace
-        if (!alive()) break;
+        if (!played && alive()) setError("Voice could not play. Retry the reading, or continue with the text.");
+        if (!alive() || !played) {
+          if (i + 1 < beats.length) { const unused = await next; if (unused) URL.revokeObjectURL(unused); }
+          break;
+        }
       }
       if (alive()) {
         setSpeaking(false);
@@ -203,5 +216,5 @@ export function useTutor(supported: boolean): Tutor {
   );
 
   useEffect(() => () => void (gen.current += 1), []);
-  return { supported, enabled: supported && enabled, setEnabled, speaking, beat, play, stop };
+  return { supported, enabled: supported && enabled, setEnabled, speaking, error, beat, play, stop };
 }

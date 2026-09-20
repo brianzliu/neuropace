@@ -1,0 +1,58 @@
+{
+  "title": "Guided EEG trial: how a treatment plant cleans water (synthetic narrated lesson)",
+  "sections": [
+    {
+      "id": "baseline",
+      "task": "focus",
+      "text": "This lesson follows water through a conventional drinking water treatment plant. It is a conceptual explanation, not a recipe for making unsafe water safe at home. Different plants use different combinations of processes, depending on their source water and local requirements. We will examine a sequence often used for surface water: screening, coagulation, flocculation, sedimentation, filtration, and disinfection. The important idea is that these stages solve different problems. A process that removes visible particles is not automatically a process that controls microorganisms. Clear water is not necessarily safe water.\n\nImagine a river supplying a town. Rain can carry soil into that river. Leaves and branches can float near the intake. Very small particles can remain suspended long after larger objects settle. Some substances are dissolved rather than suspended, so they cannot simply be caught by an ordinary particle filter. Microorganisms may also be present. A treatment plant therefore uses several barriers instead of asking a single device to solve every problem. Operators monitor the source water and the treated water, and adjust the process when conditions change.\n\nThe distinction between suspended and dissolved material will matter throughout the lesson. A grain of sand is a suspended solid. Given suitable conditions, it can settle or be captured by a filter. Salt dissolved in water behaves differently. Removing visible sand does not demonstrate that the dissolved salt has been removed. Similarly, measuring how cloudy water looks can tell us something about suspended particles, but that observation cannot identify every chemical substance or every microorganism in the water. Each measurement answers a specific question.\n\nA treatment process also has a flow rate. Water must spend time in the equipment for the intended process to happen. Tanks, mixers, and filters do different jobs, so their operating conditions differ. Vigorous mixing can be useful at one stage and harmful at another. Flow that helps carry water through a plant can interfere with settling if it disturbs particles that were supposed to move to the bottom. The design therefore balances movement with controlled periods of slower motion.\n\nAs you listen, try to connect each later stage to a problem it solves. Ask yourself what goes into that stage, what action occurs there, and what leaves it. Also notice what the stage does not accomplish. That last question prevents a common misunderstanding: treating the entire plant as a single generic filter. The sequence matters because one step prepares the water for the next. Removing a troublesome particle early can make a later stage easier to operate.\n\nWe will now walk through six stages separately. There will be a short question about the purpose or mechanism of each stage after the lesson. You do not need to memorize numerical design values. Concentrate on the relationships between the stages and on the contrast between removing material and changing it. In this exercise, the prerecorded narration is the lesson source. The headband measures your own signal; it does not generate the lesson and it cannot know which particular sentence you are thinking about."
+    },
+    {
+      "id": "screening",
+      "task": "focus",
+      "text": "The first stage in our example is screening. Water passes through a screen that catches relatively large debris, such as sticks and leaves. One purpose is to protect pumps and later equipment from material that could obstruct or damage them. A screen is not a fine filter for all suspended particles, and it does not disinfect water. The size of its openings determines which objects it can physically hold back. Smaller particles continue with the water into later treatment stages. Think of screening as removing obstacles before a more delicate process begins. The captured debris must also be taken away, otherwise the screen itself can become clogged. The key distinction is between removing large objects and removing tiny particles or microorganisms. Screening addresses the large objects; it is only the beginning of the sequence.",
+      "question": "What is the main purpose of the screening stage described here?",
+      "options": ["Remove all dissolved salts", "Catch large debris and protect equipment", "Disinfect the water", "Make tiny particles clump together"],
+      "correct_index": 1
+    },
+    {
+      "id": "coagulation",
+      "task": "drift",
+      "text": "Next comes coagulation. Very small suspended particles may resist coming together because of their surface properties. A coagulant is added and rapidly mixed into the water. In this simplified explanation, the treatment destabilizes those small particles so that they can begin to aggregate. The rapid mixing distributes the added chemical through the water. Coagulation does not mean that every particle immediately sinks to the bottom. It prepares the particles for the next stage, where gentler mixing helps larger clusters develop. The amount and type of coagulant are operating decisions that depend on the water being treated. For this lesson, remember the role rather than a chemical dosage: coagulation changes the conditions that kept tiny particles apart. It makes later aggregation possible instead of acting like a physical screen.",
+      "question": "What does coagulation primarily prepare small particles to do?",
+      "options": ["Remain permanently suspended", "Turn into dissolved salts", "Come together into aggregates", "Pass through every later stage unchanged"],
+      "correct_index": 2
+    },
+    {
+      "id": "flocculation",
+      "task": "focus",
+      "text": "Flocculation follows coagulation in our example. The water is mixed more gently so that destabilized particles can collide and build larger clusters called flocs. This is different from the rapid mixing used to distribute the coagulant. The aim now is to encourage collisions without repeatedly breaking the developing clusters apart. If mixing is too vigorous, fragile flocs can be damaged. If conditions allow suitable flocs to form, those larger clusters can be easier to separate from the water in a later stage. There is still water surrounding and flowing between them; flocculation is not simply squeezing the water through a barrier. A useful contrast is that coagulation destabilizes the small particles, while flocculation helps them grow into larger groups. The change from rapid to gentle mixing reflects those different jobs.",
+      "question": "Why is mixing gentler during flocculation?",
+      "options": ["To help clusters grow without breaking them apart", "To prevent all particle collisions", "To evaporate the water", "To replace the need for disinfection"],
+      "correct_index": 0
+    },
+    {
+      "id": "sedimentation",
+      "task": "effort_offtask",
+      "text": "In sedimentation, water moves through a settling zone under conditions that allow suitable suspended material to move downward. Gravity separates particles or flocs that settle sufficiently well from water that continues toward the next stage. Material collected at the bottom forms sludge that must be removed. The water leaving above that collected material can still contain smaller particles, so sedimentation is not necessarily the final separation step. This process depends on particle behavior and the flow conditions in the tank. If the water is excessively disturbed, settling can be less effective. Compare sedimentation with screening: a screen catches objects against a barrier, while sedimentation relies on settling through the water. Both remove material, but they use different mechanisms. The central mechanism in this stage is gravity acting on settleable particles.",
+      "question": "Which mechanism separates particles during sedimentation?",
+      "options": ["Ultraviolet light", "Rapid chemical mixing", "Evaporation", "Gravity-driven settling"],
+      "correct_index": 3
+    },
+    {
+      "id": "filtration",
+      "task": "focus",
+      "text": "Filtration provides another barrier for particles that remain after earlier stages. In the conventional example discussed here, water passes through a bed of granular material such as sand. Suspended material can be retained within that bed through several physical interactions. As material accumulates, the filter needs maintenance, and many granular filters are cleaned using a backwash process. The important limitation is that an ordinary particle filter is not the same thing as a membrane system designed to reject dissolved substances. Capturing suspended sand or floc does not establish that dissolved salt has been removed. Filtration also does not, by itself, justify assuming that the final water is safe without the plant's other treatment and monitoring steps. Keep the categories separate: particle removal, dissolved-substance removal, and disinfection are related goals, but they are not interchangeable claims.",
+      "question": "What should we NOT conclude merely because a granular filter removed suspended particles?",
+      "options": ["The filter can accumulate material", "Dissolved salt was also removed", "The water passed through a bed", "The filter may need cleaning"],
+      "correct_index": 1
+    },
+    {
+      "id": "disinfection",
+      "task": "drift",
+      "text": "Disinfection addresses microorganisms rather than simply removing visible debris. Different treatment systems may use methods such as chlorine or ultraviolet light. These methods are not identical. A chlorine residual can remain in the water after treatment and contribute to protection in a distribution system, while ultraviolet treatment does not leave that kind of disinfectant residual. The effectiveness of any method depends on its operating conditions and the organisms of concern. Our lesson is not claiming that one brief treatment guarantees safety in every situation. The main point is that disinfection has a different purpose from screening, settling, or ordinary particle filtration. It is one part of a monitored sequence of barriers. When you explain the complete plant, name both what each stage accomplishes and what it leaves for other stages to handle.",
+      "question": "Which distinction between chlorine and ultraviolet treatment was described?",
+      "options": ["Ultraviolet treatment always removes dissolved salt", "Both work only by screening debris", "Chlorine can leave a disinfectant residual; UV does not", "Neither method addresses microorganisms"],
+      "correct_index": 2
+    }
+  ]
+}

@@ -6,6 +6,7 @@ Strict mode rules: every field required, additionalProperties false, no array-le
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, model_validator
@@ -14,7 +15,7 @@ from ..config import FORMS
 
 
 class Strict(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
 
 class RecapForms(Strict):
@@ -317,6 +318,13 @@ class Animation(Strict):
             raise ValueError("animation needs inline svg or canvas")
         if "<script" not in low:
             raise ValueError("animation needs an inline script")
+        scripts = re.findall(r"<script\b[^>]*>(.*?)</script\s*>", html, flags=re.I | re.S)
+        if len(scripts) != 1:
+            raise ValueError("animation needs exactly one inline script")
+        if "//" in scripts[0] or "/*" in scripts[0]:
+            raise ValueError(
+                "animation script must omit comments so compact HTML cannot comment out its motion"
+            )
         for bad in _ANIMATION_FORBIDDEN:
             if bad in low:
                 raise ValueError(f"animation must not use {bad.strip()!r}")
@@ -397,7 +405,9 @@ def pick_artifact(artifacts: dict, family: str) -> tuple[str, dict | str]:
     if family == "words":
         return "words", _words_content(artifacts)
     if family == "analogy":
-        return "analogy", artifacts.get("analogy") or ""
+        if _present(artifacts.get("analogy")):
+            return "analogy", artifacts["analogy"]
+        return "words", _words_content(artifacts)
     plan = artifacts.get("plan") or {}
     if family == "visual":
         order = [plan.get("visual"), "diagram"] if plan else []

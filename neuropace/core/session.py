@@ -22,8 +22,9 @@ from ..ids import new_id
 from ..llm.artifacts import build_package
 from ..llm.client import LLMClient, LLMUnavailable
 from ..llm.fallback import recap_forms as offline_recap
-from ..signal.features import DetectorEvent, FocusEngine
-from ..signal.headset import make_headset
+from ..signal.features import Baseline, DetectorEvent, DropDetector, FocusEngine
+from ..signal.headset import headset_port_key, make_headset
+from ..signal.personal_calibration import DURATION_SECONDS, fit_personal_baseline
 from ..signal.thinkgear import TGEvent
 from ..store.db import DB
 from ..totem.bridge import make_totem
@@ -54,8 +55,13 @@ class SessionRuntime:
         tick_interval: float = 1.0,
         drive_manually: bool = False,
         headset_auto: bool = False,
+        device_lock: asyncio.Lock | None = None,
+        runtimes: dict[str, SessionRuntime] | None = None,
+        startup_calibration: bool = False,
     ) -> None:
         self.s = s
+        self._device_lock = device_lock or asyncio.Lock()
+        self._runtimes = runtimes if runtimes is not None else {}
         self.db = db
         self.llm = llm
         self.session = session
@@ -87,7 +93,7 @@ class SessionRuntime:
         self.recaps = RecapScheduler(s, llm, self.transcript, self.ring, self._on_recap, keyterms)
         self.recaps.on_unavailable = lambda reason: self.notice(
             "error",
-            f"Recaps unavailable ({reason}). Catch-ups show the verbatim transcript until it recovers.",
+            "Explanations are temporarily unavailable. Catch-ups show the lecture's own words for now.",
         )
         self.flags: dict[str, dict] = {}
         self.open_eeg_flag: str | None = None
@@ -132,6 +138,15 @@ class SessionRuntime:
         self.catchups_shown = 0
         self.notices: list[dict] = []
         self._focus_hist: list[dict] = []
+        self._personal_calibration: dict | None = None
+        self.startup_calibration: dict | None = (
+            {"status": "waiting"}
+            if startup_calibration and self.headset.kind == "real" and self.mode != "review"
+            else None
+        )
+        if self.startup_calibration:
+            self.clock = LiveClock()
+        self._save_baseline_on_end = not self.calibration_pending
         self.review_only = self.mode == "review"  # headset only: no transcript, no recaps, no gaps
         self._raw_acc: list[float] = []
         self._raw_chunk: list[float] = []
@@ -165,6 +180,7 @@ class SessionRuntime:
             and hasattr(self.transcriber, "start")
             and self.transcript_kind == "scripted"
             and not self.drive_manually
+            and not self.calibration_pending
         ):
             await self.transcriber.start()
         self.db.update_session(
@@ -219,6 +235,116 @@ class SessionRuntime:
                 )
             elif not prev[2] and key[2]:
                 self.notice("info", "Headset back. Focus tracking resumed.")
+
+    @property
+    def calibration_pending(self) -> bool:
+        return self.startup_calibration is not None and self.startup_calibration["status"] != "complete"
+
+    def startup_calibration_status(self) -> dict | None:
+        if self.startup_calibration is None:
+            return None
+        last = self.engine.last
+        clean = bool(
+            self.headset.kind == "real"
+            and self.engine.external
+            and self.headset_status()["stream"]["live"]
+            and last
+            and last.quality == "good"
+            and not last.artifact
+            and last.x is not None
+            and not self.engine.extra.get("cal_phase")
+        )
+        remaining = DURATION_SECONDS
+        if self.startup_calibration["status"] == "collecting" and self._personal_calibration:
+            remaining = max(0, DURATION_SECONDS - (self.clock.now() - self._personal_calibration["t_start"]))
+        return {**self.startup_calibration, "clean": clean, "remaining_seconds": remaining}
+
+    async def complete_startup_calibration(self) -> dict:
+        if self.status != "running" or self.startup_calibration is None:
+            raise ValueError("No startup calibration is pending")
+        if self.startup_calibration["status"] == "complete":
+            return self.startup_calibration_status()
+        if self.startup_calibration["status"] != "saved":
+            raise ValueError("Complete the focused calibration before starting the lecture")
+        b = self.engine.baseline
+        self.engine = FocusEngine(self.s, stored_baseline=(b.mu, b.sigma))
+        self.clock = MediaClock() if self.mode == "recorded" else LiveClock()
+        self._focus_hist.clear()
+        self._focus_buf.clear()
+        self._last_tick_t = -1.0
+        self.startup_calibration = {"status": "complete"}
+        if isinstance(self.transcriber, ScriptedTranscript):
+            self.transcriber.clock = self.clock
+            if not self.drive_manually:
+                await self.transcriber.start()
+        self.broadcast(self.snapshot())
+        return self.startup_calibration_status()
+
+    def begin_personal_calibration(self) -> dict:
+        if self.status != "running" or (self.mode != "review" and not self.calibration_pending):
+            raise ValueError("Personal calibration requires session startup or a headset-only review session")
+        if self.startup_calibration and self.startup_calibration["status"] == "failed":
+            self._personal_calibration = None
+        if self.headset.kind != "real" or not self.engine.external:
+            raise ValueError("Personal calibration requires the real headset pipeline")
+        self._save_baseline_on_end = False
+        if self._personal_calibration is not None:
+            raise ValueError("Personal calibration is already started")
+        if not self.headset_status()["stream"]["live"]:
+            raise ValueError("Wait for a live headset stream before calibrating")
+        last = self.engine.last
+        if not last or last.quality != "good" or last.artifact or self.engine.extra.get("cal_phase"):
+            raise ValueError("Wait for clean signal outside a diagnostic calibration phase")
+        previous = self.db.get_learner(self.learner["id"])
+        self._personal_calibration = {
+            "t_start": self.clock.now(),
+            "previous_at": previous["baseline_at"],
+            "result": None,
+        }
+        result = {"t_start": self._personal_calibration["t_start"], "duration_seconds": DURATION_SECONDS}
+        self.broadcast({"type": "personal_calibration", "status": "collecting", **result})
+        if self.calibration_pending:
+            self.startup_calibration = {"status": "collecting"}
+            self.broadcast({"type": "startup_calibration", **self.startup_calibration_status()})
+        return result
+
+    def finish_personal_calibration(self, apply: bool = False) -> dict:
+        calibration = self._personal_calibration
+        if calibration is None:
+            raise ValueError("Personal calibration has not started")
+        if self.status != "running" or self.headset.kind != "real" or not self.engine.external:
+            raise ValueError("Personal calibration requires a running real headset pipeline")
+        if self.clock.now() < calibration["t_start"] + DURATION_SECONDS:
+            raise ValueError("Wait for the full 30 seconds before finishing calibration")
+        if calibration["result"] is None:
+            calibration["result"] = {
+                **fit_personal_baseline(self._focus_hist, calibration["t_start"], self.s),
+                "t_start": calibration["t_start"],
+                "learner_id": self.learner["id"],
+                "saved": False,
+            }
+        result = calibration["result"]
+        if apply and not result["saved"]:
+            if not self.db.compare_and_set_learner_baseline(
+                self.learner["id"], result["mu"], result["sigma"], calibration["previous_at"]
+            ):
+                raise ValueError("The learner baseline changed during calibration; start a fresh calibration")
+            if self.open_eeg_flag:
+                self._close_flag(self.open_eeg_flag, self.clock.now())
+                self.open_eeg_flag = None
+            self.engine.baseline = Baseline.from_stored(result["mu"], result["sigma"], self.s.sigma_floor)
+            self.engine._zwin.clear()
+            self.engine.detector = DropDetector(self.s)
+            self.learner = self.db.get_learner(self.learner["id"])
+            self.db.update_session(
+                self.id,
+                baseline={"mu": result["mu"], "sigma": result["sigma"], "stored": True, "ready": True},
+            )
+            result["saved"] = True
+            if self.calibration_pending:
+                self.startup_calibration = {"status": "saved"}
+            self.broadcast({"type": "personal_calibration", "status": "saved", **result})
+        return dict(result)
 
     def calibrate(self, phase: str) -> None:
         """Drive the mindwave pipeline's three-anchor calibration (eyes_closed | easy | hard | done | reset)."""
@@ -276,6 +402,7 @@ class SessionRuntime:
             "policy": self.policy,
             "auto_pause": self.auto_pause,
             "transcript_kind": self.transcript_kind,
+            "startup_calibration": self.startup_calibration_status(),
             "words": self.transcript.to_dicts(),
             "flags": [self._flag_public(f) for f in self.flags.values()],
             "recaps": self.ring.all(),
@@ -363,10 +490,11 @@ class SessionRuntime:
         self.broadcast({"type": "headset", **self.headset_status()})
 
     def _on_totem_tap(self, _mono: float) -> None:
-        self.tap(source="tap")
+        if not self.calibration_pending:
+            self.tap(source="tap")
 
     def _on_words(self, words: list[Word], final: bool) -> None:
-        if self.status != "running":
+        if self.status != "running" or self.calibration_pending:
             return
         if final:
             added = self.transcript.append(words)
@@ -388,13 +516,13 @@ class SessionRuntime:
             self._on_words(batch, True)
 
     def set_media_time(self, t: float, playing: bool) -> None:
-        if isinstance(self.clock, MediaClock):
+        if isinstance(self.clock, MediaClock) and not self.calibration_pending:
             self.clock.set(t, playing)
             self._reveal_recorded_words(self.clock.now())
 
     async def audio_start(self, sample_rate: int) -> None:
         self.audio_sample_rate = int(sample_rate) or 16000
-        if self.transcript_kind != "deepgram":
+        if self.transcript_kind != "deepgram" or self.calibration_pending:
             return
         if not self.s.deepgram_api_key:
             self.notice("warn", "No DEEPGRAM_API_KEY: audio ignored, transcript is scripted or empty")
@@ -485,14 +613,15 @@ class SessionRuntime:
                 forms = dict.fromkeys(FORMS, "(nothing transcribed yet for this span)")
                 source = "transcript"
             recap = Recap(flag["t_start"], t, forms, source)
+        form = "words" if recap.source == "transcript" else self.best_form
         return {
             "type": "catchup",
             "flag_id": flag["id"],
             "since": flag["t_start"],
             "span_seconds": round(max(0.0, t - flag["t_start"]), 1),
             "linked_eeg": flag.get("linked_eeg"),
-            "form": self.best_form,
-            "line": recap.forms.get(self.best_form) or recap.forms.get("plain", ""),
+            "form": form,
+            "line": recap.forms.get(form) or recap.forms.get("words") or recap.forms.get("plain", ""),
             "now_text": self._now_text(t),
             "forms": recap.forms,
             "source": recap.source,
@@ -540,6 +669,8 @@ class SessionRuntime:
             self.broadcast({"type": "catchup_withheld", "flag_id": f["id"], "reason": "randomized policy"})
             return
         card = self._build_catchup(f, t)
+        f["catchup_form"] = card["form"]
+        self._persist_flag(f)
         card["auto_show"] = auto_show
         card["reason"] = reason
         if auto_show:
@@ -596,6 +727,8 @@ class SessionRuntime:
         self.broadcast({"type": "catchup_dismissed", "flag_id": flag_id})
 
     def _on_detector_events(self, events: list[DetectorEvent], t: float) -> None:
+        if self.calibration_pending:
+            return
         for ev in events:
             if ev.kind == "enter":
                 t_start, _ = eeg_span(self.transcript, ev.t, None, self.s)
@@ -622,7 +755,7 @@ class SessionRuntime:
         t = self.clock.now() if t is None else t
         self.board.prune(t)
         paused = self.clock.paused
-        if self.mode == "recorded":
+        if self.mode == "recorded" and not self.calibration_pending:
             self._reveal_recorded_words(t)
         sample, events = self.engine.tick(t, paused=paused)
         d = sample.to_dict()
@@ -641,11 +774,23 @@ class SessionRuntime:
         self._broadcast_headset_if_changed()
         self._maybe_attach_totem(t)
         self._maybe_attach_headset(t)
-        if not self.review_only:
+        if not self.review_only and not self.calibration_pending:
             self.recaps.maybe_run(t)
+        if self.calibration_pending:
+            d.update(state="baseline" if d["quality"] == "good" else "bad", z=None, w15=None)
         self._focus_hist.append(d)
         if len(self._focus_hist) > 4000:
             self._focus_hist = self._focus_hist[-2000:]
+        if self.calibration_pending:
+            if self.startup_calibration["status"] == "collecting" and self._personal_calibration:
+                if self.clock.now() >= self._personal_calibration["t_start"] + DURATION_SECONDS:
+                    try:
+                        self.finish_personal_calibration(apply=True)
+                    except ValueError as error:
+                        self.startup_calibration = {"status": "failed", "error": str(error)}
+            self.broadcast({"type": "startup_calibration", **self.startup_calibration_status()})
+            self.broadcast({"type": "focus", **d})
+            return d
         self._focus_buf.append(d)
         if len(self._focus_buf) >= 5:
             self.db.add_focus_samples(self.id, self._focus_buf)
@@ -702,17 +847,35 @@ class SessionRuntime:
         from ..signal.headset import autodetect_headset_port
 
         port = await asyncio.to_thread(autodetect_headset_port)
+        async with self._device_lock:
+            if any(
+                rt is not self
+                and rt.status in ("running", "ending")
+                and rt.headset.kind in ("real", "virtual")
+                and headset_port_key(getattr(rt.headset, "port", None)) == headset_port_key(port)
+                for rt in self._runtimes.values()
+            ):
+                return
+            await self._attach_headset(port)
+
+    async def _attach_headset(self, port: str | None) -> None:
         if not port or self.status != "running" or self.headset.kind != "simulated":
             return
         old = self.headset
         new = self._make_real_headset(port)
         try:
             await new.start()
+        except asyncio.CancelledError:
+            await new.stop()
+            raise
         except Exception as e:  # noqa: BLE001
             log.warning("headset found on %s but failed to start: %s", port, e)
             return
         with contextlib.suppress(Exception):
             await old.stop()
+        if self.status != "running":
+            await new.stop()
+            return
         self.headset = new
         # the simulator's baseline means nothing for a real forehead: the engine starts over (stored baseline kept)
         b = self.engine.baseline
@@ -759,7 +922,12 @@ class SessionRuntime:
         if self._focus_buf:
             self.db.add_focus_samples(self.id, self._focus_buf)
             self._focus_buf = []
-        if self.engine.baseline.ready and not self.engine.baseline.stored:
+        if (
+            self._save_baseline_on_end
+            and self.headset.kind == "real"
+            and self.engine.baseline.ready
+            and not self.engine.baseline.stored
+        ):
             self.db.set_learner_baseline(
                 self.learner["id"], self.engine.baseline.mu, self.engine.baseline.sigma
             )  # type: ignore[arg-type]

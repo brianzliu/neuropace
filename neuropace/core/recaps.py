@@ -44,7 +44,7 @@ class RecapRing:
         (for a span shorter than one window this is simply the latest recap that reaches into it)."""
         cands = [r for r in self._items if r.t_to <= t + 2.0]
         if not cands:
-            return self.latest()
+            return None
         best, best_key = None, None
         for r in cands:
             overlap = max(0.0, min(r.t_to, t) - max(r.t_from, span_start))
@@ -53,7 +53,7 @@ class RecapRing:
                 best, best_key = r, key
         if best is not None and best_key is not None and best_key[0] > 0:
             return best
-        return self.latest()
+        return None
 
     def all(self) -> list[dict]:
         return [r.to_dict() for r in self._items]

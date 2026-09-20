@@ -5,11 +5,12 @@ a plan (which visual and which doing template fit the moment); then one focused 
 the data that template renders. Each template prompt lists its fields and nothing else.
 """
 
-PROMPT_VERSION = "5"
+PROMPT_VERSION = "9"
 
 GROUNDING = (
     "Ground every word in the transcript text you are given. Quote or closely paraphrase it. "
     "Never introduce facts, names, numbers or examples that are not in the transcript. "
+    "Preserve qualifications: a specific comparison does not justify a general verdict about reliability or superiority. "
     "If the transcript is too thin to support a field, write a short honest line such as "
     "'the lecturer only mentioned X here' instead of inventing content. Plain text only, no markdown, no bullet symbols."
 )
@@ -20,7 +21,7 @@ RECAP_INSTRUCTIONS = (
     "- words: the point stated plainly, naming the key term.\n"
     "- analogy: the point as an everyday comparison, with the mapping explicit (X is like Y because Z).\n"
     "- visual: the point as something you could picture: a relation, a formula, or a one-line sketch in words (A -> B because C).\n"
-    "- doing: the point as a step or a concrete example the student could carry out (if you have 3 satellites, then ...).\n"
+    "- doing: the point as a step or a concrete example the student could carry out, using only the stated quantities.\n"
     "Write for a glance: no preamble, no 'the lecturer said'. " + GROUNDING
 )
 
@@ -50,7 +51,12 @@ TEMPLATE_INSTRUCTIONS: dict[str, str] = {
         "Explain the missed idea by comparison with an everyday situation. Fields: story (at most 80 words: the "
         "everyday situation told so the idea's behaviour shows through), mapping (2 to 5 pairs: idea = the lecture's "
         "term or part, everyday = what it stands for in the story), caveat (one line: where the comparison stops "
-        "holding). Keep the lecturer's terms exact in 'idea'. " + GROUNDING
+        "holding). Keep the lecturer's terms exact in 'idea'. The everyday story is explicitly an invented comparison, "
+        "not something the lecturer said. Preserve the roles, direction of cause and effect, and any essential counts "
+        "or constraints. Never change four required signals into three, or confuse the receiver being located with "
+        "the sources whose positions are known. Prefer a simpler partial comparison with a precise caveat over a "
+        "vivid but misleading story. Ground the lecture side of every mapping in the supplied transcript; only the "
+        "everyday setting may be invented. Plain text only."
     ),
     "diagram": (
         "Draw the missed idea as a concept graph. Fields: title; nodes (3 to 7, ids n1, n2, ..., labels of at most 4 "
@@ -70,7 +76,8 @@ TEMPLATE_INSTRUCTIONS: dict[str, str] = {
         "40 points {x, y} sampled along the curve); annotations (0 to 4 short labels at notable points: a crossing, a "
         "peak, a threshold); illustrative: false only when the points come from numbers or a formula the lecturer "
         "actually gave, true when you are drawing the SHAPE the lecturer described (rising, saturating, crossing) with "
-        "unit-free axes; takeaway (one line: what the shape means). " + GROUNDING
+        "unit-free axes; takeaway (one line: what the shape means). Sampling additional points from a stated formula "
+        "is allowed: use 6 to 40 points so a curve is not reduced to a few straight segments. " + GROUNDING
     ),
     "timeline": (
         "Lay the missed content out in order. Fields: title; events (3 to 8, in order: when = a date, year, time or "
@@ -84,7 +91,8 @@ TEMPLATE_INSTRUCTIONS: dict[str, str] = {
     ),
     "steps": (
         "Turn the missed procedure into steps a student could follow. Fields: title; steps (2 to 8, in order, each at "
-        "most 15 words, one action per step, using the lecturer's terms). " + GROUNDING
+        "most 15 words, one action per step, using the lecturer's terms). Do not repeat the same action in different words. "
+        + GROUNDING
     ),
     "example": (
         "Carry one concrete instance of the missed idea through to its result. Fields: title; lines (2 to 8, one beat "
@@ -97,6 +105,14 @@ TEMPLATE_INSTRUCTIONS: dict[str, str] = {
         "html rules: ONE <div> wrapping an inline <svg viewBox='0 0 600 260' width='100%'> (or a <canvas width=600 "
         "height=260 style='width:100%'>) and ONE inline <script>. Animate with requestAnimationFrame, loop forever, one "
         "cycle of 4 to 8 seconds. Label the moving parts with short text. Use fill='currentColor' for text and outlines "
+        "Drive motion from the requestAnimationFrame timestamp, never a fixed increment per rendered frame. "
+        "Preserve every stated motion constraint, including acceleration and slowing: a pendulum must ease at "
+        "each end and move fastest at the bottom, rather than reversing at constant speed. "
+        "For back-and-forth motion use a signed full-cycle sinusoid: angle = amplitude * Math.sin(2 * Math.PI * "
+        "elapsed / period). A pendulum must pass through the bottom and reach BOTH left and right extremes. "
+        "Do not use a positive-only half-sine or separate easing halves, which can omit half the swing. "
+        "Check the depicted positions at phase 0, 1/4, 1/2, 3/4 and 1 before returning the animation. "
+        "Do not include JavaScript comments. Place the script AFTER the closing svg or canvas tag. "
         "so it reads on light and dark backgrounds, #1cb0f6 for the main moving part and #ff9600 for a second one. No "
         "external resources of any kind (no http, no import, no fetch, no fonts, no libraries), no cookies or storage, "
         "no access to parent or top, no eval. Under 4000 characters. Depict only what the lecturer described; if a "

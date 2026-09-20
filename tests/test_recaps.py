@@ -23,7 +23,8 @@ def test_long_span_prefers_the_recap_with_most_coverage_later_on_ties():
     assert r.lookup(62.0, 35.0).t_to == 60.0
 
 
-def test_no_overlap_falls_back_to_latest_and_empty_ring_is_none():
+def test_no_overlap_or_future_recaps_require_current_transcript():
     r = _ring()
-    assert r.lookup(300.0, 250.0).t_to == 100.0
+    assert r.lookup(300.0, 250.0) is None
+    assert r.lookup(5.0, 0.0) is None
     assert RecapRing().lookup(10.0, 2.0) is None

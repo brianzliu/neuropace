@@ -1,5 +1,6 @@
 import LiveCapture, { type CaptureStatus } from "../components/LiveCapture";
-import type { BoardExplanation } from "../lib/types";
+import type { BoardExplanation, StartupCalibration } from "../lib/types";
+import PersonalCalibration from "../components/PersonalCalibration";
 import { backendFetch } from "../lib/backend";
 import { ConnectionPills, type ConnectionPill } from "../components/StudioChrome";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -15,7 +16,7 @@ import SessionPlayer from "../components/SessionPlayer";
 import { mmss } from "../lib/format";
 import { readLocalSetting, writeLocalSetting } from "../lib/storage";
 
-const BOARD_EXPLANATION_TIMEOUT_MS = 12000;
+const BOARD_EXPLANATION_TIMEOUT_MS = 90000;
 
 type SimState = "focused" | "drifting" | "poor";
 type CalPhase = "eyes_closed" | "easy" | "hard" | "done" | "reset";
@@ -47,6 +48,8 @@ export default function Live() {
   const nav = useNavigate();
   const [state, setState] = useState<SessionState>(initialState);
   const [status, setStatus] = useState<SocketStatus>("connecting");
+  const [calibration, setCalibration] = useState<StartupCalibration | null>(null);
+  const calibrating = !!calibration && calibration.status !== "complete";
   const [wsError, setWsError] = useState<string | null>(null);
   const [cycleToken, setCycleToken] = useState(0);
   const [board, setBoard] = useState<BoardExplanation | null>(null);
@@ -58,8 +61,9 @@ export default function Live() {
   const [micError, setMicError] = useState<string | null>(null);
   const micRef = useRef<MicStream | null>(null);
   const micGeneration = useRef(0);
+  const micStartup = useRef<AbortController | null>(null);
   const [micStarting, setMicStarting] = useState(false);
-  useEffect(() => () => { micGeneration.current++; void micRef.current?.stop(); micRef.current = null; }, []);
+  useEffect(() => () => { micGeneration.current++; micStartup.current?.abort(); void micRef.current?.stop(); micRef.current = null; }, []);
   const [simState, setSimState] = useState<SimState>("focused");
   const [calPhase, setCalPhase] = useState<CalPhase | null>(null);
   const [details, setDetails] = useState<boolean>(() => {
@@ -89,12 +93,14 @@ export default function Live() {
     const sock = new SessionSocket(
       sessionId,
       (m) => {
+        if (m.type === "hello") setCalibration(m.startup_calibration ?? null);
+        if (m.type === "startup_calibration") { setCalibration(m); return; }
         if (m.type === "board_explanation") {
           // Board explanations are async, labelled and never replace the transcript
           // catch-up. They can only arrive when randomized withholding allowed it.
           setBoard(m);
           setBoardUnavailable(false);
-          setBoardAwaiting((a) => (m.status !== "pending" && a && a.flagId === m.flag_id ? null : a));
+          setBoardAwaiting((a) => m.status === "pending" ? { flagId: m.flag_id, since: Date.now() } : a?.flagId === m.flag_id ? null : a);
           return;
         }
         if (m.type === "catchup_withheld") {
@@ -105,7 +111,6 @@ export default function Live() {
         if (m.type === "catchup") {
           if (m.reason === "tap") {
             setBoardUnavailable(false);
-            setBoardAwaiting({ flagId: m.flag_id, since: Date.now() });
           }
           setState((s) => reduce(s, m));
           return;
@@ -165,13 +170,16 @@ export default function Live() {
     [send],
   );
 
-  const recording = status === "open" && !state.ended && !ending && !wsError;
+  const recording = !!state.hello && !state.ended && !ending;
 
   const endLecture = useCallback(async (): Promise<boolean> => {
     if (ending) return false;
     setEnding(true);
     try {
       micGeneration.current++;
+      micStartup.current?.abort();
+      micStartup.current = null;
+      setMicStarting(false);
       if (micRef.current) await micRef.current.stop();
       micRef.current = null;
       setMic(null);
@@ -218,14 +226,16 @@ export default function Live() {
   }, [state.ended, ending, nav, sessionId]);
 
   const startMic = useCallback(async () => {
-    if (micRef.current) return;
+    if (micRef.current || micStartup.current) return;
+    const controller = new AbortController();
+    micStartup.current = controller;
     setMicStarting(true);
     const run = ++micGeneration.current;
     setMicError(null);
     try {
       const sock = sockRef.current;
       if (!sock) return;
-      const m = await startMicStream(sock);
+      const m = await startMicStream(sock, controller.signal);
       if (run !== micGeneration.current) {
         await m.stop();
         return;
@@ -233,9 +243,10 @@ export default function Live() {
       micRef.current = m;
       setMic(m);
     } catch (e) {
-      setMicError(micMessage(e));
+      if (run === micGeneration.current && !controller.signal.aborted) setMicError(micMessage(e));
     } finally {
-      setMicStarting(false);
+      if (micStartup.current === controller) micStartup.current = null;
+      if (run === micGeneration.current) setMicStarting(false);
     }
   }, []);
   const stopMic = async () => {
@@ -246,14 +257,14 @@ export default function Live() {
   };
   // a live lecture listens by itself: the microphone starts as soon as the session is open
   useEffect(() => {
-    if (status !== "open" || state.hello?.transcript_kind !== "deepgram" || micTried.current) return;
+    if (calibrating || status !== "open" || state.hello?.transcript_kind !== "deepgram" || micTried.current) return;
     micTried.current = true;
     void startMic();
-  }, [status, state.hello?.transcript_kind, startMic]);
+  }, [calibrating, status, state.hello?.transcript_kind, startMic]);
 
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => {
-      if (inField(ev) || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+      if (calibrating || inField(ev) || ev.metaKey || ev.ctrlKey || ev.altKey) return;
       const k = ev.key.toLowerCase();
       if (blocker.state === "blocked") {
         if (k === "escape") blocker.reset();
@@ -273,7 +284,7 @@ export default function Live() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [doTap, doForce, doSim, doEnd, details, blocker]);
+  }, [doTap, doForce, doSim, doEnd, details, blocker, calibrating]);
 
   const onExpire = useCallback(() => setState((s) => clearCatchup(s)), []);
   const onDismiss = useCallback(() => {
@@ -449,7 +460,7 @@ export default function Live() {
 
   return (
     <>
-      <LiveStage
+      {calibrating && calibration ? <PersonalCalibration sessionId={sessionId} calibration={calibration} headset={state.headset} connected={status === "open"} ending={ending} onEnd={() => void doEnd()} /> : <LiveStage
         state={state}
         capture={hello?.mode === "live" ? <>
           <LiveCapture sessionId={sessionId} active={status === "open" && !ending && !state.ended} onStatus={setCapture} />
@@ -479,7 +490,7 @@ export default function Live() {
         controls={controls}
         head={<>{head}<ConnectionPills pills={pills} /></>}
         details={details}
-      />
+      />}
       {blocker.state === "blocked" ? (
         <div className="modal-back" onClick={() => blocker.reset()} role="presentation">
           <div className="modal" role="dialog" aria-modal="true" aria-labelledby="quit-title" onClick={(e) => e.stopPropagation()}>

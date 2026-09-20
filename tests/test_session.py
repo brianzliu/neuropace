@@ -108,7 +108,7 @@ async def test_live_session_tap_catchup_eeg_flag_notes_and_log(settings, db, llm
     )
     sess = db.get_session(rt.id)
     assert sess["status"] == "ended" and sess["baseline"]["ready"] and sess["headset_kind"] == "simulated"
-    assert db.get_learner(lrn["id"])["baseline_mu"] is not None
+    assert db.get_learner(lrn["id"])["baseline_mu"] is None, "practice data must not calibrate a real wearer"
     assert len(db.get_focus_samples(rt.id)) == 110 and len(db.get_words(rt.id)) == len(
         [w for w in words if w.end <= 110]
     )

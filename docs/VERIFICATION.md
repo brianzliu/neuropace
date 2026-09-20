@@ -2,6 +2,278 @@
 
 What was checked, how, and what is still unverified. Re-run the commands before the demo; the outcomes below are from the build day on Joaquin's laptop (macOS, Python 3.13.14, Node 24, pnpm 11.13, arduino-cli with core arduino:renesas_uno 1.6.0).
 
+## MVP startup and tutor voice integration: 20 Sep 2026
+
+Real-headset lecture sessions now begin with the existing 30-second focused calibration, without reconnecting the headset. Failed calibration preserves the previous baseline; recording and attention flags wait until calibration succeeds and the learner starts the lecture. Simulated practice remains labelled and does not save a personal calibration.
+
+Learning narration uses the separate server-side Deepgram TTS credential, `flux-cole-en`, `/v2/speak`, and expressivity `2`. The actual API returned audio; transcribing the preview recovered its exact wording. Ego played multiple narration beats to completion, advanced the explanation, stopped playback, recovered through Retry voice after an injected HTTP 503, and completed the question/review flow. Re-enabling voice now restarts the current explanation.
+
+Verification: 185 backend tests, 18 frontend tests, lint/format, TypeScript/build, the live-server scripted smoke, and isolated wheel startup passed. The wheel excludes dotenv files. Calibration success, persistence, retry, and same-connection transition were checked with controlled runtime inputs, not new human measurements.
+
+Hardware limitation remains: the real startup check (`sess_79435283`) received zero raw chunks across 46 focus ticks. The browser stayed on Waiting for the headset, disabled calibration, and did not start the microphone. A successful physical-headset calibration-to-lecture run was not verified in this pass. No detector thresholds or EEG feature formulas were changed.
+
+## Signal calibration audit and personal-baseline workflow: 20 Sep 2026
+
+The completed measurement is `sess_33d42adb`, recorded under
+`data/eeg/20260920-003519/`. Brief ElevenLabs prompts were played natively while the browser
+showed a centre dot and the current instruction. There was no lecture or comprehension quiz.
+Earlier interrupted lesson/audio attempts are not included in this analysis.
+
+### Manual audit of the real recording
+
+The audit is reproducible with:
+
+```
+uv run --group monitor python -m scripts.audit_eeg_calibration data/verification/trial-20260920-003412 --plots
+```
+
+The local output directory contains `manual-audit.json`, `manual-audit.png`, the original
+phase markers and telemetry. Participant-level artifacts and generated speech files are now
+ignored by git. They are not bundled into the distribution.
+
+| Check | Measured result |
+|---|---|
+| Raw input | 93,687 real samples at the nominal 512 Hz rate; no int16 rail clipping |
+| Raw-to-feature reconstruction | All 179 logged four-second windows reproduced from raw data; maximum error 0.000049975, within the stored four-decimal rounding |
+| Signal availability | 179 valid pipeline windows; 192 runtime ticks included startup without usable signal; 178 runtime ticks reported poor_signal=0 |
+| Band routing | Independent 6, 10 and 20 Hz input checks selected theta, alpha and beta respectively |
+| Eyes-closed response | Alpha power increased about 3.8 times; the recomputed eyes-closed spectrum had a clear 9 Hz alpha peak |
+| Artifact review | Median masked fraction was zero in the eyes-open, eyes-closed and counting windows, and 5.71% during the instructed daydream block |
+| Actual live automatic attention flags | Zero |
+
+The actual engagement ratio, expressed as a geometric mean of beta/(alpha+theta), was
+approximately 0.485 during the first counting block, 0.406 during daydreaming and 0.642
+during counting again. The raw index varied substantially within blocks. Theta/alpha effort
+was higher during daydreaming than during counting, so it must not simply be renamed an
+attention score. Forehead beta/gamma can contain muscle activity; good contact alone does
+not prove that every change is cognitive.
+
+### Why the live detector did not fire, and what the replay establishes
+
+The live diagnostic's automatic focus baseline included deliberate eyes-closed and relaxed
+periods. That is not an appropriate focused-lecture reference. During the later daydream
+block, its 15-second z average reached only -0.63, above the unchanged -1.25 entry threshold.
+The diagnostic exposed baseline contamination, not an end-to-end successful attention test.
+
+An exploratory replay kept the same feature, smoothing, sigma floor, -1.25 entry, -0.6 exit,
+cap and refractory logic. Its reference was fitted only on the first counting block, then
+run forward through the later data. It entered a drop at session time 137.008, ten seconds
+after the recorded daydream phase began, and exited at 151.008. It produced no entry during
+the later counting block. Daydream minimum w15 was -1.954; later counting minimum was -0.795.
+No threshold was selected using those later outcomes.
+
+Important distinction: this replay used the legacy `baseline_seconds=30` rehearsal rule,
+which finalizes after 18 clean samples. The new explicit personal-calibration workflow below
+waits for the full 30-second window. The replay is not a live validation of that new workflow.
+One instructed daydream block and one later counting block cannot establish sensitivity,
+specificity or a personal optimum. Task labels remain instructed conditions rather than
+independent verification of the participant's actual mental state. Adjacent EEG windows overlap
+and must not be treated as independent participants. A future focused-only live run and a
+real-lesson outcome check are still required before claiming reliable catch-up effectiveness.
+
+### Changes made after the audit
+
+- Explicit pipeline diagnostic phases no longer update the normal focus baseline/EMA or
+  open attention-lapse flags. Raw waves and diagnostic band measurements continue. Both
+  contamination and spurious-flag regression tests failed before the guard and passed after it.
+- `scripts/calibrate_user.py` measures a focused 30-second window after clean-signal preflight.
+  Default mode is a preview. `--apply` saves a personal baseline only after at least 24 distinct
+  seconds pass the existing contact/artifact gates, with no missing run longer than two seconds.
+  Simulated, paused, nonfinite and diagnostic-phase samples cannot qualify. The stored values
+  are the mean and sample deviation of the existing smoothed log engagement, with the existing
+  sigma floor. Feature weights and entry/exit z thresholds are unchanged.
+- Saving is compare-and-set against the prior baseline timestamp. A newer calibration cannot
+  be overwritten; failures, previews and session shutdown preserve the previous baseline.
+  Tests also cover a fresh consumer session loading the saved values.
+- The additive `baseline_source` field distinguishes explicit personal calibration from old
+  automatic references. A new session reuses an explicit personal baseline by default;
+  `use_stored_baseline=false` still requests a fresh baseline. Legacy automatic references
+  retain the old opt-in behavior. Profile reset clears the new metadata too.
+- No baseline from the mixed diagnostic was applied to the device learner. On the restarted
+  server, the device's `baseline_source` remained null. The new 30-second routine was verified
+  with hermetic data and API tests, not a new live wearer calibration in this pass.
+
+Commands:
+
+```
+uv run python scripts/calibrate_user.py
+uv run python scripts/calibrate_user.py --apply
+```
+
+### Verification after the last implementation edit
+
+`uv run python scripts/verify_readiness.py` passed: **181 backend tests**, **15 frontend
+tests**, lint, format (97 Python files), TypeScript/Vite build, evaluation self-test, wheel
+build and isolated distribution startup. All **4 personal-calibration mutants** and all
+**5 audio mutants** were killed. `git diff --check` passed. The backend was restarted as
+PID 84124, and a fresh HTTP client verified both personal-calibration endpoints in the live
+OpenAPI schema. No scientific accuracy percentage is implied by these software tests.
+
+Browser audio delivery remains unresolved and was explicitly deferred by the user; the
+successful native ElevenLabs playback is not labelled a browser fix. No commit or push was made.
+
+## Latest battery retest: 19 Sep 2026, 23:31
+
+The user tried another battery before any proposed transport change. The implementation,
+Bluetooth helper, reconnect policy and running backend were unchanged for both tests.
+The previous streaming/reconnect failure did not reproduce with this battery.
+
+| Check | Result |
+|---|---|
+| 60 s recording, `sess_71ff3e3e` | 3,216 decimated raw samples (402 display chunks). First data after 9.84 s; maximum subsequent inter-chunk gap 0.240 s; stream live at end, newest chunk age 0.10 s. Bluetooth continuity passed. |
+| Signal quality in that recording | 17/60 good and valid focus ticks; insufficient valid input to complete the 30 s test baseline. The combined test command exited nonzero for this reason, not for a Bluetooth dropout. Its generic "No sustained stream" exit text was misleading and is not the interpretation used here. |
+| Fresh session after ending, `sess_6d323e42`, 45 s | 2,312 decimated raw samples (289 chunks). First data after 9.25 s; maximum subsequent gap 0.208 s; stream live at end, newest chunk age 0.01 s. Reconnect passed without a headset reset between these sessions. |
+| Fresh calibration in the second session | 29/45 good and valid focus ticks, including 27 ticks with poor_signal=0. A new baseline completed (`stored: false`, `ready: true`); the test did not rely on the previous saved baseline. |
+
+Both runs reported `kind: real`, `simulated: false`. The initial no-signal ticks include
+connection and feature-window startup. Brief poor-contact readings remained during the
+second run, but they did not interrupt the Bluetooth byte stream. Recordings are under
+`data/eeg/20260919-233122/` and `data/eeg/20260919-233302/`. Both lectures were ended cleanly.
+
+**Current conclusion:** this battery replacement/power cycle restored continuous Bluetooth
+streaming and session-to-session reconnect in the unchanged app. Contact still determines
+whether a frame can be used for focus. The earlier five-second native-startup watchdog
+concern is a possible robustness issue, not an established cause of the historical failures;
+no transport change was applied. This result supersedes the Bluetooth blocker recorded below,
+but is not a long-duration reliability claim or a verification of the other deferred hardware.
+
+## Battery replacement retest: 19 Sep 2026, 23:15
+
+The user replaced the headset battery. Both checks below used the same running backend
+and unchanged implementation. EEG was real; the lecture transcript was the labelled GPS
+practice script, so no microphone capture was needed.
+
+| Check | Result |
+|---|---|
+| Repeat the prior 60 s test, session `sess_5d16dccc` | 1,968 decimated raw display samples (246 chunks); 21/60 focus ticks had good signal; the 30 s test baseline became ready. First raw data arrived after 10.47 s. The original minimum gate passed, but the maximum inter-chunk gap was 8.32 s and the stream was no longer live at the end. |
+| Browser | Observed real waves, "LIVE FROM YOUR HEADSET" and "Steady" after calibration. The view also showed the appropriate adjustment/lost-signal states when quality or liveness deteriorated. |
+| Concurrent device ownership | A second lecture requesting the same headset returned 409; the first session kept running. |
+| End and reacquire, session `sess_610e113e` | Only 16 decimated display samples (2 chunks) in 60 s; zero good or valid focus ticks; zero pipeline feature frames. The stream was not live at the end. Reconnect check failed. |
+| Stored baseline | The second session correctly loaded the first test learner's baseline (`stored: true`, `ready: true`), but this did not count as live or valid EEG. No simulated frames were substituted. |
+
+Recordings: `data/eeg/20260919-231537/` and `data/eeg/20260919-231706/`.
+Both test lectures were ended cleanly. The test learner was "Readiness hardware check";
+the device learner's calibration was not reset or overwritten by these tests.
+
+**Conclusion:** battery replacement/power cycling restored usable EEG temporarily. It did
+not establish reliable sustained streaming or session-to-session reconnect. Contact varied
+in the first run; the second had insufficient data to infer actual contact quality from
+the default quality value. The remaining cause is unknown, and the hardware readiness
+blocker stays open. No implementation changes or fresh software-suite claims accompany
+this hardware-only retest.
+
+## Latest readiness pass: 19 Sep 2026, after the state handoff
+
+This section is the current evidence. Sections below it are historical runs, including
+older statements that no headset or provider key was available. Base commit:
+`8a1cb94a5e5166d5ce0070e55358e6a41ba3f626`, with the prior agents' uncommitted work preserved.
+No commit, push, deployment, repository dependency change, or learner reset was performed.
+
+### Changes and differential checks
+
+- **Installed distribution:** the original wheel built successfully but a fresh consumer
+  outside the checkout found neither the SPA nor the practice lecture. The source checkout
+  passed because those assets were outside the Python package. The wheel now includes them
+  under `neuropace/_assets`; app serving and doctor share the same resource paths.
+  `scripts/verify_distribution.py` first failed on the old wheel, then passed on the rebuilt
+  wheel in an isolated subprocess and directory. It checks SPA routes, every bundled asset,
+  health, the seeded practice lecture, and the native Swift helper.
+- **Microphone startup and cancellation:** five new regression cases initially failed because
+  pending browser operations never settled and cancellation did not release late-granted
+  capture. Permission, context startup and worklet loading now have bounded waits; leaving
+  or ending aborts pending startup. Tracks and blob URLs are released on failure, and a
+  browser context whose close never resolves cannot prevent session end. Successful PCM16
+  conversion, idempotent stop, permission denial and unavailable-socket behavior remain tested.
+- **Honest completion:** the UI used to say "You stayed with it the whole way" even when
+  microphone startup failed and zero words were captured. Both zero-word and ordinary
+  zero-gap regression cases failed first. The completion screen now distinguishes missing
+  capture from no saved moments, without making an unsupported claim about attention.
+- **Generated motion:** the first live-provider pendulum output passed schema validation but
+  only moved from x=300 to x=380, never left of the pivot. Prompt version 9 explicitly requires
+  a signed full-cycle sinusoid and checks both extremes. A fresh generated sample passed the
+  sandboxed browser fixture check: 121 frames, x=253.27 to x=346.73 around pivot x=300,
+  displacement per 50 ms of 2.512 near the bottom versus 0.061 near the extreme. The saved
+  old output still fails the exact same checker with "Pendulum does not swing to both sides".
+  This is evidence for this fixture, not a guarantee about every future generated explanation.
+
+### Final automated run
+
+Entry point: `uv run python scripts/verify_readiness.py --base http://127.0.0.1:8765`.
+Executed after the last implementation edit, against a newly started backend process.
+
+| Check | Result |
+|---|---|
+| `uv run pytest -q` | 135 passed in 51.52 s; baseline was also 135, no tests removed |
+| `uv run ruff check neuropace tests scripts` | clean |
+| `uv run ruff format --check neuropace tests scripts` | 84 files already formatted |
+| `cd frontend && pnpm test` | 15 passed: 12 audio cases and 3 completion cases |
+| `cd frontend && node audio.mutations.mjs` | 5/5 in-memory mutants killed: timeout, cancellation, cleanup, PCM scaling, idempotence |
+| `cd frontend && pnpm build` | TypeScript check and Vite build passed, 102 modules |
+| `uv run neuropace sim selftest` | SELFTEST PASS |
+| `uv build --wheel` and `scripts/verify_distribution.py` | isolated distribution startup passed |
+| `git diff --check` | clean |
+| Live-server smoke | SMOKE PASS, session `sess_79ed8062`, tap-to-catch-up 3 ms, LLM gap package, review and tally updated |
+
+The primary server was restarted as PID 76517 on port 8765 after confirming no lecture was
+running. The effective provider/model is OpenRouter / `openai/gpt-4.1-mini`, prompt version 9.
+The served frontend bundle is `index-Crcc4QLr.js`. No provider credentials were changed.
+
+Additional opt-in check: `uv run python scripts/verify_templates.py` produced all nine
+schema-valid artifacts from the real provider, with 9 calls, no fallback, no error and no
+timeout. Outputs are in `data/verification/templates.json`. With an authorized active
+browser workspace, `uv run python scripts/verify_animation.py --space <id>` checks the
+saved pendulum fixture. Passing `--templates data/verification/pendulum-regression.json`
+is a negative control and must fail.
+
+### Browser and real-service evidence
+
+- Ego Lite 0.5.0.32, Chromium 152.0.7977.54. Initial live microphone capture worked. A browser
+  restart did not by itself resolve the apparent intermittent stall. The differential was
+  the automation call: waiting inside the same call for AudioWorklet loading stalled it;
+  clicking Start and returning let loading complete before the next call. Minimal probes
+  at native 48 kHz, explicit 48 kHz and 16 kHz showed the same in-call stall. Browser tooling
+  interference is established; the exact browser-internal cause is not.
+- On the final frontend build, `sess_c77c2300` captured 76 final words through the real
+  microphone, AudioWorklet, session WebSocket and Deepgram. Stop and restart both worked.
+  Catch-up rendered within the viewport, and ending produced an LLM core, analogy, diagram
+  and worked example. The transcript itself is not reproduced in this document.
+- The quit-recording dialog was exercised both ways: Keep listening returned to the lecture;
+  Stop and leave ended it and opened its completion page. No microphone was left recording.
+- The zero-transcript session `sess_d1b35ad0` showed the new honest completion message.
+- All ten sample tabs were available; the animation iframe used `sandbox="allow-scripts"`.
+  Two screenshots showed the signal dots moving. The separate generated-pendulum check
+  measured its motion in a scripts-only, no-network iframe rather than executing generated
+  JavaScript in the host process.
+- A fresh temporary-data server on port 8775 exercised the no-device practice route. The UI
+  labelled EEG and transcription as simulated. Private tutoring (`sess_a7ad17d6`) explained
+  first, read the explanation, accepted the correct answer and showed one moment landed.
+  Manual review (`sess_6a35ec82`) opened with the question and no voice, then revealed an
+  explanation after an intentionally wrong answer. Advancing that explanation and selecting
+  the reshuffled correct option completed the moment.
+
+### Remaining readiness limits
+
+**A fully ready hardware claim is blocked.** Real bytes were observed in `sess_c02ce884`
+(302 raw chunks, newest age 0.06 s, kind real, simulated false), but contact quality was 200.
+Later sessions showed intermittent RFCOMM failure or no bytes. A dedicated 60 s check after
+backend restart (`sess_e2e54619`, 30 s test baseline) saw zero raw samples, zero good focus
+frames and no completed baseline. It failed explicitly and was ended cleanly. No competing
+native reader remained after it ended. The cause of this intermittent hardware failure is
+not established; the native Bluetooth transport and signal math were not rewritten.
+
+The earlier, separate hardware success reported in `docs/STATE-2026-09-19.md` remains useful
+historical evidence (94,088 raw samples, 181 frames and four EEG flags), but it does not turn
+this failed fresh check into a pass.
+
+Other limits: camera/whiteboard and physical Arduino tests remain deferred from the prior
+scope; Windows execution and hosted-deployment verification were not performed. Strengthen
+and conversational voice tutoring remain explicitly future features in `docs/PRODUCT.md`.
+No claim is made that arbitrary generated content is factually perfect. Changed-line coverage
+and randomized suite ordering were not measured; there is no configured frontend lint gate.
+The added audio boundary/property checks and mutation tests do not replace those layers.
+Spec approval was not obtained separately (autonomous run); no independent subagent review
+was used. These limits prevent describing the entire product as "100% ready".
+
 ## Automated
 
 | Check | Command | Result |

@@ -344,7 +344,7 @@ function AnimationView({ c }: { c: AnimationContent }) {
   const [gen, setGen] = useState(0);
   const doc = useMemo(() => {
     const ink = getComputedStyle(document.documentElement).getPropertyValue("--label").trim() || "#3c3c3c";
-    return `<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:transparent;color:${ink};font-family:system-ui,sans-serif;overflow:hidden}svg,canvas{display:block;max-width:100%}</style></head><body>${c.html}</body></html>`;
+    return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'"><style>html,body{margin:0;background:transparent;color:${ink};font-family:system-ui,sans-serif;overflow:hidden}svg,canvas{display:block;width:100%;height:260px;object-fit:contain}</style></head><body>${c.html}</body></html>`;
   }, [c.html]);
   return (
     <div className="stack">

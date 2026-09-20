@@ -177,3 +177,43 @@ def test_no_key_means_offline_without_network(tmp_path):
     assert not c.enabled
     pkg, source = asyncio.run(build_package(c, SPAN, CTX, CTX + " " + SPAN))
     assert source == "offline" and pkg["artifacts"]["plan"] and pkg["sources"]["core"] == "offline"
+
+
+def test_gemini_uses_google_compatible_schema_without_router_options(tmp_path):
+    s = Settings(data_dir=tmp_path, llm_provider="gemini")
+    fake = FakeOpenRouter([GOOD_RECAP])
+    client = LLMClient(s, DB(s.db_path), client=fake)
+    forms, source = asyncio.run(client.recap("some words", "corpus"))
+    assert source == "llm" and forms.words == "p"
+    call = fake.chat.completions.calls[0]
+    assert call["model"] == "gemini-2.5-flash"
+    assert call["response_format"]["json_schema"]["strict"] is True
+    assert call["reasoning_effort"] == "none" and "extra_body" not in call
+
+
+@pytest.mark.asyncio
+async def test_exhausted_billing_stops_repeated_generation_calls(tmp_path):
+    class NoCredit(RuntimeError):
+        status_code = 402
+
+    fake = FakeClient([NoCredit("insufficient credit")])
+    client = LLMClient(Settings(data_dir=tmp_path), None, client=fake)
+    assert await client.gap_core("span", "") == (None, "offline")
+    assert await client.gap_core("other span", "") == (None, "offline")
+    assert len(fake.responses.calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_schema_retry_quota_wait_does_not_consume_network_timeout(tmp_path, monkeypatch):
+    client = LLMClient(
+        Settings(data_dir=tmp_path, recap_timeout_seconds=0.02),
+        None,
+        client=FakeClient(["{}", GOOD_RECAP]),
+    )
+
+    async def quota_wait():
+        await asyncio.sleep(0.03)
+
+    monkeypatch.setattr(client, "_rate_limit", quota_wait)
+    forms, source = await client.recap("span", "")
+    assert source == "llm" and forms.words == "p"

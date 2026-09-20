@@ -214,6 +214,7 @@ export default function Restudy() {
         } else if (step < nSteps - 1) setStep((s) => s + 1);
         else void advance();
       } else if (k.toLowerCase() === "v" && tutorRef.current.supported) {
+        if (!tutorRef.current.enabled) playedFor.current = null;
         tutorRef.current.setEnabled(!tutorRef.current.enabled);
         if (tutorRef.current.enabled) setSpoken(-1);
       } else return;
@@ -266,6 +267,7 @@ export default function Restudy() {
           <button
             className={"btn btn-sm tutor-toggle" + (tutor.enabled ? " is-on" : "")}
             onClick={() => {
+              if (!tutor.enabled) playedFor.current = null;
               tutor.setEnabled(!tutor.enabled);
               setSpoken(-1);
             }}
@@ -353,6 +355,10 @@ export default function Restudy() {
                     <span className="lbl">Where you were</span> {card.reteach.context}
                   </p>
                 ) : null}
+                {tutor.error && <div className="callout" role="status">
+                  <p>{tutor.error}</p>
+                  <button className="btn btn-sm" disabled={tutor.speaking} onClick={() => void tutor.play(narrationForCard(card), (i, beat) => { setSpoken(i); setStep(beat.step); })}>Retry voice</button>
+                </div>}
                 <ArtifactView kind={card.reteach.artifact} content={card.reteach.content} step={step} onSteps={onSteps} />
                 {card.reteach.said ? (
                   <details className="said">

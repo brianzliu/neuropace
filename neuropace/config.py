@@ -69,17 +69,22 @@ class Settings:
     ui_origins: tuple[str, ...] = ("https://neurospace-hackmit.vercel.app",)
 
     deepgram_api_key: str | None = None
+    deepgram_tts_api_key: str | None = field(default=None, repr=False)
+    tts_expressivity: int = 2
     deepgram_model: str = "nova-3"
     openai_api_key: str | None = None
     openai_model: str = "gpt-5-mini"
     openrouter_api_key: str | None = None
     openrouter_model: str = "openai/gpt-4o-mini"
+    gemini_api_key: str | None = None
+    gemini_model: str = "gemini-2.5-flash"
+    gemini_requests_per_minute: int = 5  # conservative free-tier pacing; raise for a paid project
     llm_provider: str = "openai"
     # The product needs the selected model provider. The extractive fallback is for tests only.
     allow_offline_llm: bool = False
 
     headset_port: str | None = None  # None = auto-detect, "sim" = simulate
-    tts_model: str = "aura-2-thalia-en"  # the tutor voice (Deepgram Aura)
+    tts_model: str = "flux-cole-en"  # the tutor voice (Deepgram Aura)
     totem_port: str | None = None
 
     # signal engine (TDD §3)
@@ -131,6 +136,18 @@ class Settings:
     lossmap_window_bins: int = 4
 
     @property
+    def tts_api_key(self) -> str | None:
+        return self.deepgram_tts_api_key or self.deepgram_api_key
+
+    @property
+    def llm_model(self) -> str:
+        return getattr(self, f"{self.llm_provider}_model")
+
+    @property
+    def llm_api_key(self) -> str | None:
+        return getattr(self, f"{self.llm_provider}_api_key")
+
+    @property
     def db_path(self) -> Path:
         return self.data_dir / "neuropace.db"
 
@@ -174,6 +191,7 @@ def load_settings(env_file: str | os.PathLike | None = None) -> Settings:
         load_dotenv(env_file, override=False)
     else:
         load_dotenv(override=False)
+    load_dotenv(Path(env_file).parent / ".env.tts" if env_file else ".env.tts", override=False)
     s = Settings()
     s.data_dir = Path(_compat_env("NEUROPACE_DATA_DIR", "REFLOW_DATA_DIR", "data") or "data")
     s.host = _compat_env("NEUROPACE_HOST", "REFLOW_HOST", s.host) or s.host
@@ -183,6 +201,8 @@ def load_settings(env_file: str | os.PathLike | None = None) -> Settings:
     if origins is not None:
         s.ui_origins = tuple(o.strip().rstrip("/") for o in origins.split(",") if o.strip())
     s.deepgram_api_key = _env("DEEPGRAM_API_KEY")
+    s.deepgram_tts_api_key = _env("DEEPGRAM_TTS_API_KEY")
+    s.tts_expressivity = _env_int("NEUROPACE_TTS_EXPRESSIVITY", s.tts_expressivity)
     s.deepgram_model = (
         _compat_env("NEUROPACE_DEEPGRAM_MODEL", "REFLOW_DEEPGRAM_MODEL", s.deepgram_model) or s.deepgram_model
     )
@@ -190,11 +210,22 @@ def load_settings(env_file: str | os.PathLike | None = None) -> Settings:
     s.openai_model = _env("OPENAI_MODEL", s.openai_model) or s.openai_model
     s.openrouter_api_key = _env("OPENROUTER_API_KEY")
     s.openrouter_model = _env("OPENROUTER_MODEL", s.openrouter_model) or s.openrouter_model
+    s.gemini_api_key = _env("GEMINI_API_KEY")
+    s.gemini_model = _env("GEMINI_MODEL", s.gemini_model) or s.gemini_model
+    s.gemini_requests_per_minute = max(1, _env_int("GEMINI_REQUESTS_PER_MINUTE", 5))
     provider = (
         _compat_env("NEUROPACE_LLM_PROVIDER", "REFLOW_LLM_PROVIDER")
-        or ("openrouter" if s.openrouter_api_key and not s.openai_api_key else "openai")
+        or (
+            "openai"
+            if s.openai_api_key
+            else "gemini"
+            if s.gemini_api_key
+            else "openrouter"
+            if s.openrouter_api_key
+            else "openai"
+        )
     ).lower()
-    s.llm_provider = provider if provider in ("openai", "openrouter") else "openai"
+    s.llm_provider = provider if provider in ("openai", "openrouter", "gemini") else "openai"
     s.headset_port = _compat_env("NEUROPACE_HEADSET_PORT", "REFLOW_HEADSET_PORT")
     s.tts_model = _compat_env("NEUROPACE_TTS_MODEL", "REFLOW_TTS_MODEL", s.tts_model) or s.tts_model
     s.allow_offline_llm = (

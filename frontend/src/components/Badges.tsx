@@ -16,7 +16,8 @@ export function SourceBadge({ source }: { source: string | null | undefined }) {
   if (source === "cache") return <Badge>cached</Badge>;
   if (source === "transcript") return <Badge>verbatim transcript</Badge>;
   if (source === "failed") return <Badge tone="danger">failed</Badge>;
-  return <Badge tone="accent">llm</Badge>;
+  if (source === "llm") return <Badge tone="accent">llm</Badge>;
+  return <Badge>{source}</Badge>;
 }
 
 export function StatusDot({ state }: { state: "ok" | "warn" | "bad" | "off" | "accent" }) {

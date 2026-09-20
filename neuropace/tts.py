@@ -22,7 +22,7 @@ class TTSUnavailable(RuntimeError):
 
 
 def cache_path(s: Settings, text: str) -> Path:
-    key = hashlib.sha256(f"{s.tts_model}|{text}".encode()).hexdigest()
+    key = hashlib.sha256(f"{s.tts_model}|{s.tts_expressivity}|{text}".encode()).hexdigest()
     return s.data_dir / "cache" / "tts" / f"{key}.mp3"
 
 
@@ -31,18 +31,22 @@ async def synthesize(s: Settings, text: str, client: httpx.AsyncClient | None = 
     text = " ".join(text.split())[:MAX_CHARS]
     if not text:
         raise TTSUnavailable("nothing to say")
-    if not s.deepgram_api_key:
-        raise TTSUnavailable("no DEEPGRAM_API_KEY")
+    if not s.tts_api_key:
+        raise TTSUnavailable("no DEEPGRAM_TTS_API_KEY or DEEPGRAM_API_KEY")
     path = cache_path(s, text)
     if path.exists():
         return path.read_bytes()
     own = client is None
     client = client or httpx.AsyncClient(timeout=20.0)
+    flux = s.tts_model.startswith("flux-")
+    params = {"model": s.tts_model, "encoding": "mp3"}
+    if flux:
+        params["expressivity"] = str(s.tts_expressivity)
     try:
         r = await client.post(
-            DEEPGRAM_SPEAK_URL,
-            params={"model": s.tts_model, "encoding": "mp3"},
-            headers={"Authorization": f"Token {s.deepgram_api_key}", "Content-Type": "application/json"},
+            "https://api.deepgram.com/v2/speak" if flux else DEEPGRAM_SPEAK_URL,
+            params=params,
+            headers={"Authorization": f"Token {s.tts_api_key}", "Content-Type": "application/json"},
             json={"text": text},
         )
     except httpx.HTTPError as e:

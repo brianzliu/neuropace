@@ -191,4 +191,5 @@ def test_profile_and_reset_follow_selected_learner(app, db):
         assert client.post("/api/me/reset?learner_id=missing").status_code == 404
         assert client.post("/api/me/reset", params={"learner_id": selected["id"]}).status_code == 200
         assert db.get_learner(selected["id"])["baseline_mu"] is None
+        assert db.get_learner(selected["id"])["baseline_source"] is None
         assert db.get_learner(first["id"])["baseline_mu"] == 1.0

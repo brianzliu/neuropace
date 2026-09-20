@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import json
 import logging
@@ -16,14 +17,12 @@ from starlette.middleware.cors import CORSMiddleware
 from .. import __version__
 from ..config import Settings, load_settings
 from ..llm.client import LLMClient
+from ..resources import DEMO_SCRIPT, FRONTEND_DIST
 from ..store.db import DB
 from . import routes, ws
 from .local_bridge import LocalBridgeGuard
 
 log = logging.getLogger(__name__)
-ROOT = Path(__file__).resolve().parents[2]
-FRONTEND_DIST = ROOT / "frontend" / "dist"
-DEMO_SCRIPT = ROOT / "data" / "lectures" / "demo" / "script.json"
 
 NO_BUILD_HTML = """<!doctype html><meta charset=utf-8><title>NeuroPace</title>
 <body style="font-family:system-ui;padding:2rem;background:#0f1115;color:#e6e6e6">
@@ -89,6 +88,7 @@ def create_app(
     app.state.db = db
     app.state.llm = llm
     app.state.runtimes = {}
+    app.state.session_start_lock = asyncio.Lock()
     app.state.reviews = {}
     app.state.loop = None
 

@@ -77,7 +77,7 @@ def test_session_creation_is_refused_without_a_key(tmp_path):
         r = c.post(
             "/api/sessions", json={"learner_id": lr["id"], "lecture_id": "lec_demo0001", "mode": "live"}
         )
-        assert r.status_code == 400 and "OpenAI or OpenRouter" in r.json()["detail"]
+        assert r.status_code == 400 and "API key is missing" in r.json()["detail"]
 
 
 @pytest.mark.asyncio
@@ -126,7 +126,8 @@ async def test_outage_gives_verbatim_transcript_and_failed_packages_then_regener
     cu = [m for m in msgs if m["type"] == "catchup"]
     assert cu and cu[0]["source"] == "transcript" and "offline" not in cu[0]["line"]
     assert all(cu[0]["forms"][f] == cu[0]["line"] for f in FORMS)
-    assert any(m["type"] == "notice" and "Recaps unavailable" in m["text"] for m in msgs)
+    assert cu[0]["form"] == "words"
+    assert any(m["type"] == "notice" and "temporarily unavailable" in m["text"] for m in msgs)
     assert len(rt.ring) == 0
 
     async def no_sleep(_):

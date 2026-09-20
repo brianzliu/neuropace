@@ -345,7 +345,7 @@ h1, h2, h3 { margin: 0; letter-spacing: -0.01em; }
 .hud .now { color: var(--label-2); font-weight: 600; }
 .hud .sep { color: var(--label-3); margin: 0 10px; }
 .hud .meta { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: var(--fs-footnote); color: var(--label-2); flex-wrap: wrap; font-weight: 600; }
-.banner { position: fixed; top: 16px; right: 20px; z-index: 55; width: 340px; background: var(--surface); border: 2px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow-pop); padding: 16px 18px; animation: pop var(--t-med) var(--spring); }
+.banner { position: fixed; top: 80px; right: 20px; z-index: 55; width: min(340px, calc(100vw - 40px)); background: var(--surface); border: 2px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow-pop); padding: 16px 18px; animation: pop var(--t-med) var(--spring); }
 .banner .title { font-size: var(--fs-body); font-weight: 800; }
 .banner .subtitle { font-size: var(--fs-footnote); color: var(--label-2); margin-top: 4px; font-weight: 600; }
 .banner .actions { display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end; }

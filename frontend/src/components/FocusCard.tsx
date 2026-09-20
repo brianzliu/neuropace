@@ -37,7 +37,9 @@ export default function FocusCard({ last, headset, flags, rawAt }: { last: Focus
         : tone === "off"
           ? headset && headset.kind !== "real"
             ? "No headset today, so focus is simulated. Catch me up still works."
-            : "The pad is not touching your forehead. Nothing is recorded until it does."
+            : last?.artifact
+              ? "Movement is obscuring the signal. Keep still for a moment; the lecture keeps recording."
+              : "Check the forehead sensor and ear clip. Focus pauses until contact improves; the lecture keeps recording."
           : settling
             ? `Learning your normal focus during the first minutes · ${pct}%`
             : flags

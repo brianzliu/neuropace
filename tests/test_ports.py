@@ -72,6 +72,15 @@ def test_named_port_wins_on_macos_and_tty_maps_to_cu(monkeypatch):
     assert normalize("/dev/tty.X") == "/dev/cu.X"
 
 
+def test_headset_ownership_normalizes_adapter_and_port_aliases(monkeypatch):
+    from neuropace.signal.headset import headset_port_key, resolve_headset
+
+    monkeypatch.setattr(sys, "platform", "darwin")
+    assert headset_port_key("serial:/dev/tty.MindWaveMobile") == headset_port_key("/dev/cu.MindWaveMobile")
+    assert resolve_headset("/dev/tty.MindWaveMobile") == "/dev/cu.MindWaveMobile"
+    assert headset_port_key("sim") is None
+
+
 def test_windows_bluetooth_ports_are_probed_and_the_outgoing_one_is_found(monkeypatch):
     monkeypatch.setattr(sys, "platform", "win32")
     named, bluetooth = headset_candidates(WIN_PORTS)

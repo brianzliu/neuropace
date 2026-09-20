@@ -249,7 +249,7 @@ def test_virtual_headset_is_a_real_headset_to_the_pipeline(tmp_path):
     try:
         assert resolve_headset(path) == path
         h = make_headset(path, lambda *_: None, on_frame=lambda f: None)
-        assert isinstance(h, MindwaveHeadset) and h.kind == "real" and h.port == path
+        assert isinstance(h, MindwaveHeadset) and h.kind == "virtual" and h.port == path
         src = MindWaveSource(path)
         pipe = Pipeline(src, log_dir=None)
         frames, raws = [], []
@@ -297,12 +297,16 @@ def test_one_headset_one_lecture_over_the_api(app, monkeypatch):
                 "/api/sessions",
                 json={"lecture_id": "lec_demo0001", "mode": "live", "headset": path, "totem": "keyboard"},
             )
-            assert first.status_code == 200 and first.json()["headset"]["kind"] == "real"
+            assert first.status_code == 200 and first.json()["headset"]["kind"] == "virtual"
             second = c.post(
                 "/api/sessions",
                 json={"lecture_id": "lec_demo0001", "mode": "live", "headset": path, "totem": "keyboard"},
             )
             assert second.status_code == 409 and "still recording" in second.json()["detail"]
+            alias = c.post(
+                "/api/sessions", json={"mode": "review", "headset": "serial:" + path, "totem": "keyboard"}
+            )
+            assert alias.status_code == 409, "using another adapter must not steal the same serial port"
             c.post(f"/api/sessions/{first.json()['id']}/end")
             review = c.post("/api/sessions", json={"mode": "review", "headset": path, "totem": "keyboard"})
             assert review.status_code == 200
@@ -313,6 +317,48 @@ def test_one_headset_one_lecture_over_the_api(app, monkeypatch):
             t0 = time.monotonic()
             review2 = c.post("/api/sessions", json={"mode": "review", "headset": path, "totem": "keyboard"})
             assert review2.status_code == 200 and time.monotonic() - t0 < 4.5
+            busy = c.post("/api/sessions", json={"mode": "review", "headset": path, "totem": "keyboard"})
+            assert busy.status_code == 409, "a timed-out handoff must never open a second reader"
             c.post(f"/api/sessions/{review2.json()['id']}/end")
     finally:
         vh.stop()
+
+
+@pytest.mark.asyncio
+async def test_concurrent_hotplug_sessions_share_one_device(settings, db, llm, monkeypatch):
+    import neuropace.signal.headset as hs_mod
+
+    port = "/dev/cu.MindWaveMobile"
+    monkeypatch.setattr(hs_mod, "autodetect_headset_port", lambda: port)
+    first = _runtime(settings, db, llm, "sim", drive_manually=True)
+    second = _runtime(settings, db, llm, "sim", drive_manually=True)
+    registry = {first.id: first, second.id: second}
+    lock = asyncio.Lock()
+    starts = []
+
+    class Device:
+        kind = "real"
+        connected = False
+
+        def __init__(self, path):
+            self.port = path
+
+        async def start(self):
+            starts.append(self.port)
+            await asyncio.sleep(0)
+
+        async def stop(self):
+            pass
+
+    for runtime in (first, second):
+        runtime._device_lock = lock
+        runtime._runtimes = registry
+        monkeypatch.setattr(runtime, "_make_real_headset", Device)
+        await runtime.start()
+    try:
+        await asyncio.gather(first._attach_headset_if_found(), second._attach_headset_if_found())
+        assert starts == [port]
+        assert sorted(rt.headset.kind for rt in registry.values()) == ["real", "simulated"]
+    finally:
+        await first.end()
+        await second.end()

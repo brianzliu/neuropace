@@ -82,7 +82,7 @@ function GapCard({ g }: { g: GapArtifacts }) {
           {g.note?.key_term ? ` · ${g.note.key_term}` : ""}
         </span>
         <span className="row">
-          <SourceBadge source={g.package_source} />
+          {g.id === "sample" ? <Badge>sample data</Badge> : <SourceBadge source={g.package_source} />}
           {plan ? (
             <Badge tone="accent" title={plan.why}>
               plan: {ARTIFACT_LABEL[plan.visual]} · {ARTIFACT_LABEL[plan.doing]}
@@ -239,5 +239,5 @@ const SAMPLE: GapArtifacts = {
       result: "distance = 20,100 km",
     },
   },
-  sources: { core: "llm", analogy: "llm", animation: "llm", steps: "llm" },
+  sources: {},
 };

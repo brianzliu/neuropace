@@ -15,7 +15,7 @@ def test_health_doctor_learners_lectures(app):
     with TestClient(app) as c:
         assert c.get("/api/health").json()["ok"] is True
         d = c.get("/api/doctor").json()
-        assert d["keys"] == {"deepgram": False, "openai": False, "openrouter": False}
+        assert d["keys"] == {"deepgram": False, "openai": False, "openrouter": False, "gemini": False}
         assert d["headset"]["kind"] == "simulated"
         assert d["totem"]["kind"] == "keyboard"
         lr = c.post("/api/learners", json={"name": "Judge"}).json()
