@@ -559,3 +559,16 @@ img, video, canvas { max-width: 100%; }
   .chart-times { padding-left: 70px; }
   .difficulty-card .lossbars { height: 150px; }
 }
+/* Brain mascot stop-motion: 6 frames per row, steps(6) from 0% to 100%
+   lands exactly on each frame. Reduced motion holds the first frame. */
+.mascot { aspect-ratio: 1 / 2; background-repeat: no-repeat; background-size: 600% 100%; animation: mascot-play 1.8s steps(6) infinite; }
+.mascot-wave { background-image: url("/brain-wave.png"); }
+.mascot-cheer { background-image: url("/brain-cheer.png"); animation-duration: 1.6s; }
+.mascot-think { background-image: url("/brain-think.png"); animation-duration: 2.6s; }
+@keyframes mascot-play { from { background-position: 0 0; } to { background-position: 100% 0; } }
+.mascot-row { display: flex; align-items: center; gap: .8rem; }
+.mascot-row p { margin: 0; }
+.dashboard-empty .mascot { margin-bottom: .4rem; }
+@media (prefers-reduced-motion: reduce) {
+  .mascot { animation: none; }
+}

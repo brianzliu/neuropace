@@ -1,4 +1,5 @@
 import type { Concept, Dashboard } from "../../lib/dashboardTypes";
+import BrainMascot from "./BrainMascot";
 import ConceptBox from "./ConceptBox";
 
 interface ReviewQueueProps {
@@ -31,7 +32,7 @@ export default function ReviewQueue({ concepts, closed, organizationSource, sess
           ? `${concepts.length} concept${concepts.length === 1 ? "" : "s"} worth another look`
           : "Your next discovery starts here."}</h2>
       </div>
-      {!concepts ? <p className="muted" role="status">Loading…</p>
+      {!concepts ? <div className="mascot-row" role="status"><BrainMascot art="think" size={56} /><p className="muted">Loading…</p></div>
         : concepts.length ? (
           <>
             <div className="concept-list">
@@ -42,7 +43,7 @@ export default function ReviewQueue({ concepts, closed, organizationSource, sess
           </>
         ) : (
           <div className="dashboard-empty">
-            <div className="empty-stack" aria-hidden="true"><i /><i /><i><span>✳</span></i></div>
+            {closed ? <BrainMascot art="cheer" size={84} /> : <BrainMascot art="wave" size={84} />}
             <h3>{closed ? "You've cleared your saved concepts." : "Nothing to untangle. Yet."}</h3>
           </div>
         )}
