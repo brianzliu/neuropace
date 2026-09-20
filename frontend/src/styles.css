@@ -21,6 +21,9 @@
 
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }
+/* Reserve the scrollbar gutter so switching tabs never nudges centered
+   content when the vertical scrollbar appears or disappears. */
+html { scrollbar-gutter: stable; }
 body {
   background: var(--bg);
   color: var(--text);
@@ -121,7 +124,9 @@ h1 { font-size: 1.8em; margin: 0 0 1rem; }
 .transcript .empty { color: var(--dim); font-style: italic; }
 .trace-wrap { position: relative; }
 .trace { width: 100%; height: 200px; display: block; border-radius: var(--radius); background: var(--bg-2); border: 1px solid var(--line); }
-.trace-legend { position: absolute; top: 6px; left: 10px; font-size: 0.72em; color: var(--muted); display: flex; gap: 0.75rem; }
+.trace-legend { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .75rem; padding: .15rem .25rem .45rem; font-size: 0.72em; color: var(--muted); }
+.trace-legend > span { display: inline-flex; align-items: center; }
+.trace-legend .sw { width: 9px; height: 9px; flex-shrink: 0; border-radius: 50%; margin-right: .3rem; }
 .baseline-bar { position: absolute; left: 10px; right: 10px; bottom: 8px; height: 6px; background: var(--bg-3); border-radius: 3px; overflow: hidden; }
 .baseline-bar > i { display: block; height: 100%; background: var(--accent); }
 .baseline-label { position: absolute; right: 12px; bottom: 16px; font-size: 0.72em; color: var(--muted); }
