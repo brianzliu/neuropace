@@ -1,8 +1,9 @@
+import { useGuidedStep } from "../lib/guide";
 import { libraryHref, useLibrary } from "./Library";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api, errorText } from "../lib/api";
-import { FORM_ICON, FORM_LABEL, FORMS, type Card, type Progress, type TallySummary } from "../lib/types";
+import { FORM_ICON, FORM_LABEL, FORMS, type Card, type FocusMsg, type HeadsetStatus, type Progress, type TallySummary } from "../lib/types";
 import { flash } from "../lib/flash";
 import { useFocusSession } from "../lib/focusSession";
 import { narrationForCard, useTutor } from "../lib/tutor";
@@ -15,10 +16,11 @@ type Phase = "idle" | "answering" | "feedback" | "dissolving" | "reteach" | "don
 
 /** Restudy, as a lesson (docs/PRODUCT.md §6): one card at a time, question first, a different explanation on a miss,
  * three in a row to finish. With a headset on, focus is measured per explanation and a drift switches it early. */
-export default function Restudy() {
+export default function Restudy({ workspaceActive = true, onFocusState }: { workspaceActive?: boolean; onFocusState?: (headset: HeadsetStatus | null, frame: FocusMsg | null) => void } = {}) {
   const { sessionId = "" } = useParams();
   const [params] = useSearchParams();
-  const mode: "tutor" | "manual" = params.get("mode") === "manual" ? "manual" : "tutor";
+  const guide = useGuidedStep();
+  const mode: "tutor" | "manual" = guide || params.get("mode") === "manual" ? "manual" : "tutor";
   const library = useLibrary();
   const [card, setCard] = useState<Card | null>(null);
   const [progress, setProgress] = useState<Progress | null>(null);
@@ -40,11 +42,18 @@ export default function Restudy() {
   const focus = useFocusSession(!!learnerId, learnerId);
   const focusRef = useRef(focus);
   focusRef.current = focus;
+  useEffect(() => { onFocusState?.(focus.headset, focus.last); }, [focus.headset, focus.last, onFocusState]);
   const [ttsOk, setTtsOk] = useState(false);
   useEffect(() => {
     api.health().then((h) => setTtsOk(!!h.voice)).catch(() => setTtsOk(false));
   }, []);
   const tutor = useTutor(ttsOk && mode === "tutor"); // manual review: no voice, the check first
+  useEffect(() => {
+    if (!workspaceActive) { focusRef.current.endCard(); tutor.stop(); }
+    else if (card) focusRef.current.startCard();
+    // Only visibility transitions reset the per-card focus sample.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceActive]);
   const tutorRef = useRef(tutor);
   tutorRef.current = tutor;
   const [spoken, setSpoken] = useState(-1); // index of the beat being read (why = 0, context = 1, then the template)
@@ -128,6 +137,7 @@ export default function Restudy() {
         setPhase("feedback");
         pendingNext.current = r.next;
         const done = r.done;
+        if (guide) { guide.reportOutcome(r.outcome); return; }
         window.setTimeout(
           () => {
             if (r.outcome === "miss" && r.next && r.next.kind === "reteach") {
@@ -145,7 +155,7 @@ export default function Restudy() {
         busy.current = false;
       }
     },
-    [card, phase, sessionId, applyNext],
+    [card, phase, sessionId, applyNext, guide],
   );
 
   const drop = useCallback(
@@ -180,8 +190,8 @@ export default function Restudy() {
   useEffect(() => {
     if (focus.driftSeq === driftSeen.current) return;
     driftSeen.current = focus.driftSeq;
-    if (phase === "reteach" && card) void drop(false);
-  }, [focus.driftSeq, phase, card, drop]);
+    if (workspaceActive && !guide && phase === "reteach" && card) void drop(false);
+  }, [focus.driftSeq, phase, card, drop, workspaceActive, guide]);
 
   const advance = useCallback(async () => {
     if (!card || card.kind !== "reteach" || busy.current) return;
@@ -201,6 +211,7 @@ export default function Restudy() {
 
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => {
+      if (!workspaceActive || guide?.paused) return;
       const tag = (ev.target as HTMLElement | null)?.tagName;
       if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
       const k = ev.key;
@@ -223,7 +234,7 @@ export default function Restudy() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [phase, answer, drop, advance, step, nSteps]);
+  }, [phase, answer, drop, advance, step, nSteps, workspaceActive, guide?.paused]);
 
   const onSteps = useCallback((n: number) => setNSteps(Math.max(1, n)), []);
   const pct = useMemo(() => {
@@ -261,7 +272,7 @@ export default function Restudy() {
         <span className="streak" title="three in a row finishes the lesson">
           {progress.streak}/{progress.stop_streak} in a row
         </span>
-        {mode === "manual" ? (
+        {mode === "manual" && !guide ? (
           <Link className="btn btn-sm" to={library ? libraryHref(sessionId, "review") : `/library/${sessionId}/review`} title="Switch to an agent-guided conversation with a shared board">
             AI-assisted
           </Link>

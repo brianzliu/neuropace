@@ -11,10 +11,11 @@ import SessionBack from "../components/BackLink";
 /** Office Hours (docs/PRODUCT.md §5a): an open conversation about a lecture. The agent replies and draws on a
  * shared board; the scrubber replays any earlier point read-only; clicking a board element asks the agent to
  * say more about it. */
-export default function OfficeHours() {
-  const { sessionId = "" } = useParams();
+export default function OfficeHours({ embeddedSessionId, originalSessionId, openingPrompt, embedded = false, paused = false }: { embeddedSessionId?: string; originalSessionId?: string; openingPrompt?: string; embedded?: boolean; paused?: boolean } = {}) {
+  const { sessionId: routeSessionId = "" } = useParams();
+  const sessionId = embeddedSessionId ?? routeSessionId;
   const [search] = useSearchParams();
-  const original = search.get("original");
+  const original = originalSessionId ?? search.get("original");
   const library = useLibrary();
   const [snap, setSnap] = useState<OHSnapshot | null>(null);
   const [scrubOrd, setScrubOrd] = useState<number | null>(null); // null = live (now)
@@ -71,7 +72,7 @@ export default function OfficeHours() {
       if (s && s.messages.length === 0 && original && !kickedOff.current) {
         kickedOff.current = true;
         try {
-          await sendStream("What did I miss in this lecture? Walk me through it.");
+          await sendStream(openingPrompt ?? "What did I miss in this lecture? Walk me through it.");
         } catch (e) {
           setErr(errorText(e));
         }
@@ -102,9 +103,9 @@ export default function OfficeHours() {
   return (
     <div className="office-hours">
       <header className="oh-header row between">
-        {!library && <SessionBack />}
+        {!library && !embedded && <SessionBack />}
         <div className="row">
-          {original ? (
+          {original && !embedded ? (
             <Link className="btn btn-sm" to={`/restudy/${original}?mode=manual`} title="Switch to a quiz-first self-test with no agent conversation">
               Skip to quiz
             </Link>
@@ -125,8 +126,8 @@ export default function OfficeHours() {
         <OfficeHoursChat
           sessionId={sessionId}
           messages={snap.messages}
-          voiceOn={voiceOn}
-          disabled={!live}
+          voiceOn={voiceOn && !paused}
+          disabled={!live || paused}
           onSend={sendStream}
           onVoiceClipSent={() => void load()}
           pendingUserText={pendingUserText}

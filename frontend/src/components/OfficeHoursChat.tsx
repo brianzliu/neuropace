@@ -1,3 +1,4 @@
+import "./review-workspace.css";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, errorText } from "../lib/api";
 import { speak, stopSpeaking } from "../lib/tutor";
@@ -8,13 +9,24 @@ import type { OHMessage } from "../lib/types";
 function usePushToTalk(onClip: (blob: Blob) => void) {
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const generation = useRef(0);
+  const starting = useRef(false);
+  useEffect(() => () => {
+    generation.current++;
+    const rec = recorderRef.current;
+    if (rec) { rec.onstop = null; if (rec.state !== "inactive") rec.stop(); rec.stream.getTracks().forEach(t => t.stop()); }
+    recorderRef.current = null;
+  }, []);
   const [recording, setRecording] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const start = async () => {
-    if (recorderRef.current) return;
+    if (recorderRef.current || starting.current) return;
+    starting.current = true;
+    const run = ++generation.current;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (run !== generation.current) { stream.getTracks().forEach(t => t.stop()); return; }
       const mime = ["audio/webm", "audio/ogg"].find((t) => MediaRecorder.isTypeSupported(t));
       const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
       chunksRef.current = [];
@@ -32,14 +44,21 @@ function usePushToTalk(onClip: (blob: Blob) => void) {
       setRecording(true);
     } catch {
       setError("Microphone unavailable; type your question instead.");
-    }
+    } finally { starting.current = false; }
   };
   const stop = () => {
-    recorderRef.current?.stop();
+    generation.current++;
+    if (recorderRef.current?.state !== "inactive") recorderRef.current?.stop();
     recorderRef.current = null;
     setRecording(false);
   };
-  return { recording, error, start, stop };
+  const cancel = () => {
+    generation.current++;
+    const rec = recorderRef.current;
+    if (rec) { rec.onstop = null; if (rec.state !== "inactive") rec.stop(); rec.stream.getTracks().forEach(t => t.stop()); }
+    recorderRef.current = null; setRecording(false);
+  };
+  return { recording, error, start, stop, cancel };
 }
 
 interface SpeechRecognitionResultLike {
@@ -84,7 +103,7 @@ function useVoiceAgent(onFinal: (text: string) => void) {
 
   const stop = useCallback(() => {
     pausedRef.current = true;
-    recRef.current?.stop();
+    if (recRef.current) { recRef.current.onresult = null; recRef.current.stop(); }
     recRef.current = null;
     setActive(false);
     setInterim("");
@@ -189,13 +208,18 @@ export default function OfficeHoursChat({
   const [speaking, setSpeaking] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const mounted = useRef(true);
+  const voiceRef = useRef(voiceOn); voiceRef.current = voiceOn;
+  const disabledRef = useRef(disabled); disabledRef.current = disabled;
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; stopSpeaking(); }; }, []);
+  useEffect(() => { if (!voiceOn || disabled) stopSpeaking(); }, [voiceOn, disabled]);
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages.length]);
+  }, [messages.length, pendingReplyText]);
 
   const afterReply = async (replyText: string) => {
-    if (voiceOn && replyText) {
+    if (mounted.current && voiceRef.current && !disabledRef.current && replyText) {
       setSpeaking(true);
       try {
         await speak(replyText);
@@ -207,7 +231,7 @@ export default function OfficeHoursChat({
 
   const send = async (raw: string) => {
     const trimmed = raw.trim();
-    if (!trimmed || sending) return;
+    if (!trimmed || sending || disabled) return;
     setSending(true);
     setErr(null);
     setText("");
@@ -222,6 +246,7 @@ export default function OfficeHoursChat({
   };
 
   const agent = useVoiceAgent(async (spokenText) => {
+    if (disabledRef.current || sending) return;
     agent.pause();
     setSending(true);
     setErr(null);
@@ -232,7 +257,7 @@ export default function OfficeHoursChat({
       setErr(errorText(e));
     } finally {
       setSending(false);
-      agent.resume();
+      if (mounted.current && !disabledRef.current) agent.resume();
     }
   });
 
@@ -251,7 +276,7 @@ export default function OfficeHoursChat({
   });
 
   useEffect(() => {
-    if (disabled && agent.active) agent.stop();
+    if (disabled) { if (agent.active) agent.stop(); ptt.cancel(); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [disabled]);
 
@@ -259,42 +284,32 @@ export default function OfficeHoursChat({
 
   return (
     <div className="oh-chat">
-      <div className="oh-chat-list" ref={listRef}>
+      <div className="oh-captions" ref={listRef} role="log" aria-label="Conversation captions" aria-live="polite" aria-relevant="additions text">
         {messages.map((m) => (
-          <div key={m.id} className={"oh-bubble oh-bubble-" + m.role}>
-            <div className="oh-bubble-text">{m.text}</div>
-            {m.source === "failed" ? <span className="badge">offline</span> : null}
+          <div key={m.id} className="oh-caption">
+            <span className="oh-caption-speaker">{m.role === "user" ? "You" : "Tutor"}</span>
+            <p>{m.text}</p>
+            {m.source === "failed" || m.source === "offline" ? <span className="badge">Offline response</span> : null}
           </div>
         ))}
-        {pendingUserText ? (
-          <div className="oh-bubble oh-bubble-user">
-            <div className="oh-bubble-text">{pendingUserText}</div>
-          </div>
-        ) : null}
-        {pendingUserText ? (
-          <div className="oh-bubble oh-bubble-agent oh-bubble-pending">
-            <div className="oh-bubble-text">{pendingReplyText || "Drawing it out…"}</div>
-          </div>
-        ) : null}
-        {agent.active && agent.interim ? (
-          <div className="oh-bubble oh-bubble-user oh-bubble-interim">
-            <div className="oh-bubble-text">{agent.interim}…</div>
-          </div>
-        ) : null}
+        {pendingUserText && <div className="oh-caption"><span className="oh-caption-speaker">You</span><p>{pendingUserText}</p></div>}
+        {pendingUserText && <div className="oh-caption oh-caption-pending"><span className="oh-caption-speaker">Tutor</span><p>{pendingReplyText || "Drawing it out…"}</p></div>}
+        {agent.active && agent.interim && <div className="oh-caption oh-caption-interim"><span className="oh-caption-speaker">You</span><p>{agent.interim}…</p></div>}
+        {!messages.length && !pendingUserText && <p className="oh-caption-empty">Captions will appear here as you talk through the idea.</p>}
       </div>
       {err ? <div className="callout danger label-3">{err}</div> : null}
       {ptt.error ? <div className="label-3">{ptt.error}</div> : null}
       {agent.error ? <div className="label-3">{agent.error}</div> : null}
-      {disabled ? <div className="label-3">Looking back. Return to now to keep talking.</div> : null}
+      {disabled ? <div className="label-3">Conversation paused. Resume to keep talking.</div> : null}
       <div className="oh-chat-toolbar row">
         <button
           type="button"
           className={"btn btn-sm" + (agent.active ? " is-on is-recording" : "")}
           onClick={() => (agent.active ? agent.stop() : agent.start())}
-          disabled={disabled || !agent.supported}
+          disabled={locked || !agent.supported}
           title={agent.supported ? "Continuous listening: talk any time, no button to hold" : "Needs Chrome or Edge"}
         >
-          {agent.active ? "Listening…" : "Voice agent"}
+          {agent.active ? "Listening…" : "Talk hands-free"}
         </button>
         <button
           type="button"

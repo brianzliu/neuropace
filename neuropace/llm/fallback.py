@@ -94,6 +94,34 @@ def rare_terms(span_text: str, corpus_text: str, k: int = 4, min_len: int = 6) -
     return [orig for _, orig in ranked[:k]] or [t for t in tokens(span_text)[:k]] or ["this idea"]
 
 
+def key_phrase(span_text: str, corpus_text: str) -> str:
+    """A single rare word ("citric", "standard") means nothing pulled out of context — real concepts
+    are usually named in 2-3 words ("citric acid cycle", "standard error"). Grows rare_terms()'s pick
+    into the short phrase it's actually part of, by walking outward through the span's own words
+    until hitting a stopword/filler or a sentence boundary. Still purely extractive: every word in
+    the result was already in the span, in that order."""
+    toks = tokens(span_text)
+    if not toks:
+        return "this idea"
+    term = rare_terms(span_text, corpus_text, 1)[0]
+    try:
+        i0 = next(i for i, t in enumerate(toks) if t.lower() == term.lower())
+    except StopIteration:
+        return term
+
+    def blocked(tok: str) -> bool:
+        lt = tok.lower()
+        return lt in STOP or lt in _GENERIC_FILLER
+
+    lo = i0
+    while lo > 0 and (i0 - lo) < 1 and not blocked(toks[lo - 1]):
+        lo -= 1
+    hi = i0
+    while hi < len(toks) - 1 and (hi - i0) < 2 and not blocked(toks[hi + 1]):
+        hi += 1
+    return " ".join(toks[lo : hi + 1])
+
+
 def tail(text: str, n_words: int = 22) -> str:
     ws = text.split()
     out = " ".join(ws[-n_words:])
@@ -319,7 +347,7 @@ def gap_package(span_text: str, context_text: str, corpus_text: str, seed: int =
         if context_text.strip()
         else "This was the first part of the lecture you heard."
     )
-    note = GapNote(what_was_said=said, key_term=term, definition=definition, connection=connection)
+    note = GapNote(what_was_said=said, key_term=key_phrase(span_text, corpus_text), definition=definition, connection=connection)
     correct = _phrases(span_text, 6, rng, 1, set())
     correct_phrase = correct[0] if correct else tail(span_text, 6)
     avoid = {correct_phrase.lower()}
