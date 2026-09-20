@@ -35,7 +35,7 @@ export default function App() {
   return <div className={"app" + (compact ? " app-compact" : "")}>
     <SideBlobs />
     <header className="topbar">
-      <Link to="/" className="brand"><span className="brand-mark" aria-hidden="true"><i /><i /><i /></span>NeuroPace</Link>
+      <Link to="/" className="brand"><span className="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><g transform="rotate(-18 12 12)"><rect x="9.3" y="2.2" width="5.4" height="2.8" rx="1.2" fill="var(--accent-2)" /><rect x="9.3" y="5" width="5.4" height="1.7" fill="var(--surface-edge)" /><rect x="9.3" y="6.7" width="5.4" height="8.3" fill="var(--accent)" /><polygon points="9.3,15 14.7,15 12,19.2" fill="var(--object)" /><polygon points="11.1,17.3 12.9,17.3 12,19.2" fill="var(--text)" /></g></svg></span>NeuroPace</Link>
       {compact ? <Link to="/">Dashboard</Link> : <TopTabs />}
     </header>
     <main className="main">

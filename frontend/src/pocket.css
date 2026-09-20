@@ -55,7 +55,16 @@ a { font-weight: 500; }
 .activity-chart { display: flex; gap: 12px; align-items: flex-end; padding-top: 1.2rem; }
 .activity-day { flex: 1; display: flex; flex-direction: column; align-items: center; gap: .35rem; font-size: .73rem; color: var(--muted); }
 .activity-track { height: 80px; width: 100%; max-width: 42px; display: flex; align-items: flex-end; background: var(--bg-3); border-radius: 7px; }
-.activity-bar { width: 100%; background: #efd26c; border-radius: 7px; }
+.activity-bar { width: 100%; background: #efd26c; border-radius: 9px 12px 8px 11px / 11px 9px 12px 8px; }
+/* Hand-drawn bars: non-uniform squiggly corners and a slight lean that
+   varies by day, plus uneven grid cells. All static — no motion. */
+.activity-track { border-radius: 10px 7px 11px 8px / 9px 11px 8px 10px; }
+.activity-day:nth-child(odd) .activity-track { transform: rotate(-.7deg); }
+.activity-day:nth-child(even) .activity-track { transform: rotate(.6deg); }
+.activity-day:nth-child(3n) .activity-bar { border-radius: 12px 8px 11px 9px / 8px 12px 9px 11px; }
+.activity-day:nth-child(4n) .activity-track { border-radius: 8px 11px 7px 12px / 12px 8px 11px 9px; }
+.grid-cell { border-radius: 8px 6px 9px 5px; }
+.activity-week:nth-child(odd) .grid-cell:nth-child(even) { border-radius: 5px 8px 6px 9px; }
 .activity-count { min-height: 1.4em; font-variant-numeric: tabular-nums; }
 /* Activity view toggle + GitHub-style grid. Intensity is color plus exact
    counts (title tooltips + img label), never color-alone. Cells are static. */

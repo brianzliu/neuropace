@@ -29,16 +29,13 @@
 .topbar { max-width: 1600px; width: 100%; margin: auto; border: 0; padding-block: 1.35rem; }
 .brand { font-size: 1.85rem; letter-spacing: -.065em; display: inline-flex; align-items: center; gap: .6rem; font-family: var(--display); font-weight: 400; }
 .brand-dot { background: linear-gradient(135deg, var(--accent), var(--object)); box-shadow: inset 2px 2px 3px #ffffff55, 2px 3px 0 var(--object-dark); }
-/* Brand mark: a planet and its moon, far apart in a tactile squircle.
-   Two dots only, widely spaced — never a cluster. */
-.brand-mark { position: relative; width: 36px; height: 36px; flex-shrink: 0; border-radius: 13px 13px 6px 13px; background: var(--cap); border: 1px solid var(--surface-edge); box-shadow: inset 1px 2px 2px #ffffff88, 0 3px 0 var(--surface-edge); }
-.brand-mark i { position: absolute; border-radius: 50%; }
-.brand-mark i:nth-child(1) { width: 15px; height: 15px; left: 6px; bottom: 6px; background: var(--accent); }
-.brand-mark i:nth-child(2) { width: 7px; height: 7px; right: 7px; top: 7px; background: var(--accent-2); }
-.brand-mark i:nth-child(3) { display: none; }
+/* Brand mark: a tilted pencil in a tactile squircle. Inline SVG so the
+  eraser, ferrule, body, wood, and lead all read crisply at any size. */
+.brand-mark { width: 36px; height: 36px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 13px 13px 6px 13px; background: var(--bg-2); border: 1px solid var(--surface-edge); box-shadow: inset 1px 2px 2px #ffffff88, 0 3px 0 var(--surface-edge); }
+.brand-mark svg { width: 23px; height: 23px; display: block; overflow: visible; }
+.brand-mark i { display: none; }
 .app-compact .brand-mark { width: 28px; height: 28px; border-radius: 10px 10px 5px 10px; }
-.app-compact .brand-mark i:nth-child(1) { width: 11px; height: 11px; left: 5px; bottom: 5px; }
-.app-compact .brand-mark i:nth-child(2) { width: 5px; height: 5px; right: 5px; top: 5px; }
+.app-compact .brand-mark svg { width: 18px; height: 18px; }
 .topnav > a { font-size: .9rem; }
 .main { padding-top: .25rem; }
 .welcome { padding: 1.5rem 0 2.5rem; gap: 3rem; min-height: 380px; }
