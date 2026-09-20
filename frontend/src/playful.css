@@ -256,8 +256,10 @@ select {
 /* Session icon actions (Agent 2): compact tactile buttons, one wrapped row.
    Real links keep the global :focus-visible outline; 44px touch targets. */
 .session-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
-.icon-button { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: .4rem .6rem; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-2); color: var(--text); font-size: 1.05rem; line-height: 1; text-decoration: none; box-shadow: 0 2px 0 var(--surface-edge); }
-.icon-button:hover { background: var(--bg-3); text-decoration: none; }
+.icon-button { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: .65rem .8rem; border: 1px solid var(--line); border-radius: 14px; background: var(--bg-2); color: var(--text); text-decoration: none; box-shadow: 0 3px 0 var(--surface-edge); }
+.icon-button:hover { background: var(--bg-3); border-color: var(--surface-edge); text-decoration: none; transform: translateY(-1px); }
+.icon-button:active { transform: translateY(2px); box-shadow: 0 0 0 var(--surface-edge); }
+.icon-button svg { width: 26px; height: 26px; display: block; }
 .live-open { display: inline-flex; align-items: center; gap: .5rem; min-height: 44px; padding: .5rem 1rem; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-2); box-shadow: 0 2px 0 var(--surface-edge); }
 .live-open:hover { background: var(--bg-3); text-decoration: none; }
 .sidebar-note { background: var(--note); color: var(--note-ink); border-radius: 5px 5px 24px 5px; padding: 1.5rem; transform: rotate(2deg); margin: 2rem .25rem; box-shadow: 0 4px 0 var(--surface-edge); }
@@ -390,7 +392,7 @@ img, video, canvas { max-width: 100%; }
   .desk-device, .physical-button, button, .top-tabs a, .toptabs a, .sub-tabs a, .library-tab, .theme-option, .practice-go,
   .dissolve.active span, .reteach, .caption, .diagram .node, .diagram .edge path, .diagram .edge text { transition: none; animation: none; }
   .home-page .welcome, .home-page .home { animation: none; }
-  button:hover:not(:disabled), .top-tabs a:hover, .toptabs a:hover, .sub-tabs a:hover, .library-tab:hover, .practice-go:hover, .practice-go:active, .theme-option:hover:not(:disabled) { transform: none; }
+  button:hover:not(:disabled), .top-tabs a:hover, .toptabs a:hover, .sub-tabs a:hover, .library-tab:hover, .practice-go:hover, .practice-go:active, .icon-button:hover, .icon-button:active, .theme-option:hover:not(:disabled) { transform: none; }
   .sim-flash, .catchup.fading { animation: none; opacity: 1; }
 }
 @media (max-width: 640px) {

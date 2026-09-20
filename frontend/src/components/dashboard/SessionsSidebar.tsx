@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import type { ReactNode } from "react";
 import type { Concept, Dashboard } from "../../lib/dashboardTypes";
 import PracticeCard from "./PracticeCard";
 
@@ -26,11 +27,21 @@ function statusMeta(status: SessionStatus): { modifier: string; label: string } 
   return { modifier: "is-other", label: status };
 }
 
+/** Stroke-consistent action icons (24-grid, round caps, 2px stroke).
+ *  Text glyphs varied wildly in weight and optical size; these match. */
+function ActionIcon({ children }: { children: ReactNode }) {
+  return (
+    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+      {children}
+    </svg>
+  );
+}
+
 const ACTIONS = [
-  { to: (id: string) => `/notes/${id}`, glyph: "✎", name: "Notes" },
-  { to: (id: string) => `/review/${id}`, glyph: "✓", name: "Review" },
-  { to: (id: string) => `/quiz/${id}`, glyph: "?", name: "Quiz" },
-  { to: (id: string) => `/replay/${id}`, glyph: "↶", name: "Replay" },
+  { to: (id: string) => `/notes/${id}`, name: "Notes", paths: (<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></>) },
+  { to: (id: string) => `/review/${id}`, name: "Review", paths: (<polyline points="20 6 9 17 4 12" />) },
+  { to: (id: string) => `/quiz/${id}`, name: "Quiz", paths: (<><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" /></>) },
+  { to: (id: string) => `/replay/${id}`, name: "Replay", paths: (<><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></>) },
 ] as const;
 export default function SessionsSidebar({ sessions, concepts, closed }: SessionsSidebarProps) {
   return (
@@ -72,7 +83,7 @@ export default function SessionsSidebar({ sessions, concepts, closed }: Sessions
                     aria-label={`${action.name} for ${session.title}`}
                     title={`${action.name} for ${session.title}`}
                   >
-                    <span aria-hidden="true">{action.glyph}</span>
+                    <span aria-hidden="true"><ActionIcon>{action.paths}</ActionIcon></span>
                   </Link>
                 ))
               )}
