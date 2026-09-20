@@ -543,7 +543,12 @@ class LLMClient:
 
     def _chat_options(self) -> dict:
         if self.provider == "openrouter":
-            return {"extra_body": {"provider": {"require_parameters": True}}}
+            # Many OpenRouter models (deepseek included) default to spending hidden reasoning
+            # tokens out of the same max_tokens budget as the actual answer; on a schema-heavy
+            # call that budget can be entirely consumed by reasoning, returning empty content
+            # (verified directly against this provider/model: 900+ reasoning tokens, 0 output).
+            # Disabling it is the same fix already applied below for Gemini 2.5 Flash.
+            return {"extra_body": {"provider": {"require_parameters": True}, "reasoning": {"enabled": False}}}
         # Flash 2.5 supports disabling internal thinking, keeping the narrow schema calls
         # within the output budget. Other Gemini models use their own default.
         if self.provider == "gemini" and self.model.startswith("gemini-2.5-flash"):

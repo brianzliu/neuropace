@@ -2,9 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import type { SessionPublic } from "../lib/types";
-import { sessionHref } from "../components/SessionNavigation";
 
-/** Lecture complete (docs/PRODUCT.md §6): the numbers, then straight into Review (or later). */
+/** Lecture complete: the numbers, then one entry into the guided study flow. */
 export default function Done() {
   const { sessionId = "" } = useParams();
   const [sess, setSess] = useState<SessionPublic | null>(null);
@@ -44,10 +43,10 @@ export default function Done() {
         </div>
         <p className="sub">{sess.gaps ? "Each moment explained your way, then one quick question. About five minutes." : sess.words ? "No moments were saved for restudy this time." : "No transcript was captured. Check your microphone before starting another lecture."}</p>        {sess.gaps ? (
           <>
-            <Link className="btn btn-primary btn-lg" to={sessionHref(sessionId, "review")}>
-              Review
+            <Link className="btn btn-primary btn-lg" to={`/library/${sessionId}/review`}>
+              Study this lecture
             </Link>
-            <Link className="linklike" to={sessionHref(sessionId, "notes")}>
+            <Link className="linklike" to={`/lecture/${sessionId}`}>
               Later
             </Link>
           </>

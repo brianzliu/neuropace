@@ -46,6 +46,22 @@ STOP = set(
     thing things get got make made does did do done here now well say said says one two three first second next""".split()
 )
 
+# rare_terms() picks a "key term" purely by length + corpus rarity; without this, a common linking
+# verb or adverb that only happens to appear once in a short transcript (e.g. "transfers", "usually")
+# outranks the real named concept just for being an unusually long word. -ly words are excluded by
+# suffix below; these are the common verb forms that survive that filter.
+_GENERIC_FILLER = set(
+    """transfers transfer reduces reduce increases increase shows show means mean causes cause
+    creates create produces produce provides provide allows allow requires require involves involve
+    includes include affects affect changes change carries carry becomes become remains remain
+    appears appear occurs occur happens happen results result leads lead gives give takes take
+    describes describe explains explain represents represent determines determine depends depend
+    relates relate connects connect combines combine reflects reflect suggests suggest indicates
+    indicate demonstrates demonstrate reveals reveal captures capture builds build moves move
+    larger smaller higher lower greater faster slower similar several various particular specific
+    general common important significant possible current recent previous following different""".split()
+)
+
 _SENT = re.compile(r"(?<=[.!?])\s+")
 
 
@@ -60,12 +76,50 @@ def tokens(text: str) -> list[str]:
 def rare_terms(span_text: str, corpus_text: str, k: int = 4, min_len: int = 6) -> list[str]:
     corpus = Counter(t.lower() for t in tokens(corpus_text))
     seen: dict[str, str] = {}
-    for t in tokens(span_text):
+    order: dict[str, int] = {}
+    for i, t in enumerate(tokens(span_text)):
         lt = t.lower()
-        if len(lt) >= min_len and lt not in STOP and lt not in seen:
+        if (
+            len(lt) >= min_len
+            and lt not in STOP
+            and lt not in _GENERIC_FILLER
+            and not lt.endswith("ly")
+            and lt not in seen
+        ):
             seen[lt] = t
-    ranked = sorted(seen.items(), key=lambda kv: (corpus.get(kv[0], 0), -len(kv[0])))
+            order[lt] = i
+    # Tiebreak on where the word first appears, not its length: preferring the longest word among
+    # equally-rare candidates is what let long common words like "transfers" outrank a real term.
+    ranked = sorted(seen.items(), key=lambda kv: (corpus.get(kv[0], 0), order[kv[0]]))
     return [orig for _, orig in ranked[:k]] or [t for t in tokens(span_text)[:k]] or ["this idea"]
+
+
+def key_phrase(span_text: str, corpus_text: str) -> str:
+    """A single rare word ("citric", "standard") means nothing pulled out of context — real concepts
+    are usually named in 2-3 words ("citric acid cycle", "standard error"). Grows rare_terms()'s pick
+    into the short phrase it's actually part of, by walking outward through the span's own words
+    until hitting a stopword/filler or a sentence boundary. Still purely extractive: every word in
+    the result was already in the span, in that order."""
+    toks = tokens(span_text)
+    if not toks:
+        return "this idea"
+    term = rare_terms(span_text, corpus_text, 1)[0]
+    try:
+        i0 = next(i for i, t in enumerate(toks) if t.lower() == term.lower())
+    except StopIteration:
+        return term
+
+    def blocked(tok: str) -> bool:
+        lt = tok.lower()
+        return lt in STOP or lt in _GENERIC_FILLER
+
+    lo = i0
+    while lo > 0 and (i0 - lo) < 1 and not blocked(toks[lo - 1]):
+        lo -= 1
+    hi = i0
+    while hi < len(toks) - 1 and (hi - i0) < 2 and not blocked(toks[hi + 1]):
+        hi += 1
+    return " ".join(toks[lo : hi + 1])
 
 
 def tail(text: str, n_words: int = 22) -> str:
@@ -293,7 +347,7 @@ def gap_package(span_text: str, context_text: str, corpus_text: str, seed: int =
         if context_text.strip()
         else "This was the first part of the lecture you heard."
     )
-    note = GapNote(what_was_said=said, key_term=term, definition=definition, connection=connection)
+    note = GapNote(what_was_said=said, key_term=key_phrase(span_text, corpus_text), definition=definition, connection=connection)
     correct = _phrases(span_text, 6, rng, 1, set())
     correct_phrase = correct[0] if correct else tail(span_text, 6)
     avoid = {correct_phrase.lower()}

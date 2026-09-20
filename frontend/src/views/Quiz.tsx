@@ -1,3 +1,4 @@
+import { useGuidedStep } from "../lib/guide";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../lib/api";
@@ -9,6 +10,7 @@ import { useLibrary } from "./Library";
 export default function Quiz() {
   const { sessionId = "" } = useParams();
   const library = useLibrary();
+  const guide = useGuidedStep();
   const [data, setData] = useState<QuizGet | null>(null);
   const [phase, setPhase] = useState<"before" | "after">("before");
   const [answers, setAnswers] = useState<Record<string, number>>({});
@@ -21,7 +23,9 @@ export default function Quiz() {
   const submit = async () => {
     setBusy(true);
     try {
-      setResult(await api.submitQuiz(sessionId, phase, answers));
+      const scored = await api.submitQuiz(sessionId, phase, answers);
+      setResult(scored);
+      guide?.reportOutcome(scored.score === scored.total ? "hit" : "miss");
     } catch (e) {
       setErr(String(e));
     } finally {

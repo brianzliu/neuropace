@@ -4,10 +4,17 @@ import type { OHSnapshot } from "../lib/types";
 import Board from "../components/Board";
 import OfficeHoursChat from "../components/OfficeHoursChat";
 
-/** Whiteboard (docs/PRODUCT.md §5a), Review's second mode: an open conversation about a lecture. The agent
+/** Whiteboard (docs/PRODUCT.md §5a), Review's board mode: an open conversation about a lecture. The agent
  * replies and draws on a shared board; clicking a board element asks it to say more. sessionId is the
- * office_hours session, original the lecture session it is about. */
-export default function OfficeHours({ sessionId, original }: { sessionId: string; original: string | null }) {
+ * office_hours session, original the lecture session it is about; openingPrompt is the first turn sent on
+ * a fresh board; paused mutes voice and input while the guided session is paused. */
+export default function OfficeHours({ sessionId, original, openingPrompt, paused = false, onTurnComplete }: {
+  sessionId: string;
+  original: string | null;
+  openingPrompt?: string;
+  paused?: boolean;
+  onTurnComplete?: () => void;
+}) {
   const [snap, setSnap] = useState<OHSnapshot | null>(null);
   const [voiceOn, setVoiceOn] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -62,7 +69,7 @@ export default function OfficeHours({ sessionId, original }: { sessionId: string
       if (s && s.messages.length === 0 && original && !kickedOff.current) {
         kickedOff.current = true;
         try {
-          await sendStream("What did I miss in this lecture? Walk me through it.");
+          await sendStream(openingPrompt ?? "What did I miss in this lecture? Walk me through it.");
         } catch (e) {
           setErr(errorText(e));
         }
@@ -100,12 +107,13 @@ export default function OfficeHours({ sessionId, original }: { sessionId: string
         <OfficeHoursChat
           sessionId={sessionId}
           messages={snap.messages}
-          voiceOn={voiceOn}
-          disabled={false}
+          voiceOn={voiceOn && !paused}
+          disabled={paused}
           onSend={sendStream}
           onVoiceClipSent={() => void load()}
           pendingUserText={pendingUserText}
           pendingReplyText={pendingReplyText}
+          onTurnComplete={onTurnComplete}
         />
       </div>
     </div>

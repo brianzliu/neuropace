@@ -1,21 +1,16 @@
-import { Link } from "react-router-dom";
 import type { SessionPublic } from "../lib/types";
-import { SESSION_ICONS, SessionIconArt } from "../lib/sessionIcons";
 import { BackLink } from "./BackLink";
 import SessionSwitcher from "./SessionSwitcher";
 
 export type SessionTab = "notes" | "review" | "quiz" | "replay" | "artifacts";
-const sections = (["notes", "review", "quiz", "replay", "artifacts"] as const).map((id) => ({
-  id,
-  label: SESSION_ICONS[id].name,
-}));
+
 
 export function sessionHref(sessionId: string, tab: SessionTab) {
   return `/library/${encodeURIComponent(sessionId)}/${tab}`;
 }
 
 /** Every lecture view shares the same navigation, including standalone and team links. */
-export default function SessionNavigation({ sessionId, tab, title, sessions, titles, onSelect }: {
+export default function SessionNavigation({ sessionId, title, sessions, titles, onSelect }: {
   sessionId: string;
   tab: SessionTab;
   title: string;
@@ -36,15 +31,6 @@ export default function SessionNavigation({ sessionId, tab, title, sessions, tit
         <h1 className="library-title">{title}</h1>
       )}
     </div>
-    <nav className="library-tabs" aria-label="Session sections">
-      {sections.map(section => <Link key={section.id}
-        to={sessionHref(sessionId, section.id)}
-        className={`library-tab${tab === section.id ? " active" : ""}`}
-        aria-current={tab === section.id ? "page" : undefined}
-      >
-        <SessionIconArt kind={section.id} />
-        {section.label}
-      </Link>)}
-    </nav>
+
   </header>;
 }

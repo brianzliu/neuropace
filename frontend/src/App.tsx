@@ -11,7 +11,7 @@ import Live from "./views/Live";
 import Done from "./views/Done";
 import Lecture from "./views/Lecture";
 import Lectures from "./views/Lectures";
-import Review from "./views/Review";
+import ReviewWorkspace from "./components/ReviewWorkspace";
 import Team from "./views/Team";
 import Replay from "./views/Replay";
 import Quiz from "./views/Quiz";
@@ -50,7 +50,7 @@ export default function App() {
         <Route path="/library" element={<Library />} />
         <Route path="/library/:sessionId" element={<Library />}>
           <Route path="notes" element={<Lecture />} />
-          <Route path="review" element={<Review />} />
+          <Route path="review" element={<ReviewWorkspace />} />
           <Route path="replay" element={<Replay />} />
           <Route path="quiz" element={<Quiz />} />
           <Route path="artifacts" element={<Artifacts />} />

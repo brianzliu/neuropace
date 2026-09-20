@@ -1,0 +1,116 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
+import { api, errorText } from "../lib/api";
+import { GuideContext, useGuidedStep, type GuideStepContext, type ReviewMode } from "../lib/guide";
+import type { FocusMsg, HeadsetStatus } from "../lib/types";
+import ExplainDeck from "./ExplainDeck";
+import OfficeHours from "../views/OfficeHours";
+import "./review-workspace.css";
+
+/** One workspace, two teaching tools. Mood is self-reported; EEG never diagnoses it. */
+export default function ReviewWorkspace() {
+  const { sessionId = "" } = useParams();
+  const guide = useGuidedStep();
+  const guideRef = useRef(guide); guideRef.current = guide;
+  const [view, setView] = useState<"practice" | "board">("practice");
+  const [mood, setMood] = useState("ready");
+  const [learnerId, setLearnerId] = useState("");
+  const [reason, setReason] = useState("");
+  const [officeId, setOfficeId] = useState<string | null>(null);
+  const [prompt, setPrompt] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [signal, setSignal] = useState("Waiting for headset");
+  const creating = useRef(false);
+  const alive = useRef(true);
+  const officeRef = useRef<string | null>(null);
+  const driftHandled = useRef(false);
+  useEffect(() => {
+    alive.current = true;
+    return () => { alive.current = false; };
+  }, []);
+  const openBoard = useCallback(async (why: string) => {
+    setView("board"); setReason(why);
+    if (officeRef.current || creating.current) return;
+    creating.current = true; setLoading(true); setError("");
+    try {
+      const notes = await api.notes(sessionId);
+      const target = notes.gaps.find(g => g.id === guideRef.current?.decision.target_gap_id) ?? notes.gaps.find(g => g.status === "open");
+      const office = await api.officeHoursOpen(sessionId);
+      if (!alive.current) return;
+      officeRef.current = office.id;
+      setPrompt(target ? `Help me understand this saved lecture moment. Explain one idea using the board, then ask one short question. Lecture excerpt: ${target.span_text}` : "Explain one main idea from this lecture on the board, then ask one short question.");
+      setOfficeId(office.id);
+    } catch (e) { if (alive.current) setError(errorText(e)); }
+    finally { creating.current = false; if (alive.current) setLoading(false); }
+  }, [sessionId]);
+  const recommend = useCallback(async (currentMode: ReviewMode, useBoardOnError = false) => {
+    if (!learnerId) return;
+    try {
+      const result = await api.reviewRecommendation(sessionId, {
+        learner_id: learnerId,
+        current_mode: currentMode,
+        conversation_session_id: officeRef.current,
+      });
+      if (!alive.current) return;
+      setReason(result.reason);
+      if (result.mode === "whiteboard") await openBoard(result.reason);
+      else { driftHandled.current = false; setView("practice"); }
+    } catch (e) {
+      if (!alive.current) return;
+      if (useBoardOnError) await openBoard("Let's draw this one out another way.");
+      else setError(errorText(e));
+    }
+  }, [learnerId, openBoard, sessionId]);
+  useEffect(() => {
+    api.session(sessionId).then(session => setLearnerId(session.learner_id)).catch(e => setError(errorText(e)));
+  }, [sessionId]);
+  useEffect(() => {
+    if (learnerId) void recommend("practice");
+  }, [learnerId, recommend]);
+  const reportOutcome = useCallback<GuideStepContext["reportOutcome"]>((outcome) => {
+    guideRef.current?.reportOutcome(outcome);
+    if (outcome === "miss" || outcome === "drop") {
+      setReason(outcome === "miss" ? "That answer needs another look." : "Let's try a different explanation.");
+      void recommend("practice", true);
+    } else if (outcome === "hit") setReason("That answer was right. Keep the explanation nearby if you need it.");
+  }, [recommend]);
+  const onSignal = useCallback((headset: HeadsetStatus | null, frame: FocusMsg | null) => {
+    const simulated = !!headset && (headset.kind !== "real" || !!headset.simulated || !!frame?.sim);
+    setSignal(simulated ? "Simulated EEG · not used to adapt" : headset?.connected ? "EEG connected" : "No live EEG · your answers guide review");
+    if (headset?.kind === "real" && headset.connected && !simulated && frame?.quality === "good" && frame.baseline_ready && !frame.artifact && !frame.paused && frame.state === "drop") {
+      if (!driftHandled.current) {
+        driftHandled.current = true;
+        void openBoard("Your focus signal changed, so we're drawing the idea another way.");
+      }
+    }
+  }, [openBoard]);
+  const paused = !!guide?.paused;
+  return <section className="review-workspace">
+    <div className="review-workspace-tools">
+      <h3>Review</h3>
+      <button className="btn btn-sm" onClick={() => {
+        if (view === "practice") void openBoard("Let's draw this one out together.");
+        else { driftHandled.current = false; setView("practice"); }
+      }}>{view === "practice" ? "Draw this out" : "Try a question"}</button>
+      <fieldset className="review-mood"><legend>How is it going?</legend><div>
+        {[["ready", "Ready to try"], ["stuck", "I'm stuck"], ["tired", "Need a breather"]].map(([value, label]) => <button type="button" key={value} aria-pressed={mood === value} className={mood === value ? "selected" : ""} onClick={() => {
+          setMood(value);
+          if (value === "stuck") void openBoard("You said you're stuck. Let's take it one idea at a time.");
+          if (value === "ready") { driftHandled.current = false; setView("practice"); }
+          if (value === "tired") setReason("Pause when you need to. We'll keep this short.");
+        }}>{label}</button>)}
+      </div></fieldset>
+    </div>
+    <p className="review-signal">{signal}</p>
+    {reason && <div className="review-adaptation" role="status"><span>{reason}</span></div>}
+    <div hidden={view !== "practice"}>
+      {guide ? <GuideContext.Provider value={{ ...guide, reportOutcome }}><ExplainDeck active={view === "practice" && !paused} onFocusState={onSignal} /></GuideContext.Provider> : <ExplainDeck active={view === "practice"} onFocusState={onSignal} />}
+    </div>
+    {view === "board" && <div className="review-board-pane">
+      {loading && <p role="status">Opening your whiteboard…</p>}
+      {error && <div className="callout danger">{error}<button className="btn" onClick={() => void openBoard(reason)}>Try again</button></div>}
+      {officeId && <OfficeHours sessionId={officeId} original={sessionId} openingPrompt={prompt} paused={paused} onTurnComplete={() => void recommend("whiteboard")} />}
+    </div>}
+  </section>;
+}

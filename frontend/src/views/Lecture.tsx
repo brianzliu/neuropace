@@ -1,3 +1,4 @@
+import { useGuidedStep } from "../lib/guide";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, errorText } from "../lib/api";
@@ -10,6 +11,7 @@ import { JargonSpans, ScholarStrip, ScholarTopicLine, useJargon, useScholar } fr
  * title, the session switcher and the Review tab (Explain deck or Whiteboard). */
 export default function Lecture() {
   const { sessionId = "" } = useParams();
+  const guide = useGuidedStep();
   const nav = useNavigate();
   const [data, setData] = useState<NotesResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -72,10 +74,10 @@ export default function Lecture() {
 
       {data.gaps.length > 0 ? (
         <section className="stack">
-          <div className="eyebrow">What you missed</div>
+          {!guide && <div className="eyebrow">What you missed</div>}
           <ScholarTopicLine data={scholar.data} />
-          {data.gaps.map((g) => (
-            <details key={g.id} className="moment-row">
+          {data.gaps.filter(g => !guide?.decision.target_gap_id || g.id === guide.decision.target_gap_id).map((g) => (
+            <details key={g.id} className="moment-row" open={guide ? true : undefined}>
               <summary>
                 <span className="m-num">{g.ord + 1}</span>
                 <span className="m-body">

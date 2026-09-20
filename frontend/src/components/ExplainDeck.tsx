@@ -1,72 +1,29 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, errorText } from "../lib/api";
-import { FORM_ICON, FORM_LABEL, type Card, type Progress, type SessionPublic, type TallySummary } from "../lib/types";
+import { FORM_ICON, FORM_LABEL, type Card, type FocusMsg, type HeadsetStatus, type Progress, type TallySummary } from "../lib/types";
 import { flash } from "../lib/flash";
 import { useFocusSession } from "../lib/focusSession";
+import { useGuidedStep } from "../lib/guide";
 import { usePushToTalk } from "../lib/pushToTalk";
-import { readSessionSetting, writeSessionSetting } from "../lib/storage";
-import ArtifactView from "../components/ArtifactView";
-import BrainWaves from "../components/BrainWaves";
-import OfficeHours from "./OfficeHours";
-import { libraryHref } from "./Library";
-
-type Mode = "explain" | "whiteboard";
-
-/** The Review tab: two ways through the same lecture. Explain is a deck of cards, one per missed moment,
- * with the headset watching (docs/PRODUCT.md §5); Whiteboard is the voice-agent conversation with a shared
- * board (§5a). The choice sticks for the tab session. */
-export default function Review() {
-  const { sessionId = "" } = useParams();
-  const key = `review-mode:${sessionId}`;
-  const [mode, setMode] = useState<Mode>(() => (readSessionSetting(key) === "whiteboard" ? "whiteboard" : "explain"));
-  const pick = (m: Mode) => {
-    setMode(m);
-    writeSessionSetting(key, m);
-  };
-  return (
-    <div className="page review-page">
-      <div className="review-mode-bar">
-        <div className="segmented" role="tablist" aria-label="How to review">
-          <button role="tab" aria-selected={mode === "explain"} className={mode === "explain" ? "is-active" : ""} onClick={() => pick("explain")}>
-            Explain
-          </button>
-          <button role="tab" aria-selected={mode === "whiteboard"} className={mode === "whiteboard" ? "is-active" : ""} onClick={() => pick("whiteboard")}>
-            Whiteboard
-          </button>
-        </div>
-        <span className="label-3 t-footnote">{mode === "explain" ? "One moment at a time, your headset watching." : "Talk it through; the tutor draws as it goes."}</span>
-      </div>
-      {mode === "explain" ? <ExplainDeck sessionId={sessionId} /> : <Whiteboard sessionId={sessionId} />}
-    </div>
-  );
-}
-
-/** The lecture's one whiteboard conversation, opened once and reused. */
-function Whiteboard({ sessionId }: { sessionId: string }) {
-  const [oh, setOh] = useState<SessionPublic | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    setOh(null);
-    setErr(null);
-    api
-      .officeHoursOpen(sessionId)
-      .then((s) => !cancelled && setOh(s))
-      .catch((e) => !cancelled && setErr(errorText(e)));
-    return () => {
-      cancelled = true;
-    };
-  }, [sessionId]);
-  if (err) return <div className="callout danger">{err}</div>;
-  if (!oh) return <div className="loading">Opening the whiteboard…</div>;
-  return <OfficeHours sessionId={oh.id} original={sessionId} />;
-}
+import ArtifactView from "./ArtifactView";
+import BrainWaves from "./BrainWaves";
+import { libraryHref } from "../views/Library";
 
 type Phase = "idle" | "answering" | "feedback" | "reteach" | "done" | "blocked";
 
-/** One card per missed moment: explain, watch, (drift → another way), one question. */
-function ExplainDeck({ sessionId }: { sessionId: string }) {
+/** One card per missed moment: explain, watch, (drift → another way), one question (docs/PRODUCT.md §5).
+ * Inside ReviewWorkspace: `active` is false while the board pane is up (focus sampling and keys pause),
+ * `onFocusState` feeds the workspace's EEG line, and every answer is reported to the guided session. */
+export default function ExplainDeck({ active = true, onFocusState }: {
+  active?: boolean;
+  onFocusState?: (headset: HeadsetStatus | null, frame: FocusMsg | null) => void;
+} = {}) {
+  const { sessionId = "" } = useParams();
+  const guide = useGuidedStep();
+  const guideRef = useRef(guide);
+  guideRef.current = guide;
+  const paused = !!guide?.paused;
   const [card, setCard] = useState<Card | null>(null);
   const [progress, setProgress] = useState<Progress | null>(null);
   const [tally, setTally] = useState<TallySummary | null>(null);
@@ -87,6 +44,15 @@ function ExplainDeck({ sessionId }: { sessionId: string }) {
   const focus = useFocusSession(!!learnerId, learnerId);
   const focusRef = useRef(focus);
   focusRef.current = focus;
+  useEffect(() => {
+    onFocusState?.(focus.headset, focus.last);
+  }, [focus.headset, focus.last, onFocusState]);
+  useEffect(() => {
+    if (!active) focusRef.current.endCard();
+    else if (card) focusRef.current.startCard();
+    // only visibility transitions reset the per-card focus sample
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active]);
 
   const applyNext = useCallback((next: Card | null, done: boolean) => {
     setChosen(null);
@@ -144,6 +110,7 @@ function ExplainDeck({ sessionId }: { sessionId: string }) {
         setTally(r.tally);
         setDrift(null);
         if (r.outcome === "hit") setHits((h) => h + 1);
+        guideRef.current?.reportOutcome(r.outcome);
         setPhase("feedback");
         window.setTimeout(() => applyNext(r.next, r.done), r.outcome === "hit" ? 1300 : 2200);
       } catch (e) {
@@ -163,6 +130,7 @@ function ExplainDeck({ sessionId }: { sessionId: string }) {
       try {
         const r = await api.reviewDrop(sessionId, card.id, focusRef.current.endCard());
         setDrift({ at: Math.round((Date.now() - cardShownAt.current) / 1000), simulated });
+        guideRef.current?.reportOutcome("drop");
         setProgress(r.progress);
         setTally(r.tally);
         applyNext(r.next, r.done);
@@ -180,8 +148,8 @@ function ExplainDeck({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     if (focus.driftSeq === driftSeen.current) return;
     driftSeen.current = focus.driftSeq;
-    if (phase === "reteach" && card) void drop(false);
-  }, [focus.driftSeq, phase, card, drop]);
+    if (active && !paused && phase === "reteach" && card) void drop(false);
+  }, [focus.driftSeq, phase, card, drop, active, paused]);
 
   const advance = useCallback(async () => {
     if (!card || card.kind !== "reteach" || busy.current) return;
@@ -189,6 +157,7 @@ function ExplainDeck({ sessionId }: { sessionId: string }) {
     try {
       const r = await api.reviewAdvance(sessionId, card.id, focusRef.current.endCard());
       setDrift(null);
+      guideRef.current?.reportOutcome("read");
       setProgress(r.progress);
       setTally(r.tally);
       applyNext(r.next, r.done);
@@ -201,6 +170,7 @@ function ExplainDeck({ sessionId }: { sessionId: string }) {
 
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => {
+      if (!active || paused) return;
       const tag = (ev.target as HTMLElement | null)?.tagName;
       if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
       const k = ev.key;
@@ -214,7 +184,7 @@ function ExplainDeck({ sessionId }: { sessionId: string }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [phase, answer, drop, advance, step, nSteps]);
+  }, [phase, answer, drop, advance, step, nSteps, active, paused]);
 
   const onSteps = useCallback((n: number) => setNSteps(Math.max(1, n)), []);
   const headsetOn = !!focus.headset?.connected;

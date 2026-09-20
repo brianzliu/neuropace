@@ -73,6 +73,8 @@ export interface SessionCreate {
 }
 
 export const api = {
+  guideNext: (id: string, body: import("./guide").GuideRequest) => postSlow<import("./guide").GuideDecision>(`/api/sessions/${encodeURIComponent(id)}/next-step`, body, MODEL_TIMEOUT_MS),
+  reviewRecommendation: (id: string, body: import("./guide").ReviewRecommendationRequest) => postSlow<import("./guide").ReviewRecommendation>(`/api/sessions/${encodeURIComponent(id)}/review/recommendation`, body, MODEL_TIMEOUT_MS),
   demoMode: () => get<{ enabled: boolean; synthetic: true }>("/api/settings/demo"),
   setDemoMode: (enabled: boolean) => request<{ enabled: boolean; synthetic: true }>("/api/settings/demo", { method: "PUT", body: JSON.stringify({ enabled }) }),
   dashboard: (id: string, organize = false) => {

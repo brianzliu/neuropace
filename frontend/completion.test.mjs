@@ -32,8 +32,8 @@ for (const words of [0, 42]) {
   });
 }
 
-test("saved moments lead to the Review tab", () => {
+test("saved moments lead into guided study", () => {
   const text = completionText({ gaps: 1, words: 42, flags: [], catchups_shown: 1 });
   assert.match(text, /Each moment explained your way/);
-  assert.match(text, /Review/);
+  assert.match(text, /Study this lecture/);
 });

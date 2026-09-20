@@ -226,7 +226,9 @@ select {
 .concept-box h3 { margin: .2rem 0 .25rem; font-size: 1.08rem; font-weight: 500; }
 .concept-box-description { margin: .2rem 0 0; font-size: .86rem; line-height: 1.6; color: var(--text); }
 .concept-box-note { margin: .45rem 0 0; font-size: .74rem; line-height: 1.5; color: var(--muted); }
-.concept-box-note.is-suggested { color: var(--accent); }
+/* The suggestion itself is signalled by the card's left accent bar; the reason it exists at all
+   is a tooltip on the numbered badge, not a sentence competing with the description for attention. */
+.concept-box.has-suggestion { border-left: 3px solid var(--accent); padding-left: calc(1.25rem - 2px); }
 /* Gentle severity: exhausted concepts (every re-teach tried, still open)
    get a deeper honey tint and warm copy. No red anywhere — harshness
    turns people away. The note text carries the meaning, never color alone. */
@@ -235,7 +237,6 @@ select {
 [data-theme="paper"] .concept-box.is-warm { background: color-mix(in srgb, var(--cap) 35%, var(--bg-2)); }
 .concept-box-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .6rem; padding-top: .3rem; margin-top: auto; }
 .concept-source { font-size: .74rem; color: var(--muted); }
-.concept-source span { display: block; font-size: .68rem; color: var(--dim); }
 /* Side blobs (user-directed polish): organic shapes flanking the content in
    wide-screen margins only. Fixed layer behind everything (content stays
    above via .topbar/.main stacking), clicks pass through, hidden in compact
@@ -262,7 +263,8 @@ body { overflow-x: clip; }
 .dashboard-empty h3 { font-family: var(--display); font-weight: 400; font-size: 1.35rem; margin: .5rem 0; }
 .dashboard-empty p { font-size: .85rem; color: var(--muted); max-width: 340px; margin: .6rem auto 1rem; }
 .session-sidebar { border-left: 1px solid var(--line); padding-left: 1.8rem; }
-.session-history-item { border: 1px solid var(--line); border-radius: 16px; background: var(--bg-2); padding: .7rem .9rem .8rem; box-shadow: 0 2px 8px color-mix(in srgb, var(--surface-edge) 70%, transparent); }
+/* Shaped like a hanging index card with a date tab, not a plain color block. */
+.session-history-item { position: relative; margin-top: 16px; border: 1px solid var(--line); border-radius: 3px 16px 16px 16px; background: var(--bg-2); padding: .9rem .9rem .8rem; box-shadow: 0 2px 8px color-mix(in srgb, var(--surface-edge) 70%, transparent); }
 /* The session list is its own scroll window (Practice card stays pinned
    below it, outside the scroll). Capped to the viewport so long histories
    never push past the bottom of the screen. */
@@ -292,8 +294,14 @@ body { overflow-x: clip; }
 .rescue-tag { transform: rotate(2deg); }
 .concept-box-index { transform: rotate(-3deg); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-.session-date { display: flex; justify-content: space-between; font-size: .7rem; color: var(--muted); }
-.session-list { display: grid; gap: .75rem; align-content: start; overflow-y: auto; overscroll-behavior-y: contain; max-height: min(62vh, 620px); margin-bottom: 1.5rem; padding: .25rem .25rem .5rem; }
+.session-date-tab { position: absolute; top: -13px; left: 0; border: 1px solid; border-color: inherit; border-bottom: 0; border-radius: 8px 8px 0 0; background: inherit; padding: 3px 10px 6px; font-size: .68rem; font-weight: 700; color: var(--muted); }
+.session-list { display: grid; gap: .75rem; align-content: start; overflow-y: auto; overscroll-behavior-y: contain; max-height: min(62vh, 620px); margin-bottom: 1.5rem; padding: .25rem .25rem .5rem; scrollbar-width: thin; scrollbar-color: var(--object-dark) transparent; scrollbar-gutter: stable; }
+/* Visible tactile scrollbar: butter thumb with a chunky rounded shape that
+   reads in every theme. Hover deepens it; the track stays transparent. */
+.session-list::-webkit-scrollbar { width: 12px; }
+.session-list::-webkit-scrollbar-track { background: transparent; }
+.session-list::-webkit-scrollbar-thumb { background: var(--object); border-radius: 99px; border: 3px solid var(--bg); box-shadow: inset 0 0 0 1px var(--surface-edge); }
+.session-list::-webkit-scrollbar-thumb:hover { background: var(--object-dark); }
 .session-history-item h3 { font-size: .97rem; font-weight: 500; margin: .35rem 0 .6rem; }
 .session-summary { font-size: .78rem; line-height: 1.5; color: var(--muted); margin: -.3rem 0 .6rem; }
 .session-history-item a { font-size: .77rem; }
@@ -558,4 +566,17 @@ img, video, canvas { max-width: 100%; }
   .difficulty-chart { grid-template-columns: 62px minmax(0, 1fr); gap: .5rem; }
   .chart-times { padding-left: 70px; }
   .difficulty-card .lossbars { height: 150px; }
+}
+/* Brain mascot stop-motion: 6 frames per row, steps(6) from 0% to 100%
+   lands exactly on each frame. Reduced motion holds the first frame. */
+.mascot { aspect-ratio: 1 / 2; background-repeat: no-repeat; background-size: 600% 100%; animation: mascot-play 1.8s steps(6) infinite; }
+.mascot-wave { background-image: url("/brain-wave.png"); }
+.mascot-cheer { background-image: url("/brain-cheer.png"); animation-duration: 1.6s; }
+.mascot-think { background-image: url("/brain-think.png"); animation-duration: 2.6s; }
+@keyframes mascot-play { from { background-position: 0 0; } to { background-position: 100% 0; } }
+.mascot-row { display: flex; align-items: center; gap: .8rem; }
+.mascot-row p { margin: 0; }
+.dashboard-empty .mascot { margin-bottom: .4rem; }
+@media (prefers-reduced-motion: reduce) {
+  .mascot { animation: none; }
 }

@@ -28,7 +28,10 @@ RECAP_INSTRUCTIONS = (
 CORE_INSTRUCTIONS = (
     "You prepare the study material for ONE span of a lecture that a student missed. You get the missed span, the "
     "transcript just before it (context the student did hear) and optional key terms.\n"
-    "note.what_was_said: two sentences quoting the span. note.key_term: the single most important term. "
+    "note.what_was_said: two sentences quoting the span. note.key_term: the specific named concept or technical term "
+    "this span teaches (a noun phrase a student could look up on its own, e.g. 'glycolysis' or 'confidence interval') "
+    "— never a common verb, adverb, or filler word (e.g. 'usually', 'transfers', 'shows'). If the span has no single "
+    "named concept, use a short 2-6 word phrase describing what it covers instead of forcing one word. "
     "note.definition: its definition as the lecturer used it. note.connection: one sentence on how the span connects to "
     "the context the student heard.\n"
     "question: multiple choice, answerable from the span alone, four options, exactly one correct, plausible "

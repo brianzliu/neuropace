@@ -1,4 +1,5 @@
-import type { Concept, Dashboard } from "../../lib/dashboardTypes";
+import type { Concept } from "../../lib/dashboardTypes";
+import BrainMascot from "./BrainMascot";
 import ConceptBox from "./ConceptBox";
 
 interface ReviewQueueProps {
@@ -10,20 +11,10 @@ interface ReviewQueueProps {
   organizationSource?: string;
   /** True while the organize pass is in flight (the first response is deterministic). */
   organizing?: boolean;
-  /** Recent sessions, used only to resolve each concept's calendar date. */
-  sessions?: Dashboard["sessions"];
 }
 
-const dateLabel = (startedAt: number | undefined): string | undefined => {
-  if (!Number.isFinite(startedAt)) return undefined;
-  const date = new Date((startedAt as number) * 1000);
-  if (!Number.isFinite(date.getTime())) return undefined;
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-};
-
-export default function ReviewQueue({ concepts, closed, organizationSource, sessions }: ReviewQueueProps) {
+export default function ReviewQueue({ concepts, closed, organizationSource }: ReviewQueueProps) {
   const organized = organizationSource === "llm" || organizationSource === "cache";
-  const dates = new Map((sessions ?? []).map(s => [s.id, dateLabel(s.started_at)]));
   return (
     <section className="concept-section" aria-label="Concepts to review">
       <div className="dashboard-section-heading">
@@ -31,18 +22,18 @@ export default function ReviewQueue({ concepts, closed, organizationSource, sess
           ? `${concepts.length} concept${concepts.length === 1 ? "" : "s"} worth another look`
           : "Your next discovery starts here."}</h2>
       </div>
-      {!concepts ? <p className="muted" role="status">Loading…</p>
+      {!concepts ? <div className="mascot-row" role="status"><BrainMascot art="think" size={56} /><p className="muted">Loading…</p></div>
         : concepts.length ? (
           <>
             <div className="concept-list">
               {concepts.map((concept, i) => (
-                <ConceptBox key={concept.id} concept={concept} index={i} organized={organized} dateLabel={dates.get(concept.session_id)} />
+                <ConceptBox key={concept.id} concept={concept} index={i} organized={organized} />
               ))}
             </div>
           </>
         ) : (
           <div className="dashboard-empty">
-            <div className="empty-stack" aria-hidden="true"><i /><i /><i><span>✳</span></i></div>
+            {closed ? <BrainMascot art="cheer" size={84} /> : <BrainMascot art="wave" size={84} />}
             <h3>{closed ? "You've cleared your saved concepts." : "Nothing to untangle. Yet."}</h3>
           </div>
         )}

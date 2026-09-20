@@ -41,13 +41,13 @@ export default function SessionsSidebar({ sessions, concepts, closed }: Sessions
             : session.status === "created" ? "Created" : session.status;
           return (
           <article className={`session-history-item ${statusClass}`} key={session.id}>
-            <span className="session-date">
+            <span className="session-date-tab" aria-hidden="true">
               {new Date(session.started_at * 1000).toLocaleDateString(undefined, {
                 month: "short",
                 day: "numeric",
               })}
-              <span className="visually-hidden">, {statusLabel}</span>
             </span>
+            <span className="visually-hidden">{statusLabel}</span>
             <h3>{session.title}</h3>
             {session.summary ? <p className="session-summary">{session.summary}</p> : null}
             {session.status === "running" ? (

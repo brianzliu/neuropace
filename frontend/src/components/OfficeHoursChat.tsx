@@ -1,3 +1,4 @@
+import "./review-workspace.css";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, errorText } from "../lib/api";
 import { speak, stopSpeaking } from "../lib/tutor";
@@ -46,7 +47,7 @@ function useVoiceAgent(onFinal: (text: string) => void) {
 
   const stop = useCallback(() => {
     pausedRef.current = true;
-    recRef.current?.stop();
+    if (recRef.current) { recRef.current.onresult = null; recRef.current.stop(); }
     recRef.current = null;
     setActive(false);
     setInterim("");
@@ -129,6 +130,7 @@ export default function OfficeHoursChat({
   onVoiceClipSent,
   pendingUserText,
   pendingReplyText,
+  onTurnComplete,
 }: {
   sessionId: string;
   messages: OHMessage[];
@@ -145,19 +147,25 @@ export default function OfficeHoursChat({
    *  conversation never looks stalled while the board is still being drawn. */
   pendingUserText: string | null;
   pendingReplyText: string | null;
+  onTurnComplete?: () => void;
 }) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const mounted = useRef(true);
+  const voiceRef = useRef(voiceOn); voiceRef.current = voiceOn;
+  const disabledRef = useRef(disabled); disabledRef.current = disabled;
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; stopSpeaking(); }; }, []);
+  useEffect(() => { if (!voiceOn || disabled) stopSpeaking(); }, [voiceOn, disabled]);
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages.length]);
+  }, [messages.length, pendingReplyText]);
 
   const afterReply = async (replyText: string) => {
-    if (voiceOn && replyText) {
+    if (mounted.current && voiceRef.current && !disabledRef.current && replyText) {
       setSpeaking(true);
       try {
         await speak(replyText);
@@ -169,12 +177,13 @@ export default function OfficeHoursChat({
 
   const send = async (raw: string) => {
     const trimmed = raw.trim();
-    if (!trimmed || sending) return;
+    if (!trimmed || sending || disabled) return;
     setSending(true);
     setErr(null);
     setText("");
     try {
       const replyText = await onSend(trimmed);
+      onTurnComplete?.();
       await afterReply(replyText);
     } catch (e) {
       setErr(errorText(e));
@@ -184,17 +193,19 @@ export default function OfficeHoursChat({
   };
 
   const agent = useVoiceAgent(async (spokenText) => {
+    if (disabledRef.current || sending) return;
     agent.pause();
     setSending(true);
     setErr(null);
     try {
       const replyText = await onSend(spokenText);
+      onTurnComplete?.();
       await afterReply(replyText);
     } catch (e) {
       setErr(errorText(e));
     } finally {
       setSending(false);
-      agent.resume();
+      if (mounted.current && !disabledRef.current) agent.resume();
     }
   });
 
@@ -204,6 +215,7 @@ export default function OfficeHoursChat({
     try {
       const { reply } = await api.officeHoursVoice(sessionId, blob);
       onVoiceClipSent();
+      onTurnComplete?.();
       await afterReply(reply.text);
     } catch (e) {
       setErr(errorText(e));
@@ -213,7 +225,7 @@ export default function OfficeHoursChat({
   });
 
   useEffect(() => {
-    if (disabled && agent.active) agent.stop();
+    if (disabled) { if (agent.active) agent.stop(); ptt.cancel(); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [disabled]);
 
@@ -221,42 +233,32 @@ export default function OfficeHoursChat({
 
   return (
     <div className="oh-chat">
-      <div className="oh-chat-list" ref={listRef}>
+      <div className="oh-captions" ref={listRef} role="log" aria-label="Conversation captions" aria-live="polite" aria-relevant="additions text">
         {messages.map((m) => (
-          <div key={m.id} className={"oh-bubble oh-bubble-" + m.role}>
-            <div className="oh-bubble-text">{m.text}</div>
-            {m.source === "failed" ? <span className="badge">offline</span> : null}
+          <div key={m.id} className="oh-caption">
+            <span className="oh-caption-speaker">{m.role === "user" ? "You" : "Tutor"}</span>
+            <p>{m.text}</p>
+            {m.source === "failed" || m.source === "offline" ? <span className="badge">Offline response</span> : null}
           </div>
         ))}
-        {pendingUserText ? (
-          <div className="oh-bubble oh-bubble-user">
-            <div className="oh-bubble-text">{pendingUserText}</div>
-          </div>
-        ) : null}
-        {pendingUserText ? (
-          <div className="oh-bubble oh-bubble-agent oh-bubble-pending">
-            <div className="oh-bubble-text">{pendingReplyText || "Drawing it out…"}</div>
-          </div>
-        ) : null}
-        {agent.active && agent.interim ? (
-          <div className="oh-bubble oh-bubble-user oh-bubble-interim">
-            <div className="oh-bubble-text">{agent.interim}…</div>
-          </div>
-        ) : null}
+        {pendingUserText && <div className="oh-caption"><span className="oh-caption-speaker">You</span><p>{pendingUserText}</p></div>}
+        {pendingUserText && <div className="oh-caption oh-caption-pending"><span className="oh-caption-speaker">Tutor</span><p>{pendingReplyText || "Drawing it out…"}</p></div>}
+        {agent.active && agent.interim && <div className="oh-caption oh-caption-interim"><span className="oh-caption-speaker">You</span><p>{agent.interim}…</p></div>}
+        {!messages.length && !pendingUserText && <p className="oh-caption-empty">Captions will appear here as you talk through the idea.</p>}
       </div>
       {err ? <div className="callout danger label-3">{err}</div> : null}
       {ptt.error ? <div className="label-3">{ptt.error}</div> : null}
       {agent.error ? <div className="label-3">{agent.error}</div> : null}
-      {disabled ? <div className="label-3">Looking back. Return to now to keep talking.</div> : null}
+      {disabled ? <div className="label-3">Conversation paused. Resume to keep talking.</div> : null}
       <div className="oh-chat-toolbar row">
         <button
           type="button"
           className={"btn btn-sm" + (agent.active ? " is-on is-recording" : "")}
           onClick={() => (agent.active ? agent.stop() : agent.start())}
-          disabled={disabled || !agent.supported}
+          disabled={locked || !agent.supported}
           title={agent.supported ? "Continuous listening: talk any time, no button to hold" : "Needs Chrome or Edge"}
         >
-          {agent.active ? "Listening…" : "Voice agent"}
+          {agent.active ? "Listening…" : "Talk hands-free"}
         </button>
         <button
           type="button"

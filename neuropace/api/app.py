@@ -59,7 +59,8 @@ def create_app(
     db = db or DB(s.db_path)
     ensure_demo_lecture(db)
     demo = DemoData(s)
-    active_db = demo.database() if demo.enabled else db
+    seed_llm = llm or LLMClient(s, db)
+    active_db = demo.database(seed_llm) if demo.enabled else db
     llm = llm or LLMClient(s, active_db)
     from ..core.gaps import recover_orphaned_sessions
 
