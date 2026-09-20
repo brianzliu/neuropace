@@ -46,13 +46,24 @@ export default function SessionsSidebar({ sessions, concepts, closed }: Sessions
         </p>
       ) : sessions.length ? (
         sessions.map((session) => {
+          // Color speaks: status lives on the card as a class (tinted wash),
+          // with the word kept screen-reader-only so color is never the sole
+          // carrier for assistive tech.
+          const statusClass = session.status === "running" ? "is-running"
+            : session.status === "reviewed" ? "is-reviewed"
+            : session.status === "ended" ? "is-ended" : "is-other";
+          const statusLabel = session.status === "running" ? "In progress"
+            : session.status === "reviewed" ? "Reviewed"
+            : session.status === "ended" ? "Ended"
+            : session.status === "created" ? "Created" : session.status;
           return (
-          <article className="session-history-item" key={session.id}>
+          <article className={`session-history-item ${statusClass}`} key={session.id}>
             <span className="session-date">
               {new Date(session.started_at * 1000).toLocaleDateString(undefined, {
                 month: "short",
                 day: "numeric",
               })}
+              <span className="visually-hidden">, {statusLabel}</span>
             </span>
             <h3>{session.title}</h3>
             <div className="row session-actions">
