@@ -218,9 +218,6 @@ select {
 .concept-section { padding: 1.5rem 1.5rem 1.6rem; border: 1px solid var(--line); border-bottom: 4px solid var(--surface-edge); border-radius: var(--radius); background: var(--bg-2); box-shadow: 0 8px 20px var(--shadow); }
 .concept-summary { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem .9rem; margin: 0 0 1.1rem; }
 .concept-summary p { flex: 1 1 260px; margin: 0; font-size: .9rem; line-height: 1.6; color: var(--text); }
-.organize-source { flex-shrink: 0; display: inline-flex; align-items: center; min-height: 26px; padding: .2rem .65rem; border: 1px solid var(--line); border-radius: var(--r-capsule, 8px); background: var(--bg-2); color: var(--muted); font-size: .68rem; font-weight: 700; letter-spacing: .03em; }
-.organize-source.is-suggested { border-color: var(--accent); color: var(--accent); }
-.organize-source.is-organizing { border-style: dashed; }
 .concept-list { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
 /* Playful card wall: alternating sticky-note tilt plus a sticker index.
    Static rotation only — no motion, so reduced-motion needs no exception. */
@@ -296,7 +293,6 @@ body { overflow-x: clip; }
   background-repeat: no-repeat; }
 .concept-section h2::before { --tack: var(--accent); }
 .session-sidebar h2::before { --tack: var(--good); transform: rotate(8deg); }
-.curriculum-section h2::before { --tack: var(--accent-2); transform: rotate(-6deg); }
 /* Sticker tags sit a little crooked. */
 .rescue-tag { transform: rotate(2deg); }
 .concept-box-index { transform: rotate(-3deg); }
@@ -332,6 +328,10 @@ body { overflow-x: clip; }
 .icon-button:hover { background: var(--bg-3); border-color: var(--surface-edge); text-decoration: none; transform: translateY(-1px); }
 .icon-button:active { transform: translateY(0); box-shadow: 0 1px 3px color-mix(in srgb, var(--surface-edge) 70%, transparent); }
 .icon-button svg { width: 26px; height: 26px; display: block; }
+/* Generated action art covers the SVG fallback when the file loads; a
+   missing file removes itself and the stroke icon shows instead. */
+.action-art { position: relative; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; }
+.action-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .live-open { display: inline-flex; align-items: center; gap: .5rem; min-height: 44px; padding: .5rem 1rem; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-2); box-shadow: 0 2px 8px color-mix(in srgb, var(--surface-edge) 70%, transparent); }
 .live-open:hover { background: var(--bg-3); text-decoration: none; }
 .sidebar-note { background: var(--note); color: var(--note-ink); border-radius: 5px 5px 24px 5px; padding: 1.5rem; transform: rotate(2deg); margin: 2rem .25rem; box-shadow: 0 6px 16px color-mix(in srgb, var(--surface-edge) 70%, transparent); }
@@ -345,72 +345,9 @@ body { overflow-x: clip; }
 .practice-go { display: inline-block; background: var(--bg-2); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: .6rem .95rem; font-size: .8rem; font-weight: 600; box-shadow: 0 2px 8px color-mix(in srgb, var(--surface-edge) 70%, transparent); transition: transform .15s ease, box-shadow .15s ease; }
 .practice-go:hover { text-decoration: none; transform: translateY(-1px); }
 .practice-go:active { transform: translateY(0); box-shadow: 0 1px 3px color-mix(in srgb, var(--surface-edge) 70%, transparent); }
-.curriculum-section { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--line); }
-/* Curriculum stages: one segmented bar plus grouped topic rows, estimated
-   from saved moments + review outcomes. Every stage is named in text too,
-   never color-alone; no motion is added, so reduced-motion needs no guard. */
-.stage-bar { display: flex; height: 14px; margin-top: .9rem; border: 1px solid var(--line); border-radius: 99px; overflow: hidden; background: var(--bg-2); }
-.stage-seg { flex: 0 1 0; min-width: 8px; }
-.stage-seg.is-review, .stage-legend .is-review i { background: var(--warn); }
-.stage-seg.is-beginner, .stage-legend .is-beginner i { background: var(--object); }
-.stage-seg.is-intermediate, .stage-legend .is-intermediate i { background: var(--accent); }
-.stage-seg.is-advanced, .stage-legend .is-advanced i { background: var(--good); }
-.stage-seg.is-no_evidence, .stage-legend .is-no_evidence i { background: var(--line); }
-.stage-legend { display: flex; flex-wrap: wrap; gap: .35rem 1rem; list-style: none; margin: .7rem 0 0; padding: 0; font-size: .74rem; color: var(--muted); }
-.stage-legend li { display: flex; align-items: center; gap: .35rem; }
-.stage-legend i { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-.stage-legend b { color: var(--text); }
-.stage-group { margin-top: 1.3rem; }
-.stage-heading { display: flex; align-items: center; gap: .5rem; font-family: var(--display); font-size: 1rem; font-weight: 400; margin: 0 0 .45rem; }
-.stage-heading > span { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 .35rem; border-radius: var(--r-capsule, 8px); background: var(--bg-3); color: var(--muted); font-size: .7rem; font-weight: 700; }
-.stage-heading.is-review { color: var(--warn); }
-.stage-heading.is-beginner { color: var(--object); }
-.stage-heading.is-intermediate { color: var(--accent); }
-.stage-heading.is-advanced { color: var(--good); }
-.stage-heading.is-no_evidence { color: var(--muted); }
-.stage-heading i { width: 10px; height: 10px; flex-shrink: 0; border-radius: 50%; background: var(--dim); }
-.stage-heading.is-review i { background: var(--warn); }
-.stage-heading.is-beginner i { background: var(--object); }
-.stage-heading.is-intermediate i { background: var(--accent); }
-.stage-heading.is-advanced i { background: var(--good); }
-.stage-heading.is-no_evidence i { background: var(--dim); }
-.stage-topics { list-style: none; margin: 0; padding: 0; display: grid; gap: .7rem; }
-/* Sticker cards: stage-tinted wash, chunky stage-color base, title dot.
-   no_evidence stays a dashed empty slot. The generic fallback reason is
-   hidden in markup (the group heading already says it); specific and
-   model-written reasons still show. */
-.stage-topic { border: 2px solid var(--line); border-radius: 16px; background: var(--bg-2); padding: .8rem .95rem; box-shadow: 0 2px 8px color-mix(in srgb, var(--surface-edge) 65%, transparent); }
-.stage-topic > b { display: flex; align-items: center; gap: .5rem; font-size: .9rem; font-weight: 650; }
-.stage-topic > b::before { content: ""; width: 10px; height: 10px; flex-shrink: 0; border-radius: 50%; background: var(--dim); }
-.stage-topic p { margin: .45rem 0 0; font-size: .76rem; line-height: 1.5; color: var(--muted); }
-.stage-group.is-review .stage-topic { background: color-mix(in srgb, var(--warn) 10%, var(--bg-2)); border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); box-shadow: 0 2px 8px color-mix(in srgb, var(--warn) 40%, transparent); }
-.stage-group.is-review .stage-topic > b::before { background: var(--warn); }
-.stage-group.is-beginner .stage-topic { background: color-mix(in srgb, var(--object) 10%, var(--bg-2)); border-color: color-mix(in srgb, var(--object) 45%, var(--line)); box-shadow: 0 2px 8px color-mix(in srgb, var(--object) 40%, transparent); }
-.stage-group.is-beginner .stage-topic > b::before { background: var(--object); }
-.stage-group.is-intermediate .stage-topic { background: color-mix(in srgb, var(--accent) 10%, var(--bg-2)); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 40%, transparent); }
-.stage-group.is-intermediate .stage-topic > b::before { background: var(--accent); }
-.stage-group.is-advanced .stage-topic { background: color-mix(in srgb, var(--good) 10%, var(--bg-2)); border-color: color-mix(in srgb, var(--good) 45%, var(--line)); box-shadow: 0 2px 8px color-mix(in srgb, var(--good) 40%, transparent); }
-.stage-group.is-advanced .stage-topic > b::before { background: var(--good); }
-.stage-group.is-no_evidence .stage-topic { border-style: dashed; box-shadow: none; background: transparent; }
-/* Evidence dots: one dot per saved moment behind the stage. Exact counts
-   live in the img label; color never stands alone. */
-.evidence-dots { display: flex; gap: 4px; margin-top: .5rem; }
-.evidence-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); }
-.evidence-dots .is-resolved { background: var(--good); }
-.evidence-dots .is-open { background: var(--accent); }
-.evidence-dots .is-exhausted { background: var(--warn); }
-/* Class tabs: one pill per class plus a dashed new-class slot. */
-.class-tabs { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .8rem; }
-.class-tab { display: inline-flex; align-items: center; gap: .45rem; min-height: 36px; padding: .35rem .8rem; border-radius: var(--r-capsule, 8px); border: 1px solid var(--line); background: var(--bg-2); color: var(--muted); font-size: .78rem; font-weight: 600; cursor: pointer; }
-.class-tab > span { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 .3rem; border-radius: var(--r-capsule, 6px); background: var(--bg-3); font-size: .68rem; }
-.class-tab[aria-pressed="true"] { color: var(--text); background: var(--bg-3); border-color: var(--surface-edge); box-shadow: 0 2px 8px color-mix(in srgb, var(--surface-edge) 65%, transparent); }
-.class-tab.is-new { border-style: dashed; }
-.class-create { display: inline-flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
-.class-create input { font: inherit; font-size: .8rem; width: 150px; padding: .4rem .6rem; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 10px; }
 /* Footnote captions (no middots): two short stacked lines, honest + muted. */
-.coverage-note, .activity-note { display: grid; gap: .15rem; margin: .6rem 0 0; font-size: .78rem; line-height: 1.5; color: var(--muted); }
-.coverage-note span:last-child, .activity-note span:last-child { color: var(--dim); }
-.syllabus-form { display: grid; gap: 1rem; }
+.activity-note { display: grid; gap: .15rem; margin: .6rem 0 0; font-size: .78rem; line-height: 1.5; color: var(--muted); }
+.activity-note span:last-child { color: var(--dim); }
 textarea { font: inherit; width: 100%; padding: .8rem; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 10px; resize: vertical; }
 @media(max-width: 1050px) { .dashboard-grid { grid-template-columns: minmax(0,1fr) 235px; gap: 1.5rem; } .idea-sculpture { width: 100px; transform: scale(.8); transform-origin: right center; } }
 @media(max-width: 800px) { .dashboard-grid { grid-template-columns: minmax(0,1fr); } .session-sidebar { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 1.5rem; } .dashboard-toolbar { align-items: flex-start; } .new-session { min-width: auto; } .idea-sculpture { width: 130px; } }
@@ -494,7 +431,7 @@ body { overflow-x: hidden; overflow-x: clip; }
 img, video, canvas { max-width: 100%; }
 /* Grid blowout guard: long words and wide children wrap instead of
    forcing page-level horizontal scroll. */
-.dashboard-main, .overview-copy, .session-setup, .studio-guide, .panel, .live-left, .live-right, .card, .syllabus-form { min-width: 0; overflow-wrap: anywhere; }
+.dashboard-main, .overview-copy, .session-setup, .studio-guide, .panel, .live-left, .live-right, .card { min-width: 0; overflow-wrap: anywhere; }
 .dashboard-main p, .overview-copy p, .session-history-item h3, .concept-box p { overflow-wrap: anywhere; }
 /* Orbit keeps glass on the device object only; reading surfaces stay
    solid so body text never sits on translucency. */
@@ -520,7 +457,7 @@ img, video, canvas { max-width: 100%; }
   .status-pills { gap: .4rem; }
   .pill { font-size: .72rem; }
   .studio-steps { margin-inline: -.25rem; padding-inline: .25rem; }
-  .session-setup, .dashboard-empty, .syllabus-form { max-width: 100%; }
+  .session-setup, .dashboard-empty { max-width: 100%; }
 }
 /* Insights: playful rescue bars, prior disclosure, waiting card. All
    numbers are real tally counts; the spotlight names a best form only
