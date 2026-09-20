@@ -20,8 +20,13 @@ export function errorText(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
+/** Fetch timeout so a dead connection surfaces as an error instead of
+ *  hanging every section on "Loading…" forever. Callers may pass their
+ *  own signal to override. */
+const FETCH_TIMEOUT_MS = 15000;
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await backendFetch(path, { headers: { "Content-Type": "application/json" }, ...init });
+  const res = await backendFetch(path, { headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS), ...init });
   if (!res.ok) {
     let detail = res.statusText;
     try {
