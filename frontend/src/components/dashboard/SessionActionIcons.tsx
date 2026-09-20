@@ -32,7 +32,7 @@ export default function SessionActionIcons({ sessionId, title, showQuiz = true }
           aria-label={`${action.name} for ${title}`}
           title={`${action.name} for ${title}`}
         >
-            <span className="action-art" aria-hidden="true"><ActionIcon>{action.paths}</ActionIcon><img src={action.img} alt="" onError={(e) => { e.currentTarget.remove(); }} /></span>
+            <span className="action-art" aria-hidden="true"><ActionIcon>{action.paths}</ActionIcon><img src={action.img} alt="" onError={(e) => { e.currentTarget.remove(); }} onLoad={(e) => { e.currentTarget.parentElement?.classList.add("has-art"); }} /></span>
         </Link>
       ))}
     </div>
