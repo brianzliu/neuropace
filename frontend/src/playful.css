@@ -29,17 +29,16 @@
 .topbar { max-width: 1600px; width: 100%; margin: auto; border: 0; padding-block: 1.35rem; }
 .brand { font-size: 1.85rem; letter-spacing: -.065em; display: inline-flex; align-items: center; gap: .6rem; font-family: var(--display); font-weight: 400; }
 .brand-dot { background: linear-gradient(135deg, var(--accent), var(--object)); box-shadow: inset 2px 2px 3px #ffffff55, 2px 3px 0 var(--object-dark); }
-/* Brand mark: three uneven pebbles scattered in a tactile squircle.
-   Abstract and a little childlike on purpose — no bars, no glyphs. */
+/* Brand mark: a planet and its moon, far apart in a tactile squircle.
+   Two dots only, widely spaced — never a cluster. */
 .brand-mark { position: relative; width: 36px; height: 36px; flex-shrink: 0; border-radius: 13px 13px 6px 13px; background: var(--cap); border: 1px solid var(--surface-edge); box-shadow: inset 1px 2px 2px #ffffff88, 0 3px 0 var(--surface-edge); }
 .brand-mark i { position: absolute; border-radius: 50%; }
-.brand-mark i:nth-child(1) { width: 11px; height: 11px; left: 6px; top: 7px; background: var(--accent); }
-.brand-mark i:nth-child(2) { width: 7px; height: 7px; right: 7px; top: 9px; background: var(--accent-2); }
-.brand-mark i:nth-child(3) { width: 13px; height: 13px; left: 11px; bottom: 5px; background: var(--good); box-shadow: 0 2px 0 color-mix(in srgb, var(--good) 55%, transparent); }
+.brand-mark i:nth-child(1) { width: 15px; height: 15px; left: 6px; bottom: 6px; background: var(--accent); }
+.brand-mark i:nth-child(2) { width: 7px; height: 7px; right: 7px; top: 7px; background: var(--accent-2); }
+.brand-mark i:nth-child(3) { display: none; }
 .app-compact .brand-mark { width: 28px; height: 28px; border-radius: 10px 10px 5px 10px; }
-.app-compact .brand-mark i:nth-child(1) { width: 8px; height: 8px; left: 5px; top: 5px; }
-.app-compact .brand-mark i:nth-child(2) { width: 5px; height: 5px; right: 5px; top: 7px; }
-.app-compact .brand-mark i:nth-child(3) { width: 10px; height: 10px; left: 8px; bottom: 4px; }
+.app-compact .brand-mark i:nth-child(1) { width: 11px; height: 11px; left: 5px; bottom: 5px; }
+.app-compact .brand-mark i:nth-child(2) { width: 5px; height: 5px; right: 5px; top: 5px; }
 .topnav > a { font-size: .9rem; }
 .main { padding-top: .25rem; }
 .welcome { padding: 1.5rem 0 2.5rem; gap: 3rem; min-height: 380px; }
@@ -277,8 +276,11 @@ body { overflow-x: clip; }
 /* Childlike wobble: session cards lean a touch, alternating sides. */
 .session-history-item:nth-child(odd) { transform: rotate(-.5deg); }
 .session-history-item:nth-child(even) { transform: rotate(.5deg); }
-/* Scattered heading dots — one hue per section, slightly oversized. */
+/* Scattered heading dots — one hue per section, slightly oversized.
+   Each heading gets a lead dot plus a two-dot trail, all widely spaced
+   (no clusters) and in three different hues. */
 .dashboard-section-heading h2::before { content: ""; display: inline-block; width: 11px; height: 11px; border-radius: 50%; background: var(--object-dark); margin-right: .55rem; vertical-align: baseline; }
+.dashboard-section-heading h2::after { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent-2); margin-left: .7rem; vertical-align: middle; box-shadow: 14px 2px 0 var(--good); }
 .concept-section h2::before { background: var(--accent); }
 .session-sidebar h2::before { background: var(--good); }
 .curriculum-section h2::before { background: var(--accent-2); }
