@@ -16,15 +16,15 @@ export function BackLink({ to, label, className }: { to: string; label: string; 
   );
 }
 
-/** Standalone session view (no library shell): learners go to Lectures, the team to Team. */
+/** Standalone session view (no library shell): learners go to the Dashboard, the team to Team. */
 export default function SessionBack({ className }: { className?: string }) {
   const { pathname } = useLocation();
   const team = pathname.startsWith("/team");
   return (
     <BackLink
       className={className}
-      to={team ? "/team" : "/lectures"}
-      label={team ? "Back to Team" : "Back to Lectures"}
+      to={team ? "/team" : "/"}
+      label={team ? "Back to Team" : "Back to Dashboard"}
     />
   );
 }

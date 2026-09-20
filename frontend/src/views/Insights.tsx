@@ -108,7 +108,7 @@ export default function Insights({ learnerId: learnerProp, lectureId: lecturePro
               <div className="stats">
                 <div className="stat orange"><div className="v">{profile.stats.streak_days}</div><div className="k">day streak</div></div>
                 <div className="stat"><div className="v">{profile.stats.lectures}</div><div className="k">lectures recorded</div></div>
-                <div className="stat green"><div className="v">{profile.stats.moments_restudied}</div><div className="k">concepts reviewed</div></div>
+                <div className="stat green"><div className="v">{profile.stats.moments_restudied}</div><div className="k">moments reviewed</div></div>
               </div>
               <TallyCard tally={profile.tally} />
               <section className="panel focus-results" aria-labelledby="focus-results-title">

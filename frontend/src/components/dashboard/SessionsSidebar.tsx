@@ -9,18 +9,17 @@ interface SessionsSidebarProps {
 }
 
 /**
- * Dashboard compartment 2: recent sessions sidebar.
- * Deep links stay on their current paths; Agent D's Library shell will
- * re-home them (redirect) without changing what this component renders.
+ * Dashboard compartment 2: every lecture you listened to, newest first. This is the one history
+ * list in the app (the separate Lectures page was the same rows under another name).
  * No status pills (user request): a running session shows an
  * "Open live session" link instead of the icon row, so state is still
  * communicated without a tag in the corner.
  */
 export default function SessionsSidebar({ sessions, concepts, closed }: SessionsSidebarProps) {
   return (
-    <aside className="session-sidebar" aria-label="Sessions">
+    <aside className="session-sidebar" aria-label="Your lectures">
       <div className="dashboard-section-heading">
-        <h2>Sessions</h2>
+        <h2>Your lectures</h2>
       </div>
       {sessions === undefined ? (
         <p className="small muted" role="status">
@@ -41,7 +40,7 @@ export default function SessionsSidebar({ sessions, concepts, closed }: Sessions
             : session.status === "created" ? "Created" : session.status;
           return (
           <article className={`session-history-item ${statusClass}`} key={session.id}>
-            <span className="session-date-tab" aria-hidden="true">
+            <span className="session-date-tab" title={new Date(session.started_at * 1000).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}>
               {new Date(session.started_at * 1000).toLocaleDateString(undefined, {
                 month: "short",
                 day: "numeric",

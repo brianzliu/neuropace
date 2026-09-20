@@ -10,7 +10,6 @@ import AdvancedSetup from "./views/AdvancedSetup";
 import Live from "./views/Live";
 import Done from "./views/Done";
 import Lecture from "./views/Lecture";
-import Lectures from "./views/Lectures";
 import ReviewWorkspace from "./components/ReviewWorkspace";
 import Team from "./views/Team";
 import Replay from "./views/Replay";
@@ -46,7 +45,7 @@ export default function App() {
         <Route path="/done/:sessionId" element={<Done />} />
         <Route path="/lecture/:sessionId" element={<SessionRouteFrame tab="notes"><Lecture /></SessionRouteFrame>} />
         <Route path="/restudy/:sessionId" element={<LegacySession tab="review" />} />
-        <Route path="/lectures" element={<Lectures />} />
+        <Route path="/lectures" element={<Navigate to="/" replace />} />
         <Route path="/library" element={<Library />} />
         <Route path="/library/:sessionId" element={<Library />}>
           <Route path="notes" element={<Lecture />} />

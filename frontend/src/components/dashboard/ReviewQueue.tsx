@@ -16,10 +16,10 @@ interface ReviewQueueProps {
 export default function ReviewQueue({ concepts, closed, organizationSource }: ReviewQueueProps) {
   const organized = organizationSource === "llm" || organizationSource === "cache";
   return (
-    <section className="concept-section" aria-label="Concepts to review">
+    <section className="concept-section" aria-label="Moments to review">
       <div className="dashboard-section-heading">
         <h2>{concepts?.length
-          ? `${concepts.length} concept${concepts.length === 1 ? "" : "s"} worth another look`
+          ? `${concepts.length} moment${concepts.length === 1 ? "" : "s"} worth another look`
           : "Your next discovery starts here."}</h2>
       </div>
       {!concepts ? <div className="mascot-row" role="status"><BrainMascot art="think" size={56} /><p className="muted">Loading…</p></div>
@@ -34,7 +34,7 @@ export default function ReviewQueue({ concepts, closed, organizationSource }: Re
         ) : (
           <div className="dashboard-empty">
             {closed ? <BrainMascot art="cheer" size={84} /> : <BrainMascot art="wave" size={84} />}
-            <h3>{closed ? "You've cleared your saved concepts." : "Nothing to untangle. Yet."}</h3>
+            <h3>{closed ? "You've cleared your saved moments." : "Nothing to untangle. Yet."}</h3>
           </div>
         )}
     </section>

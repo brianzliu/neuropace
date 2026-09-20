@@ -8,8 +8,8 @@ interface PracticeCardProps {
 
 /**
  * Sidebar practice card. Replaces the old static quote block with real,
- * honest counts: open concepts link into review, cleared queues link to
- * the library. No mastery percentages, no streaks — counts only.
+ * honest counts: open moments link into review, a cleared queue offers a
+ * new session. No mastery percentages, no streaks — counts only.
  */
 export default function PracticeCard({ concepts, closed }: PracticeCardProps) {
   if (concepts === undefined) {
@@ -25,7 +25,7 @@ export default function PracticeCard({ concepts, closed }: PracticeCardProps) {
     return (
       <div className="practice-card" aria-label="Practice">
         <h3>
-          {concepts.length} concept{concepts.length === 1 ? "" : "s"} ready
+          {concepts.length} moment{concepts.length === 1 ? "" : "s"} ready
         </h3>
         <p>Start with “{first.title}”.</p>
         <Link className="practice-go" to={`/library/${first.session_id}/review`}>
@@ -37,8 +37,8 @@ export default function PracticeCard({ concepts, closed }: PracticeCardProps) {
   return (
     <div className="practice-card" aria-label="Practice">
       <h3>{closed ? "All caught up." : "Nothing saved yet."}</h3>
-      <Link className="practice-go" to="/lectures">
-        Open lectures
+      <Link className="practice-go" to="/session/new">
+        Start a session
       </Link>
     </div>
   );

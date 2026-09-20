@@ -58,7 +58,7 @@ export default function Home() {
 
   // Office Hours and Restudy-only sessions aren't lectures: they'd otherwise show up here as a
   // phantom "Live lecture" row stuck on "running" forever, since neither mode ever transitions a
-  // session to "ended" the way a recorded/live capture does. Same filter Lectures.tsx/Library.tsx use.
+  // session to "ended" the way a recorded/live capture does. Same filter Library.tsx uses.
   const sessions = data?.sessions.filter(s => s.mode !== "review" && s.mode !== "office_hours");
 
   return <div className="dashboard">

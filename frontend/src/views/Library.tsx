@@ -121,7 +121,7 @@ export default function Library() {
   const tab = tabFromLocation(loc.pathname, params.tab, search.get("tab"));
 
   if (!sessionId) {
-    return <Navigate to="/lectures" replace />;
+    return <Navigate to="/" replace />;
   }
   if (!outlet) {
     return <Navigate to={libraryHref(sessionId, tab)} replace />;

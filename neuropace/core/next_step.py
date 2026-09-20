@@ -76,7 +76,7 @@ async def next_step(db, llm, session: dict, body: NextStepIn) -> dict:
     if not progress["remaining_seconds"]:
         available = ["complete"]
         choice = StepChoice(
-            action="complete", reason="Your study time is up. You can return to the remaining concepts later."
+            action="complete", reason="Your study time is up. You can return to the remaining moments later."
         )
         source = "rules"
     else:
@@ -95,9 +95,9 @@ async def next_step(db, llm, session: dict, body: NextStepIn) -> dict:
             order = ["complete"]
         action = next((a for a in order if a in available), "complete")
         reasons = {
-            "notes": "Look over the saved concepts before the next check.",
+            "notes": "Look over the saved moments before the next check.",
             "replay": "Revisit the lecture context for these ideas.",
-            "review": "Practice the concepts that still need another look.",
+            "review": "Practice the moments that still need another look.",
             "quiz": "Check what you remember from this lecture.",
             "complete": "That is a good stopping point. You can return whenever you want.",
         }

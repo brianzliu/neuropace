@@ -102,7 +102,7 @@ def dashboard_data(db, learner_id: str) -> dict:
         "sessions": sessions,
         "concepts": concepts,
         "closed": closed,
-        "summary": f"{len(concepts)} saved concepts to revisit. {closed} cleared through review.",
+        "summary": f"{len(concepts)} saved moments to revisit. {closed} cleared through review.",
         "organization_source": "rules",
         "_session_inputs": session_inputs,
     }

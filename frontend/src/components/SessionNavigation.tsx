@@ -20,7 +20,7 @@ export default function SessionNavigation({ sessionId, title, sessions, titles, 
 }) {
   return <header className="session-navigation">
     <div className="library-head session-navigation-heading">
-      <BackLink to="/lectures" label="Back to Lectures" />
+      <BackLink to="/" label="Back to Dashboard" />
       {sessions && sessions.length > 0 ? (
         <SessionSwitcher
           sessions={sessions} titles={titles} currentId={sessionId}
