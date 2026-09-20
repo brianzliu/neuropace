@@ -50,7 +50,7 @@ Decisions and reasons:
 - **Templates over free-form generation.** A model asked for "a visualization" produces something different every time and nothing the app can check. A model asked for "2 to 8 points with a label and a value" produces data the app renders the same way every time, validates (2 to 8 points, distinct options, safe animation code) and can show on a sample page without any model at all (`/team/artifacts/sample`).
 - **Animation is the one template that carries code**, because motion cannot be reduced to a data table without losing the point. It is fenced: inline SVG or canvas plus one script, under 6000 characters, no network, no storage, no `parent`, rendered in an iframe with `sandbox="allow-scripts"` and nothing else. The validator rejects anything that reaches outside, and a rejected animation falls back to the diagram.
 - **Everything is grounded.** Every template is built from the transcript span and the minute before it. Charts use only numbers the lecturer said; a plot with no numbers behind it says "shape only". If the span cannot support a template the plan does not pick it.
-- **Not included, on purpose:** mnemonics (weak evidence, rarely grounded), flashcards (that is what the check question already is), free text chat (the product has no prompt box), images from image models (not grounded, slow).
+- **Not included in the scripted flows above, on purpose:** mnemonics (weak evidence, rarely grounded), flashcards (that is what the check question already is), images from image models (not grounded, slow). Free text chat is deliberately kept out of Restudy and Listen, which stay scripted — it exists as its own mode, §5a.
 
 ## 5. Restudy, rethought: teach first, then check, then strengthen
 
@@ -75,7 +75,20 @@ The ranking on You combines them, understanding first: score = 0.6 × posterior 
 
 **Why not A/B two explanations of the same moment side by side.** Showing family A then family B for one moment doubles the time per moment and confounds the second with the first (you already half-know it). Alternating families across moments is the same experiment without the confound, and ten moments per lecture give each family two or three trials per lecture. The only within-moment comparison is the one that matters to the student: a miss, then another way.
 
-**Voice, where it belongs.** During a live lecture NeuroPace stays silent: the student is listening to a lecturer, and the catch-up is one line on screen. In restudy the tutor voice is the natural way to be re-explained something, and it is what makes a template reveal feel taught rather than paged through. Deepgram's text to speech is used first (the team already holds the key; sentence-level highlighting needs no word timestamps). A conversational voice agent ("ask about this moment", grounded in the transcript) is the next step, not this one: it needs duplex audio, barge-in and a grounding guard, and it is only worth it once the scripted tutor is right.
+**Voice, where it belongs.** During a live lecture NeuroPace stays silent: the student is listening to a lecturer, and the catch-up is one line on screen. In restudy the tutor voice is the natural way to be re-explained something, and it is what makes a template reveal feel taught rather than paged through. Deepgram's text to speech is used first (the team already holds the key; sentence-level highlighting needs no word timestamps). A conversational agent now exists in a deliberately narrow form — push-to-talk, no barge-in, no continuous listening — as its own mode (§5a), not folded into restudy. The fuller version (duplex audio, interrupt-anywhere) is still the next step after this one, not this one.
+
+## 5a. Office Hours: an open conversation about a lecture
+
+Restudy and Listen stay scripted on purpose (§4, §5): a fixed sequence keeps generation cheap, testable and honest. But a student who wants to just ask something — "wait, why does that follow?", "show me that again a different way" — has nowhere to type it. Office Hours is that place: a second mode, entered from the lecture page once a lecture is done, built for open-ended questions rather than a fixed lesson.
+
+The student and the agent share one thing: a **board**. As the conversation goes, the agent explains by placing, updating and removing elements on the board — the same ten templates from the catalogue in §4 (words, analogy, diagram, chart, plot, timeline, compare, animation, steps, worked example), plus three small annotation primitives (a labelled shape, an arrow connecting two elements, a text label) for tying pieces together. The model is never handed a blank canvas to design freely: every element is one of these fixed, validated shapes, positioned on a bounded board, the same "narrow schema, app renders" discipline as everywhere else in this document. A long conversation doesn't grow the board without limit — the oldest element quietly makes way once the board is full.
+
+**Clicking a board element asks the agent to say more about it** — the same as typing a follow-up question, just aimed at something already on the board instead of typed out. The elaboration lands in the chat like any other reply.
+
+**A timeline scrubber lets the student drag back through the conversation** and see the board and the chat exactly as they were at that point — read-only time travel, not an edit: dragging back never changes history, and a "return to now" brings the live conversation back.
+
+**Voice is push-to-talk, not a duplex conversation.** Hold a button, ask the question, release; the clip is transcribed (Deepgram), the agent's reply is spoken back (the same text-to-speech Restudy uses). No continuous listening, no interrupting the agent mid-reply — that fuller voice-agent experience is still future work, per §5's closing note.
+
 ## 6. Screens
 
 **Listen (home).** One card: "Ready when you are" and *Start listening* (live microphone) or a practice lecture. Below: your lectures as tiles (title, date, "3 moments to restudy" or "all clear"). Headset and pad status as one friendly line each ("Headset on, signal good" / "No headset today, the button still works").
@@ -87,6 +100,8 @@ The ranking on You combines them, understanding first: score = 0.6 × posterior 
 **Lectures.** Every past lecture as a tile with restudy progress. Opening one shows the two ways to restudy, the whole transcript with the missed moments highlighted (folded), and the moments ("What you missed") with the summary of each.
 
 **Restudy (a lesson).** Duolingo-style lesson flow: progress bar, one card at a time. For each moment: where you were, then the explanation in the family chosen for you (with the reason said), read aloud by the tutor if you like, then the check. Miss it and the moment is explained in the next family, then asked again. Hit and it celebrates. Three in a row ends the lesson. With a headset on, the brain-wave strip stays visible, focus is measured per explanation, and a drift switches the explanation early. Lesson end: what you got, what worked ("pictures rescued you twice, and held your attention 92% of the time").
+
+**Office Hours** (§5a). A shared board on the left, a chat on the right, entered from a finished lecture's page. Type or hold to talk; the agent replies and the board fills in as it explains, one element at a time. A scrubber above replays any earlier point in the conversation, read-only. Clicking a board element asks the agent to say more about it, right in the chat.
 
 **You.** Streak of days with a lecture, moments restudied, and "how you learn best" with the four families. "Not you? Start fresh."
 
@@ -107,4 +122,5 @@ Our own constraint on top: **say when something is practice.** A simulated heads
 
 - Backend: artifact schema (`GapPackage.artifacts` with applicability flags), four families (`words`, `analogy`, `visual`, `doing`) replacing the old form keys everywhere including the tally, a `review` session mode (headset only) so restudy can measure focus, a live brain-wave stream, per-card focus ratio, a profile endpoint, a reset endpoint, and migrations for existing databases.
 - Frontend: rebuilt on the screens in §6 with the Duolingo-derived system in §7, artifact renderers (chart, steps, example, diagram), a brain-wave canvas, a lesson flow, and the team pages moved behind the gear.
+- Office Hours (§5a): an `office_hours` session mode with no headset/totem; a new event-sourced log (`oh_messages`, `oh_board_ops`) so the board and chat are always rebuildable from the DB and a timeline scrub is just a replay up to an earlier point; a conversational LLM call returning a reply plus board ops, validated the same way every template already is; a board renderer built on the existing artifact views; push-to-talk voice reusing the existing transcription and text-to-speech.
 - Docs: this file; PRD §5 to §6 point here; the verification record gains the new checks.
