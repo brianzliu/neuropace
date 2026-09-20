@@ -594,8 +594,8 @@ class OfficeHoursTurn(Strict):
     @model_validator(mode="after")
     def _shape(self) -> OfficeHoursTurn:
         self.reply_text = " ".join(self.reply_text.split())
-        if not self.reply_text:
-            raise ValueError("reply_text empty")
+        if len(self.reply_text.split()) < 2:
+            raise ValueError("reply_text too short to be a real answer")
         self.board_ops = self.board_ops[:6]
         return self
 

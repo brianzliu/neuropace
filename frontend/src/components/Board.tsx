@@ -54,8 +54,8 @@ export default function Board({ elements, onExpand }: { elements: BoardElement[]
               );
             })}
           </svg>
-          {boxes.map((el) => (
-            <BoardElementWrapper key={el.id} el={el} onExpand={onExpand} />
+          {boxes.map((el, i) => (
+            <BoardElementWrapper key={el.id} el={el} onExpand={onExpand} order={i} />
           ))}
         </div>
       </div>
@@ -65,13 +65,13 @@ export default function Board({ elements, onExpand }: { elements: BoardElement[]
 
 const FRAMED_KINDS = new Set(["shape", "label", "manim"]);
 
-function BoardElementWrapper({ el, onExpand }: { el: BoardElement; onExpand: (id: string) => void }) {
+function BoardElementWrapper({ el, onExpand, order }: { el: BoardElement; onExpand: (id: string) => void; order: number }) {
   const { x, y, w, h, z } = el.envelope;
   const framed = !FRAMED_KINDS.has(el.kind);
   return (
     <div
-      className="oh-board-element"
-      style={{ left: x, top: y, width: w, height: h, zIndex: z + 1 }}
+      className="oh-board-element oh-pop-in"
+      style={{ left: x, top: y, width: w, height: h, zIndex: z + 1, animationDelay: `${Math.min(order, 8) * 90}ms` }}
       role="button"
       tabIndex={0}
       onClick={() => onExpand(el.id)}

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, errorText } from "../lib/api";
-import { speak } from "../lib/tutor";
+import { speak, stopSpeaking } from "../lib/tutor";
 import type { OHMessage } from "../lib/types";
 
 /** Push-to-talk (docs/PRODUCT.md §5a): hold to record one bounded clip, release to send. Kept as a fallback
@@ -173,6 +173,7 @@ export default function OfficeHoursChat({
 }) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -182,7 +183,14 @@ export default function OfficeHoursChat({
 
   const afterReply = async (replyText: string) => {
     onSent();
-    if (voiceOn) await speak(replyText);
+    if (voiceOn) {
+      setSpeaking(true);
+      try {
+        await speak(replyText);
+      } finally {
+        setSpeaking(false);
+      }
+    }
   };
 
   const send = async (raw: string) => {
@@ -255,7 +263,7 @@ export default function OfficeHoursChat({
       {ptt.error ? <div className="label-3">{ptt.error}</div> : null}
       {agent.error ? <div className="label-3">{agent.error}</div> : null}
       {disabled ? <div className="label-3">Looking back — return to now to keep talking.</div> : null}
-      <div className="oh-chat-input row">
+      <div className="oh-chat-toolbar row">
         <button
           type="button"
           className={"btn btn-sm" + (agent.active ? " is-on is-recording" : "")}
@@ -263,22 +271,8 @@ export default function OfficeHoursChat({
           disabled={disabled || !agent.supported}
           title={agent.supported ? "Continuous listening: talk any time, no button to hold" : "Needs Chrome or Edge"}
         >
-          {agent.active ? "Listening… tap to stop" : "Voice agent"}
+          {agent.active ? "Listening…" : "Voice agent"}
         </button>
-      </div>
-      <form
-        className="oh-chat-input row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void send(text);
-        }}
-      >
-        <input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Ask about the lecture…"
-          disabled={locked}
-        />
         <button
           type="button"
           className={"btn btn-sm" + (ptt.recording ? " is-recording" : "")}
@@ -297,6 +291,33 @@ export default function OfficeHoursChat({
         >
           {ptt.recording ? "Release to send" : "Hold to talk"}
         </button>
+        {speaking ? (
+          <button
+            type="button"
+            className="btn btn-sm btn-blue"
+            onClick={() => {
+              stopSpeaking();
+              agent.resume();
+            }}
+            title="Stop the agent talking (not true barge-in — you can't yet talk over it, just stop it)"
+          >
+            Stop
+          </button>
+        ) : null}
+      </div>
+      <form
+        className="oh-chat-input row"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void send(text);
+        }}
+      >
+        <input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Ask about the lecture…"
+          disabled={locked}
+        />
         <button className="btn btn-sm btn-primary" type="submit" disabled={locked || !text.trim()}>
           Send
         </button>

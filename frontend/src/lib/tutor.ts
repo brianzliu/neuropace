@@ -149,12 +149,21 @@ function playUrl(url: string, gen: () => boolean): Promise<void> {
 }
 
 /** One-off playback for Office Hours (docs/PRODUCT.md §5a): fetch and play a whole reply, no beat stepping. */
+let activeAudio: HTMLAudioElement | null = null;
+let activeResolve: (() => void) | null = null;
+
 export async function speak(text: string): Promise<void> {
   const url = await fetchBeat(text);
   if (!url) return;
   await new Promise<void>((resolve) => {
     const a = new Audio(url);
+    activeAudio = a;
+    activeResolve = resolve;
     const done = () => {
+      if (activeAudio === a) {
+        activeAudio = null;
+        activeResolve = null;
+      }
       URL.revokeObjectURL(url);
       resolve();
     };
@@ -162,6 +171,21 @@ export async function speak(text: string): Promise<void> {
     a.onerror = done;
     void a.play().catch(done);
   });
+}
+
+/** A crude stand-in for barge-in (docs/PRODUCT.md §5a): not interrupting by talking over the agent, just an
+ * immediate "stop" a click can reach — halts playback now and resolves whatever `speak()` call is waiting. */
+export function stopSpeaking(): void {
+  const resolve = activeResolve;
+  const audio = activeAudio;
+  activeAudio = null;
+  activeResolve = null;
+  audio?.pause();
+  resolve?.();
+}
+
+export function isSpeaking(): boolean {
+  return activeAudio !== null;
 }
 
 /** The tutor voice for restudy: sentence-sized beats from /api/tts, one prefetched ahead, cancellable. */

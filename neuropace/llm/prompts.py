@@ -51,71 +51,54 @@ OFFICE_HOURS_INSTRUCTIONS = (
     "so far, the elements currently on a shared board (id, kind, position), and the student's new message. "
     "Answer from lecture_transcript when the question is about the lecture; if lecture_transcript is empty or "
     "does not cover what was asked, say so plainly and answer from general knowledge instead of pretending it "
-    "came from the lecture. Reply in reply_text: plain, spoken-register sentences, no markdown, no bullet "
-    "symbols, under 120 words.\n"
-    "Alongside the reply, emit board_ops (0 to 6) to keep the board in step with what you are explaining:\n"
-    "- add: a NEW element. kind is one of words, analogy, diagram, chart, plot, timeline, compare, steps, "
-    "example, animation, shape, arrow, label@@MANIM_KIND@@. content_json is that kind's fields, JSON-encoded as a single "
-    "string (the same fields each template already uses; 'shape' needs {shape, label}, 'arrow' needs "
-    "{from_id, to_id, label} referencing two element ids already on the board, 'label' needs {text}). Place it "
-    "in envelope {x,y,w,h,z} in an empty part of the board (canvas is roughly 4000 by 3000; do not stack new "
-    "elements on top of ones already there).\n"
-    "- update: change an EXISTING element_id in place (envelope to move/resize it, content_json to change what "
-    "it says) rather than adding a duplicate of something already on the board.\n"
-    "- remove: take an element off the board once it is no longer part of the conversation.\n"
-    "content_json field shapes, exactly (extra or renamed fields make the whole op silently rejected, so when "
-    "unsure use fewer fields correctly rather than guessing a richer shape):\n"
-    "  words: {summary, key_idea:{term,definition,example}}\n"
-    "  analogy: {story, mapping:[{idea,everyday}], caveat}\n"
-    "  diagram: {title, nodes:[{id,label}], edges:[{from_id,to_id,label}], steps:[{highlight:[node ids],caption}]}"
-    " -- note from_id/to_id, not from/to\n"
-    "  chart: {kind:'bar'|'line', title, unit, points:[{label,value}], takeaway}\n"
-    "  plot: {title, x_label, y_label, series:[{name,points:[{x,y}]}], annotations:[{x,y,text}], illustrative, takeaway}\n"
-    "  timeline: {title, events:[{when,label,detail}], takeaway}\n"
-    "  compare: {title, left, right, rows:[{aspect,left_value,right_value}], verdict}\n"
-    "  steps: {title, steps:[one string per step]}\n"
-    "  example: {title, lines:[one string per line], result}\n"
-    "  animation: {title, caption, html} (one inline svg or canvas plus one <script>, no network/storage, under 4000 chars)\n"
-    "  shape: {shape:'rect'|'ellipse', label}\n"
-    "  arrow: {from_id, to_id, label} (from_id/to_id must be element ids already on the board)\n"
-    "  label: {text}\n"
+    "came from the lecture.\n"
+    "Reply in reply_text: plain, spoken-register sentences, no markdown, no bullet symbols. Keep it SHORT — 1 to "
+    "3 sentences, under 40 words: this is read aloud and spoken to, like a person talking, not an essay. Say one "
+    "idea, then stop; the student will ask for more if they want it.\n"
+    "You draw on a literal whiteboard, not a document. The whole toolkit is three small primitives, and every "
+    "diagram, process or comparison is BUILT from several of them, one piece per op — never one big "
+    "pre-formatted block:\n"
+    "  shape: {shape:'rect'|'ellipse', label} — a labelled box or circle: one idea, one step, one term per shape.\n"
+    "  arrow: {from_id, to_id, label} — a connector between two shapes already on the board (from_id/to_id are "
+    "their element ids); label is 1-3 words for the relation, or empty.\n"
+    "  label: {text} — free text with no box: a caption, a short note, a title over a group of shapes.\n"
     "@@MANIM_FIELD_SHAPE@@"
-    "Prefer words/analogy for a quick clarification; reach for diagram/chart/plot/timeline/compare/animation "
-    "when a picture would make the point better than more words would. Do not emit an op for every turn: a "
-    "short follow-up question with nothing new to show can be answered in reply_text alone. But if reply_text "
-    "says or implies something is now shown, drawn, on the board, or laid out (in any wording), board_ops MUST "
-    "contain the add/update op that actually puts it there in the same turn — never describe a picture you did "
-    "not also emit. Example: explaining a 3-step process for the first time should emit one add op, kind "
-    "'steps' or 'diagram', in the same turn as the reply that describes it. Never invent something as if the lecturer "
-    "said it: quote or closely paraphrase lecture_transcript for anything you attribute to the lecture, and say "
-    "plainly when you are answering from general knowledge instead. Plain text only, no markdown, no bullet "
-    "symbols."
+    "Build a 4-step process as 4 shapes in a row with 3 arrows between them, not one combined object. Build a "
+    "comparison as two shapes side by side with their differences as nearby labels. Show a small number "
+    "comparison as a few shapes labelled with their values, not a chart widget.\n"
+    "Emit 0 to 6 board_ops per turn. add: {op:'add', element_id, kind, envelope:{x,y,w,h,z}, content_json: that "
+    "kind's fields JSON-encoded as a string}. Place new elements in an empty part of the board (canvas is "
+    "roughly 4000 by 3000; keep shapes small, around 200-300 px wide, laid out left to right or top to bottom — "
+    "never stack a new element on top of one already there). update: {op:'update', element_id, envelope?, "
+    "content_json?} changes an EXISTING element in place (move it, reword it) instead of adding a duplicate. "
+    "remove: {op:'remove', element_id} takes an element off the board. Extra or renamed content_json fields make "
+    "the whole op silently rejected, so when unsure use fewer fields correctly rather than guessing a richer one.\n"
+    "Do not emit an op for every turn: a short follow-up with nothing new to show can be answered in reply_text "
+    "alone. But if reply_text says or implies something is now shown, drawn, or on the board, board_ops MUST "
+    "contain the ops that actually put it there in the same turn — never describe something you did not also "
+    "emit. Never invent something as if the lecturer said it: quote or closely paraphrase lecture_transcript for "
+    "anything you attribute to the lecture, and say plainly when you are answering from general knowledge "
+    "instead. Plain text only, no markdown, no bullet symbols."
 )
 
-_MANIM_KIND_SUFFIX = ", manim"
 _MANIM_FIELD_SHAPE = (
-    "  manim: {title, caption, scene_name, script} -- a rendered math animation (Manim Community); use this "
-    "ONLY for real mathematical content (an equation, a function's graph, a geometric construction, a vector "
-    "or calculus diagram, a proof) where the shapes and motion of the math itself are the point. For anything "
-    "else -- a general process, a system, a comparison -- use diagram/chart/plot/timeline/compare/animation "
-    "instead; manim is slower to render and is not a substitute for those. script must contain exactly "
-    "'from manim import *' for its manim import, only numpy/math/random besides that, exactly one "
-    "'class {scene_name}(Scene):' (or a Scene subclass) defining construct(self), under 4000 characters, no "
-    "other imports, no file or network access.\n"
+    "  manim: {title, caption, scene_name, script} — a rendered math animation (Manim Community); the one "
+    "exception to the shape/arrow/label toolkit, used ONLY for real mathematical content (an equation, a "
+    "function's graph, a geometric construction, a vector or calculus diagram, a proof) where the shapes and "
+    "motion of the math itself are the point — never a substitute for shape/arrow/label on anything else. "
+    "script must contain exactly 'from manim import *' for its manim import, only numpy/math/random besides "
+    "that, exactly one 'class {scene_name}(Scene):' (or a Scene subclass) defining construct(self), under 4000 "
+    "characters, no other imports, no file or network access.\n"
 )
 
 
 def office_hours_instructions(manim_enabled: bool) -> str:
     """OFFICE_HOURS_INSTRUCTIONS with the manim kind mentioned only when neuropace/manim_render.py reports it
-    installed (docs/PRODUCT.md §5a) -- the model is never told about a kind it cannot actually render."""
-    text = OFFICE_HOURS_INSTRUCTIONS
-    if manim_enabled:
-        text = text.replace("@@MANIM_KIND@@", _MANIM_KIND_SUFFIX).replace(
-            "@@MANIM_FIELD_SHAPE@@", _MANIM_FIELD_SHAPE
-        )
-    else:
-        text = text.replace("@@MANIM_KIND@@", "").replace("@@MANIM_FIELD_SHAPE@@", "")
-    return text
+    installed (docs/PRODUCT.md §5a) -- the model is never told about a kind it cannot actually render. The
+    board's toolkit is deliberately just shape/arrow/label (+ manim): the ten restudy templates (diagram,
+    chart, plot, ...) render as busy, self-contained widgets built for a full-width lesson card, not a shared
+    whiteboard, so they are not offered here even though BOARD_CONTENT_KINDS still accepts them if ever sent."""
+    return OFFICE_HOURS_INSTRUCTIONS.replace("@@MANIM_FIELD_SHAPE@@", _MANIM_FIELD_SHAPE if manim_enabled else "")
 
 
 TEMPLATE_INSTRUCTIONS: dict[str, str] = {
