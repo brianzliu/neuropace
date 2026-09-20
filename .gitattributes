@@ -1,0 +1,5 @@
+# Secrets shared with approved collaborators via git-crypt (see README "API keys").
+# Encrypted in git, plaintext on disk once `git-crypt unlock <key>` has run.
+.env filter=git-crypt diff=git-crypt
+.env.tts filter=git-crypt diff=git-crypt
+.gitattributes !filter !diff
