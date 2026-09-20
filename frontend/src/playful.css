@@ -213,7 +213,7 @@ select {
 /* Agent 3: one tactile box per saved concept, with the queue-level summary
    above it. Summary text is API-only; the source tag never claims more than
    the backend returned (model-ordered vs rules fallback vs organizing). */
-.concept-section { padding-top: 2rem; }
+.concept-section { padding: 1.5rem 1.5rem 1.6rem; border: 1px solid var(--line); border-bottom: 4px solid var(--surface-edge); border-radius: var(--radius); background: var(--bg-2); box-shadow: 0 8px 20px var(--shadow); }
 .concept-summary { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem .9rem; margin: 0 0 1.1rem; }
 .concept-summary p { flex: 1 1 260px; margin: 0; font-size: .9rem; line-height: 1.6; color: var(--text); }
 .organize-source { flex-shrink: 0; display: inline-flex; align-items: center; min-height: 26px; padding: .2rem .65rem; border: 1px solid var(--line); border-radius: 99px; background: var(--bg-2); color: var(--muted); font-size: .68rem; font-weight: 700; letter-spacing: .03em; }
@@ -229,6 +229,7 @@ select {
 .concept-box-note.is-suggested { color: var(--accent); }
 .concept-box-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .6rem; border-top: 1px solid var(--line); padding-top: .8rem; }
 .concept-source { font-size: .74rem; color: var(--muted); }
+.concept-source span { display: block; font-size: .68rem; color: var(--dim); }
 .concept-review { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; min-width: 108px; padding: .5rem 1.15rem; border: 1px solid var(--cap-dark); border-radius: 12px; background: var(--cap); color: var(--cap-text); font-size: .86rem; font-weight: 700; text-decoration: none; box-shadow: 0 3px 0 var(--cap-dark); }
 .concept-review:hover { text-decoration: none; filter: brightness(1.03); }
 .concept-review:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--cap-dark); }
@@ -297,7 +298,7 @@ select {
 textarea { font: inherit; width: 100%; padding: .8rem; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 10px; resize: vertical; }
 @media(max-width: 1050px) { .dashboard-grid { grid-template-columns: minmax(0,1fr) 235px; gap: 1.5rem; } .idea-sculpture { width: 100px; transform: scale(.8); transform-origin: right center; } }
 @media(max-width: 800px) { .dashboard-grid { grid-template-columns: minmax(0,1fr); } .session-sidebar { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 1.5rem; } .dashboard-toolbar { align-items: flex-start; } .new-session { min-width: auto; } .idea-sculpture { width: 130px; } }
-@media(max-width: 540px) { .dashboard-toolbar { flex-direction: column; gap: 1.2rem; } .dashboard-toolbar .new-session { width: 100%; } .review-overview { padding: 1.3rem; } .idea-sculpture { display: none; } .concept-box-footer { flex-direction: column; align-items: stretch; } .concept-review { width: 100%; } }
+@media(max-width: 540px) { .dashboard-toolbar { flex-direction: column; gap: 1.2rem; } .dashboard-toolbar .new-session { width: 100%; } .review-overview { padding: 1.3rem; } .idea-sculpture { display: none; } .concept-section { padding: 1.1rem; } .concept-box-footer { flex-direction: column; align-items: stretch; } .concept-review { width: 100%; } }
 .live-capture h2 { margin: 0; font-size: 1rem; }
 .live-capture video { width: 100%; max-height: 230px; object-fit: contain; background: #242424; border-radius: 12px; margin-top: .7rem; }
 .live-capture p { font-size: .72rem; }

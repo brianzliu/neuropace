@@ -13,9 +13,8 @@ interface ReviewQueueProps {
   organizing?: boolean;
 }
 
-export default function ReviewQueue({ concepts, closed, hasLearner, summary, organizationSource, organizing }: ReviewQueueProps) {
+export default function ReviewQueue({ concepts, closed, hasLearner, organizationSource }: ReviewQueueProps) {
   const organized = organizationSource === "llm" || organizationSource === "cache";
-  const sourceLabel = organizing ? "Organizing…" : organized ? "Suggested from your saved notes" : "Unfinished first";
   return (
     <section className="concept-section" aria-label="Concepts to review">
       <div className="dashboard-section-heading">
@@ -27,10 +26,6 @@ export default function ReviewQueue({ concepts, closed, hasLearner, summary, org
         : !concepts ? <p className="muted" role="status">Loading your saved moments…</p>
         : concepts.length ? (
           <>
-            <div className="concept-summary">
-              {summary?.trim() ? <p>{summary}</p> : null}
-              <span className={"organize-source" + (organized ? " is-suggested" : organizing ? " is-organizing" : "")}>{sourceLabel}</span>
-            </div>
             <div className="concept-list">
               {concepts.map((concept, i) => (
                 <ConceptBox key={concept.id} concept={concept} index={i} organized={organized} />
