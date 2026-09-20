@@ -114,7 +114,7 @@ export function LibraryFrame({ sessionId, tab, children }: { sessionId: string; 
       <div className={"library" + (tab === "replay" ? " library-replay" : "")}>
         <div className="library-head" style={{ display: "flex", flexWrap: "wrap", gap: ".6rem", alignItems: "center", justifyContent: "space-between", marginBottom: ".6rem" }}>
           <div className="row" style={{ gap: ".6rem" }}>
-            <Link to="/library" className="icon-button" aria-label="Back to Library" title="Back to Library">
+            <Link to="/lectures" className="icon-button" aria-label="Back to Lectures" title="Back to Lectures">
               <span aria-hidden="true">←</span>
             </Link>
             <h1 className="library-title" style={{ margin: 0, fontSize: "1.35rem" }}>
@@ -169,7 +169,7 @@ export default function Library() {
   const tab = tabFromLocation(loc.pathname, params.tab, search.get("tab"));
 
   if (!sessionId) {
-    return <LibraryPicker />;
+    return <Navigate to="/lectures" replace />;
   }
   if (!outlet) {
     return <Navigate to={libraryHref(sessionId, tab)} replace />;
@@ -178,46 +178,5 @@ export default function Library() {
     <LibraryFrame sessionId={sessionId} tab={tab}>
       {outlet}
     </LibraryFrame>
-  );
-}
-
-function LibraryPicker() {
-  const { sessions, titles } = useLibraryIndex();
-  return (
-    <div className="library">
-      <div className="library-head" style={{ marginBottom: ".6rem" }}>
-        <h1 className="library-title" style={{ margin: 0, fontSize: "1.5rem" }}>
-          Library
-        </h1>
-      </div>
-      <p className="muted">Every session keeps its notes, review, replay and quiz in one place.</p>
-      {sessions === null ? <div className="panel muted">loading sessions…</div> : null}
-      {sessions && sessions.length === 0 ? (
-        <div className="panel library-empty">
-          <p>No sessions yet.</p>
-          <p className="muted small">
-            The <Link to="/">Start session</Link> launcher on your dashboard starts one; it appears here when it ends.
-          </p>
-        </div>
-      ) : null}
-      {sessions && sessions.length ? (
-        <div className="library-list">
-          {sessions.map((s) => (
-            <article className="panel library-session" key={s.id}>
-              <div>
-                <Link to={libraryHref(s.id, "notes")}>{sessionTitle(s, titles)}</Link>
-                <div className="muted small">{sessionMeta(s)}</div>
-              </div>
-              <div className="row small">
-                <span className="muted">{s.gaps} {s.gaps === 1 ? "gap" : "gaps"}</span>
-                {s.lecture_id ? <Link to={libraryHref(s.id, "quiz")}>quiz</Link> : null}
-                <Link to={libraryHref(s.id, "review")}>review</Link>
-                <Link to={libraryHref(s.id, "replay")}>replay</Link>
-              </div>
-            </article>
-          ))}
-        </div>
-      ) : null}
-    </div>
   );
 }

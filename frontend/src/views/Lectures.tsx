@@ -4,6 +4,7 @@ import { activeLearnerId } from "../lib/activeLearner";
 import { api } from "../lib/api";
 import type { LectureFull, SessionPublic } from "../lib/types";
 import { Badge } from "../components/Badges";
+import SessionActionIcons from "../components/dashboard/SessionActionIcons";
 
 /** Lectures: the history, newest first. The only place it lives (docs/PRODUCT.md §6). */
 export default function Lectures() {
@@ -37,17 +38,19 @@ export default function Lectures() {
       <div className="list">
         {sessions.map((s) => {
           const lec = lectures.find((l) => l.id === s.lecture_id);
+          const title = lec?.title ?? (s.transcript_kind === "deepgram" ? "Live lecture" : "Lecture");
           const running = s.status === "running";
           const restudied = s.status === "reviewed";
           const badge = running ? { t: "Listening now", tone: "success" as const } : restudied ? { t: "Restudied", tone: "accent" as const } : s.gaps ? { t: `${s.gaps} to restudy`, tone: "warning" as const } : { t: "No saved moments", tone: "neutral" as const };
           return (
-            <Link key={s.id} className="list-row" to={running ? `/live/${s.id}` : `/lecture/${s.id}`}>
-              <span className="lr-main">
-                <span className="lr-title">{lec?.title ?? (s.transcript_kind === "deepgram" ? "Live lecture" : "Lecture")}</span>
+            <article key={s.id} className="list-row">
+              <Link className="lr-main" to={running ? `/live/${s.id}` : `/lecture/${s.id}`}>
+                <span className="lr-title">{title}</span>
                 <span className="lr-meta">{new Date(s.started_at * 1000).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
-              </span>
+              </Link>
               <Badge tone={badge.tone}>{badge.t}</Badge>
-            </Link>
+              {!running ? <SessionActionIcons sessionId={s.id} title={title} showQuiz={!!s.lecture_id} /> : null}
+            </article>
           );
         })}
       </div>

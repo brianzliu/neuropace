@@ -13,7 +13,6 @@ import Lecture from "./views/Lecture";
 import Lectures from "./views/Lectures";
 import Restudy from "./views/Restudy";
 import ReviewEntry from "./views/ReviewEntry";
-import You from "./views/You";
 import Team from "./views/Team";
 import Replay from "./views/Replay";
 import Quiz from "./views/Quiz";
@@ -63,9 +62,9 @@ export default function App() {
         <Route path="/replay/:sessionId" element={<Replay />} />
         <Route path="/quiz/:sessionId" element={<Quiz />} />
         <Route path="/insights" element={<Insights />} />
-        <Route path="/you" element={<You />} />
+        <Route path="/you" element={<Navigate to="/insights" replace />} />
         <Route path="/tally/:learnerId" element={<Insights />} />
-        <Route path="/lossmap/:lectureId" element={<LossMap />} />
+        <Route path="/lossmap/:lectureId" element={<Insights />} />
         <Route path="/team" element={<Team />} />
         <Route path="/team/replay/:sessionId" element={<Replay />} />
         <Route path="/team/lossmap/:lectureId" element={<LossMap />} />

@@ -37,8 +37,8 @@ export default function PracticeCard({ concepts, closed }: PracticeCardProps) {
   return (
     <div className="practice-card" aria-label="Practice">
       <h3>{closed ? "All caught up." : "Nothing saved yet."}</h3>
-      <Link className="practice-go" to="/library">
-        Open library
+      <Link className="practice-go" to="/lectures">
+        Open lectures
       </Link>
     </div>
   );

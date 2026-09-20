@@ -55,7 +55,7 @@ export default function Lecture() {
         lecture_id: data.session.lecture_id ?? undefined,
         learner_id: data.session.learner_id,
       });
-      nav(`/office-hours/${sess.id}`);
+      nav(`/office-hours/${sess.id}?original=${sessionId}`);
     } catch (e) {
       setErr(errorText(e));
     } finally {

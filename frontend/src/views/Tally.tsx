@@ -1,7 +1,4 @@
-import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { api } from "../lib/api";
-import type { Learner, TallySummary } from "../lib/types";
+import type { TallySummary } from "../lib/types";
 import { FORM_LABEL, FORMS } from "../lib/types";
 
 /** Card body shared by the Insights shell and the legacy /tally/:learnerId deep link.
@@ -58,29 +55,3 @@ export function TallyCard({ tally }: { tally: TallySummary }) {
   );
 }
 
-export default function Tally() {
-  const { learnerId = "" } = useParams();
-  const [tally, setTally] = useState<TallySummary | null>(null);
-  const [learner, setLearner] = useState<Learner | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  useEffect(() => {
-    Promise.all([api.tally(learnerId), api.learner(learnerId)])
-      .then(([t, l]) => {
-        setTally(t);
-        setLearner(l);
-      })
-      .catch((e) => setErr(String(e)));
-  }, [learnerId]);
-  if (err) return <div className="panel error">{err}</div>;
-  if (!tally) return <div className="panel muted">loading…</div>;
-  return (
-    <div className="col" style={{ maxWidth: 820 }}>
-      <div className="row" style={{ justifyContent: "space-between" }}>
-        <h1 style={{ margin: 0 }}>{learner?.name ?? "learner"}: which form lands</h1>
-        <Link to="/">home</Link>
-      </div>
-      <div className="muted">We don't believe in learning styles. We test it on you, and show you the data.</div>
-      <TallyCard tally={tally} />
-    </div>
-  );
-}

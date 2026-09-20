@@ -302,7 +302,7 @@ export default function Restudy() {
                 </div>
                 <WhatWorked tally={tally} />
                 <FamilyList tally={tally} />
-                <Link className="btn btn-primary btn-lg" to={library ? "/library" : "/lectures"}>
+                <Link className="btn btn-primary btn-lg" to="/lectures">
                   Done
                 </Link>
               </div>
