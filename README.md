@@ -44,7 +44,7 @@ uv run neuropace serve             # http://127.0.0.1:8765
 
 Open the URL, pick the demo lecture ("How GPS finds you", scripted, with a planted bad segment 3), start a live session with headset `sim` (the totem falls back to the keyboard when no Arduino is plugged in), and press Space or `T` to tap. Press `1`/`2` to switch the simulated headset between focused and drifting and watch the EEG flag arrive as a chip and a totem pulse.
 
-The dashboard's **Show sample data** switch opens an isolated synthetic workspace with three past lectures, review concepts, activity, and syllabus progress. Switching it off returns to the learner's original data. Its database (`data/neuropace-demo.db`) and switch state (`data/demo-mode.json`) are local runtime files covered by `.gitignore`.
+The dashboard's **Show sample data** switch opens an isolated synthetic workspace with three past lectures, review concepts, and activity. Switching it off returns to the learner's original data. Its database (`data/neuropace-demo.db`) and switch state (`data/demo-mode.json`) are local runtime files covered by `.gitignore`.
 
 Frontend development with hot reload: `cd frontend && pnpm dev` (proxies `/api`, `/ws`, `/media` to the backend on 8765).
 

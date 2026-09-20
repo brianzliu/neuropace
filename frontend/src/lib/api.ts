@@ -68,15 +68,10 @@ export interface SessionCreate {
 export const api = {
   demoMode: () => get<{ enabled: boolean; synthetic: true }>("/api/settings/demo"),
   setDemoMode: (enabled: boolean) => request<{ enabled: boolean; synthetic: true }>("/api/settings/demo", { method: "PUT", body: JSON.stringify({ enabled }) }),
-  dashboard: (id: string, organize = false, classId?: string) => {
-    const path = `/api/learners/${id}/dashboard?organize=${organize}${classId ? `&class_id=${classId}` : ""}`;
+  dashboard: (id: string, organize = false) => {
+    const path = `/api/learners/${id}/dashboard?organize=${organize}`;
     return organize ? getSlow<import("./dashboardTypes").Dashboard>(path, ORGANIZE_TIMEOUT_MS) : get<import("./dashboardTypes").Dashboard>(path);
   },
-  saveCurriculum: (id: string, body: import("./dashboardTypes").Curriculum) => request<import("./dashboardTypes").Curriculum>(`/api/learners/${id}/curriculum`, { method: "PUT", body: JSON.stringify(body) }),
-  classes: (id: string) => get<{ classes: import("./dashboardTypes").ClassSummary[] }>(`/api/learners/${id}/classes`),
-  createClass: (id: string, title: string) => post<import("./dashboardTypes").ClassDetail>(`/api/learners/${id}/classes`, { title }),
-  activateClass: (id: string, classId: string) => post<import("./dashboardTypes").ClassDetail>(`/api/learners/${id}/classes/${classId}/activate`),
-  deleteClass: (id: string, classId: string) => request<{ classes: import("./dashboardTypes").ClassSummary[] }>(`/api/learners/${id}/classes/${classId}`, { method: "DELETE" }),
   deepgramKeyStatus: () => get<{ configured: boolean }>("/api/settings/deepgram"),
   setDeepgramKey: (api_key: string) => request<{ configured: boolean }>("/api/settings/deepgram", { method: "PUT", body: JSON.stringify({ api_key }) }),
   modelSettings: () => get<{ provider: "openai" | "openrouter" | "gemini"; model: string; models: Record<"openai" | "openrouter" | "gemini", string>; configured: Record<"openai" | "openrouter" | "gemini", boolean> }>("/api/settings/model"),

@@ -13,11 +13,6 @@ from ..config import FORMS, LEGACY_FORMS
 from ..ids import new_id
 
 SCHEMA = """
-CREATE TABLE IF NOT EXISTS curricula(
-  learner_id TEXT PRIMARY KEY, content_json TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS classes(
-  id TEXT PRIMARY KEY, learner_id TEXT NOT NULL, title TEXT NOT NULL,
-  content_json TEXT NOT NULL, is_active INTEGER NOT NULL DEFAULT 0, created_at REAL NOT NULL);
 CREATE TABLE IF NOT EXISTS learners(
   id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at REAL NOT NULL,
   baseline_mu REAL, baseline_sigma REAL, baseline_at REAL, baseline_source TEXT);
@@ -90,6 +85,9 @@ class DB:
 
     def _migrate(self) -> None:
         with self.lock:
+            # Retired syllabus/class tracking: drop the tables so no stale topic data remains.
+            self.conn.execute("DROP TABLE IF EXISTS curricula")
+            self.conn.execute("DROP TABLE IF EXISTS classes")
             if "baseline_source" not in self._columns("learners"):
                 self.conn.execute("ALTER TABLE learners ADD COLUMN baseline_source TEXT")
             if "artifact_kind" not in self._columns("cards"):
@@ -138,126 +136,6 @@ class DB:
             return
         with self.lock:
             self.conn.executemany(sql, rows)
-
-    def get_curriculum(self, learner_id: str) -> dict:
-        active = self.active_class(learner_id)
-        return {"title": active["title"], "topics": active["topics"]}
-
-    def set_curriculum(self, learner_id: str, content: dict) -> None:
-        active = self.active_class(learner_id)
-        self.set_class_content(active["id"], content)
-
-    # ---- classes (multiple syllabi per learner) ----
-    def list_classes(self, learner_id: str) -> list[dict]:
-        self._ensure_classes(learner_id)
-        return [
-            {
-                "id": r["id"],
-                "title": r["title"],
-                "topic_count": len(_uj(r["content_json"], {"topics": []}).get("topics", [])),
-                "is_active": bool(r["is_active"]),
-            }
-            for r in self._q(
-                "SELECT * FROM classes WHERE learner_id=? ORDER BY created_at", (learner_id,)
-            )
-        ]
-
-    def create_class(self, learner_id: str, title: str) -> dict:
-        clean = title.strip() or "New class"
-        cid = new_id("cls")
-        first = not self._one("SELECT id FROM classes WHERE learner_id=?", (learner_id,))
-        self._x(
-            "INSERT INTO classes(id,learner_id,title,content_json,is_active,created_at)"
-            " VALUES(?,?,?,?,?,?)",
-            (cid, learner_id, clean[:200], _j({"title": clean[:200], "topics": []}), 1 if first else 0, time.time()),
-        )
-        return self.get_class(cid)  # type: ignore[return-value]
-
-    def get_class(self, class_id: str) -> dict | None:
-        row = self._one("SELECT * FROM classes WHERE id=?", (class_id,))
-        if not row:
-            return None
-        content = _uj(row["content_json"], {"topics": []})
-        return {
-            "id": row["id"],
-            "learner_id": row["learner_id"],
-            "title": row["title"],
-            "topics": content.get("topics", []),
-            "is_active": bool(row["is_active"]),
-        }
-
-    def set_class_content(self, class_id: str, content: dict) -> dict | None:
-        row = self._one("SELECT * FROM classes WHERE id=?", (class_id,))
-        if not row:
-            return None
-        title = str(content.get("title", row["title"]))[:200] or row["title"]
-        topics = content.get("topics", [])
-        self._x(
-            "UPDATE classes SET title=?, content_json=? WHERE id=?",
-            (title, _j({"title": title, "topics": topics}), class_id),
-        )
-        return self.get_class(class_id)
-
-    def activate_class(self, learner_id: str, class_id: str) -> dict | None:
-        row = self._one(
-            "SELECT id FROM classes WHERE id=? AND learner_id=?", (class_id, learner_id)
-        )
-        if not row:
-            return None
-        self._x("UPDATE classes SET is_active=0 WHERE learner_id=?", (learner_id,))
-        self._x("UPDATE classes SET is_active=1 WHERE id=?", (class_id,))
-        return self.get_class(class_id)
-
-    def delete_class(self, learner_id: str, class_id: str) -> list[dict] | None:
-        row = self._one(
-            "SELECT id, is_active FROM classes WHERE id=? AND learner_id=?", (class_id, learner_id)
-        )
-        if not row:
-            return None
-        self._x("DELETE FROM classes WHERE id=?", (class_id,))
-        remaining = self._q("SELECT id FROM classes WHERE learner_id=? ORDER BY created_at", (learner_id,))
-        if not remaining:
-            self.create_class(learner_id, "My curriculum")
-        elif row["is_active"]:
-            self._x("UPDATE classes SET is_active=1 WHERE id=?", (remaining[0]["id"],))
-        return self.list_classes(learner_id)
-
-    def active_class(self, learner_id: str) -> dict:
-        self._ensure_classes(learner_id)
-        row = self._one(
-            "SELECT * FROM classes WHERE learner_id=? AND is_active=1", (learner_id,)
-        ) or self._one(
-            "SELECT * FROM classes WHERE learner_id=? ORDER BY created_at", (learner_id,)
-        )
-        content = _uj(row["content_json"], {"topics": []})
-        return {
-            "id": row["id"],
-            "learner_id": row["learner_id"],
-            "title": row["title"],
-            "topics": content.get("topics", []),
-            "is_active": True,
-        }
-
-    def _ensure_classes(self, learner_id: str) -> None:
-        if self._one("SELECT id FROM classes WHERE learner_id=?", (learner_id,)):
-            return
-        legacy = self._one("SELECT content_json FROM curricula WHERE learner_id=?", (learner_id,))
-        if legacy:
-            content = _uj(legacy["content_json"], {"title": "My curriculum", "topics": []})
-            self._x(
-                "INSERT INTO classes(id,learner_id,title,content_json,is_active,created_at)"
-                " VALUES(?,?,?,?,?,?)",
-                (
-                    new_id("cls"),
-                    learner_id,
-                    str(content.get("title", "My curriculum"))[:200],
-                    _j({"title": content.get("title", "My curriculum"), "topics": content.get("topics", [])}),
-                    1,
-                    time.time(),
-                ),
-            )
-        else:
-            self.create_class(learner_id, "My curriculum")
 
     # ---- learners ----
     def create_learner(self, name: str) -> dict:

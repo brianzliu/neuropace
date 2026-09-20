@@ -52,9 +52,7 @@ unverified. Direct laptop EEG remains an explicit fallback, not the target archi
 
 The app now separates a learner-owned review dashboard from `/session/new` and the live session
 window. The dashboard prioritizes saved concepts, optionally summarizes/reorders them with the
-configured LLM, lists recent sessions on the side, and accepts pasted or uploaded PDF/TXT/Markdown
-syllabi. Learners review extracted topics before saving; curriculum completion is self-reported,
-separate from concepts cleared by check questions. No teacher view is added.
+configured LLM, and lists recent sessions on the side. No teacher view is added.
 
 **Current authoritative direction:** Part II's architecture (lecture capture → gap notes →
 adaptive review) with Part III's additions layered on top (content-based risk flagging as a third

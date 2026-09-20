@@ -93,18 +93,6 @@ def seed_demo_database(db: DB) -> None:
         return
     learner = db.default_learner()
     now = time.time()
-    db.set_curriculum(
-        learner["id"],
-        {
-            "title": "Foundations of science and data",
-            "topics": [
-                {"title": "Cellular respiration", "completed": True},
-                {"title": "Statistical inference", "completed": False},
-                {"title": "Orbital mechanics", "completed": False},
-                {"title": "Scientific communication", "completed": False},
-            ],
-        },
-    )
     for index, (lecture_id, title, text, term) in enumerate(LECTURES):
         words = [word.to_dict() for word in script_from_text(text, wpm=145)]
         duration = words[-1]["end"] if words else 0

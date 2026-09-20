@@ -440,14 +440,14 @@ uses `uv run neuropace serve`.
 
 The current product name is **NeuroPace**. Historical deployment URLs and CLI aliases
 remain compatible. Main's lecture, quiz, and restudy flow is merged with the Pocket
-Studio dashboard, syllabus, camera capture, and local device bridge.
+Studio dashboard, camera capture, and local device bridge.
 
 - Full backend suite: `uv run pytest -q`, **92 passed**.
 - `uv run ruff check neuropace tests scripts` passed.
 - `npm --prefix frontend run build` passed, including TypeScript checking.
 - Safari preview used an isolated temporary server on port 8766 with synthetic
   sessions, simulated EEG, keyboard input, and explicitly enabled offline fixtures.
-  Dashboard concepts, activity, syllabus progress, Library, quiz questions and selection,
+  Dashboard concepts, activity, Library, quiz questions and selection,
   restudy, and the prominent Start session page were checked visually.
 - This verification did not exercise physical hardware, microphone/camera permissions,
   external model generation, or production deployment. The existing local data and

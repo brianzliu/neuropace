@@ -280,7 +280,7 @@ export default function Setup() {
         </div>
         <aside className="studio-guide">
           <h2>A place to focus.</h2>
-          <p className="muted">This window stays with your lecture. Your dashboard keeps your notes, review queue, and syllabus.</p>
+          <p className="muted">This window stays with your lecture. Your dashboard keeps your notes and review queue.</p>
           <ol><li><b>Choose your connection.</b><p>Use the UNO Q relay, direct computer connections, or clearly labelled simulated devices.</p></li><li><b>Start listening.</b><p>Live microphone sessions stream the teacher’s voice into a transcript. Scripted lectures are labelled rehearsals.</p></li><li><b>Add the whiteboard.</b><p>Enable camera capture in the live workspace. A button press can use recent board frames and transcript together.</p></li><li><b>Save a tricky moment.</b><p>Press your physical button, or use the labelled on-screen substitute. Review the saved concepts after the lecture.</p></li></ol>
         </aside>
       </div>

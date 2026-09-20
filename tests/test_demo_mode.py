@@ -19,7 +19,6 @@ def test_demo_mode_is_isolated_seeded_and_persistent(app, settings):
         assert len(sample["sessions"]) == 3
         assert len(sample["concepts"]) == 2
         assert sample["closed"] == 1
-        assert sample["curriculum"]["title"] == "Foundations of science and data"
         assert all(concept["source"] == "demo" for concept in sample["concepts"])
         assert settings.data_dir.joinpath("neuropace-demo.db").exists()
         assert settings.data_dir.joinpath("demo-mode.json").read_text().strip()

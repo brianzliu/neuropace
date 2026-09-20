@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
-import type { ClassSummary, Curriculum, Dashboard } from "../lib/dashboardTypes";
+import type { Dashboard } from "../lib/dashboardTypes";
 import NewSessionButton from "../components/dashboard/NewSessionButton";
 import DemoModeToggle from "../components/dashboard/DemoModeToggle";
 import ReviewQueue from "../components/dashboard/ReviewQueue";
 import SessionsSidebar from "../components/dashboard/SessionsSidebar";
-import CurriculumSection from "../components/dashboard/CurriculumSection";
 import SessionActivity from "../components/dashboard/SessionActivity";
 import { readLocalSetting, writeLocalSetting } from "../lib/storage";
 
@@ -13,12 +12,9 @@ import { readLocalSetting, writeLocalSetting } from "../lib/storage";
 export default function Home() {
   const [learnerId, setLearnerId] = useState(() => readLocalSetting("learner") ?? "");
   const [data, setData] = useState<Dashboard | null>(null);
-  const [classes, setClasses] = useState<ClassSummary[]>([]);
-  const [classId, setClassId] = useState("");
   const [organizing, setOrganizing] = useState(false);
   const [error, setError] = useState("");
   const generation = useRef(0);
-  const learnerRef = useRef("");
 
   useEffect(() => {
     let active = true;
@@ -31,12 +27,6 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (learnerRef.current !== learnerId) {
-      learnerRef.current = learnerId;
-      setClassId("");
-      // Fall through to load: setClassId("") is a no-op when already "",
-      // so an early return here would skip the load forever.
-    }
     const version = ++generation.current;
     setData(null); setError("");
     setOrganizing(false);
@@ -48,14 +38,11 @@ export default function Home() {
       if (loading) return;
       loading = true;
       try {
-        const fresh = await api.dashboard(learnerId, organize, classId || undefined);
+        const fresh = await api.dashboard(learnerId, organize);
         if (active && version === generation.current) setData(fresh);
       } catch (e) { if (active && loud) setError(String(e)); }
       finally { loading = false; }
     };
-    api.classes(learnerId).then(({ classes: list }) => {
-      if (active && version === generation.current) setClasses(list);
-    }).catch(e => { if (active) setError(String(e)); });
     void load().then(async () => {
       if (!active) return;
       setOrganizing(true);
@@ -67,54 +54,8 @@ export default function Home() {
     const refresh = () => { if (document.visibilityState === "visible") void load(true); };
     window.addEventListener("focus", refresh);
     return () => { active = false; window.removeEventListener("focus", refresh); };
-  }, [learnerId, classId]);
+  }, [learnerId]);
 
-  const saveCurriculum = async (curriculum: Curriculum) => {
-    const owner = learnerId;
-    const version = generation.current;
-    setError("");
-    try {
-      const saved = await api.saveCurriculum(owner, curriculum);
-      if (version === generation.current) {
-        setData(d => d ? {...d, curriculum: saved} : d);
-        api.classes(owner).then(({ classes: list }) => {
-          if (version === generation.current) setClasses(list);
-        }).catch(() => {});
-      }
-    } catch (e) { setError(String(e)); throw e; }
-  };
-  const refreshClasses = async () => {
-    try {
-      const { classes: list } = await api.classes(learnerId);
-      setClasses(list);
-      return list;
-    } catch (e) { setError(String(e)); return []; }
-  };
-  const selectClass = async (id: string) => {
-    setError("");
-    try {
-      await api.activateClass(learnerId, id);
-      setClassId(id);
-      void refreshClasses();
-    } catch (e) { setError(String(e)); }
-  };
-  const createClass = async (title: string) => {
-    setError("");
-    const created = await api.createClass(learnerId, title);
-    await api.activateClass(learnerId, created.id);
-    setClassId(created.id);
-    void refreshClasses();
-    return created.id;
-  };
-  const deleteClass = async (id: string) => {
-    setError("");
-    try {
-      const { classes: list } = await api.deleteClass(learnerId, id);
-      setClasses(list);
-      setClassId("");
-    } catch (e) { setError(String(e)); throw e; }
-  };
-  const activeClassId = classId || data?.active_class?.id || classes.find(c => c.is_active)?.id || "";
   // Office Hours and Restudy-only sessions aren't lectures: they'd otherwise show up here as a
   // phantom "Live lecture" row stuck on "running" forever, since neither mode ever transitions a
   // session to "ended" the way a recorded/live capture does. Same filter Lectures.tsx/Library.tsx use.
@@ -139,18 +80,6 @@ export default function Home() {
           sessions={sessions}
         />
         <SessionActivity sessions={sessions} />
-        <CurriculumSection
-          curriculum={data?.curriculum}
-          understanding={data?.understanding}
-          organizing={organizing}
-          learnerId={learnerId}
-          onSave={saveCurriculum}
-          classes={classes}
-          activeClassId={activeClassId}
-          onSelectClass={selectClass}
-          onCreateClass={createClass}
-          onDeleteClass={deleteClass}
-        />
       </div>
       <SessionsSidebar sessions={sessions} concepts={data?.concepts} closed={data?.closed ?? 0} />
     </div>
