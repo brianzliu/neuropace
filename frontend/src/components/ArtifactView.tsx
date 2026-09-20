@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import Diagram from "./Diagram";
+import Whiteboard from "./Whiteboard";
 import type {
   AnalogyContent,
   AnimationContent,
@@ -28,20 +28,8 @@ export default function ArtifactView({ kind, content, step, onSteps }: { kind: A
       return <WordsView c={content as WordsContent} />;
     case "analogy":
       return <AnalogyView c={content as AnalogyContent | string} step={step} />;
-    case "diagram": {
-      const g = content as SceneGraph;
-      const cap = g.steps[Math.min(step, g.steps.length - 1)]?.caption ?? "";
-      return (
-        <div className="stack">
-          <div className="diagram-card">
-            <Diagram graph={g} step={step} />
-          </div>
-          <div className="caption" key={step}>
-            {cap}
-          </div>
-        </div>
-      );
-    }
+    case "diagram":
+      return <Whiteboard graph={content as SceneGraph} step={step} />;
     case "chart":
       return <ChartView c={content as ChartContent} step={step} />;
     case "plot":

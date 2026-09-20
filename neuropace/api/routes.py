@@ -156,6 +156,31 @@ def set_model_settings(body: ModelSettingsIn, request: Request):
     return _model_settings(request)
 
 
+class DemoModeIn(BaseModel):
+    enabled: bool
+
+
+@router.get("/settings/demo")
+def demo_mode(request: Request):
+    return {"enabled": request.app.state.demo.enabled, "synthetic": True}
+
+
+@router.put("/settings/demo")
+def set_demo_mode(body: DemoModeIn, request: Request):
+    """Switch between the learner's database and an isolated synthetic workspace."""
+    if any(runtime.status == "running" for runtime in request.app.state.runtimes.values()):
+        raise HTTPException(409, "End the live session before switching sample data.")
+
+    from ..llm.client import LLMClient
+
+    demo = request.app.state.demo
+    demo.set_enabled(body.enabled)
+    request.app.state.db = demo.database() if body.enabled else request.app.state.real_db
+    request.app.state.reviews.clear()
+    request.app.state.llm = LLMClient(_s(request), _db(request))
+    return {"enabled": demo.enabled, "synthetic": True}
+
+
 @router.get("/devices/status")
 async def device_status(request: Request):
     from ..signal.headset import autodetect_headset_port

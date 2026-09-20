@@ -16,6 +16,7 @@ data/sessions/
 data/cache/
 data/lectures/*/media.*
 data/uploads/
+data/demo-mode.json
 # node
 node_modules/
 frontend/dist/

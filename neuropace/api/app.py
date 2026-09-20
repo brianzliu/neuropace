@@ -15,6 +15,7 @@ from starlette.middleware.cors import CORSMiddleware
 
 from .. import __version__
 from ..config import Settings, load_settings
+from ..demo import DemoData
 from ..llm.client import LLMClient
 from ..store.db import DB
 from . import routes, ws
@@ -57,8 +58,10 @@ def create_app(
     s = settings or load_settings()
     s.ensure_dirs()
     db = db or DB(s.db_path)
-    llm = llm or LLMClient(s, db)
     ensure_demo_lecture(db)
+    demo = DemoData(s)
+    active_db = demo.database() if demo.enabled else db
+    llm = llm or LLMClient(s, active_db)
     from ..core.gaps import recover_orphaned_sessions
 
     orphans = recover_orphaned_sessions(db, s)
@@ -74,6 +77,7 @@ def create_app(
         for rt in list(app.state.runtimes.values()):
             with contextlib.suppress(Exception):
                 await rt.abort()
+        demo.close()
 
     app = FastAPI(title="NeuroPace", version=__version__, lifespan=lifespan)
     app.state.pairing_token = secrets.token_urlsafe(24)
@@ -86,7 +90,9 @@ def create_app(
         expose_headers=["Content-Range", "Accept-Ranges"],
     )
     app.state.settings = s
-    app.state.db = db
+    app.state.real_db = db
+    app.state.demo = demo
+    app.state.db = active_db
     app.state.llm = llm
     app.state.runtimes = {}
     app.state.reviews = {}
@@ -115,7 +121,7 @@ def create_app(
 
     @app.get("/media/{lecture_id}")
     def media(lecture_id: str):
-        lec = db.get_lecture(lecture_id)
+        lec = app.state.db.get_lecture(lecture_id)
         if not lec or not lec.get("media_path") or not Path(lec["media_path"]).exists():
             return JSONResponse({"error": "no media"}, status_code=404)
         return FileResponse(lec["media_path"])

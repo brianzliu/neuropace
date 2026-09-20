@@ -54,6 +54,8 @@ export interface SessionCreate {
 }
 
 export const api = {
+  demoMode: () => get<{ enabled: boolean; synthetic: true }>("/api/settings/demo"),
+  setDemoMode: (enabled: boolean) => request<{ enabled: boolean; synthetic: true }>("/api/settings/demo", { method: "PUT", body: JSON.stringify({ enabled }) }),
   dashboard: (id: string, organize = false) => get<import("./dashboardTypes").Dashboard>(`/api/learners/${id}/dashboard?organize=${organize}`),
   saveCurriculum: (id: string, body: import("./dashboardTypes").Curriculum) => request<import("./dashboardTypes").Curriculum>(`/api/learners/${id}/curriculum`, { method: "PUT", body: JSON.stringify(body) }),
   deepgramKeyStatus: () => get<{ configured: boolean }>("/api/settings/deepgram"),

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
 import type { Curriculum, Dashboard } from "../lib/dashboardTypes";
 import NewSessionButton from "../components/dashboard/NewSessionButton";
+import DemoModeToggle from "../components/dashboard/DemoModeToggle";
 import ReviewQueue from "../components/dashboard/ReviewQueue";
 import SessionsSidebar from "../components/dashboard/SessionsSidebar";
 import CurriculumSection from "../components/dashboard/CurriculumSection";
@@ -67,7 +68,10 @@ export default function Home() {
   return <div className="dashboard">
     <div className="dashboard-toolbar">
       <div><h1>Ready for your next idea?</h1></div>
-      <NewSessionButton />
+      <div className="dashboard-actions">
+        <DemoModeToggle />
+        <NewSessionButton />
+      </div>
     </div>
     {error && <div className="panel error" role="alert">{error}</div>}
     <div className="dashboard-grid">

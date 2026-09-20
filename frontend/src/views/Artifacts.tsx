@@ -6,7 +6,7 @@ import ArtifactView, { stepsOf } from "../components/ArtifactView";
 import { Badge, SourceBadge } from "../components/Badges";
 import { range } from "../lib/format";
 
-/** For the team (docs/PRODUCT.md §3): every explanation Reflow generated for every moment of a session, one template
+/** For the team (docs/PRODUCT.md §3): every explanation NeuroPace generated for every moment of a session, one template
  * at a time with its reveal steps, so each renderer can be checked on its own. `/team/artifacts/sample` renders
  * built-in sample data for all ten templates without a session or a model. */
 export default function Artifacts() {
@@ -161,10 +161,10 @@ const SAMPLE: GapArtifacts = {
     diagram: {
       title: "from delays to a position",
       nodes: [
-        { id: "n1", label: "satellite time" },
-        { id: "n2", label: "delay" },
-        { id: "n3", label: "distance" },
-        { id: "n4", label: "position" },
+        { id: "n1", label: "satellite time", shape: "pill", tone: "butter" },
+        { id: "n2", label: "delay", shape: "card", tone: "peach" },
+        { id: "n3", label: "distance", shape: "card", tone: "lilac" },
+        { id: "n4", label: "position", shape: "ellipse", tone: "mint" },
       ],
       edges: [
         { from_id: "n1", to_id: "n2", label: "arrives late" },

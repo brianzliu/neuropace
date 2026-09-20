@@ -177,3 +177,20 @@ def test_no_key_means_offline_without_network(tmp_path):
     assert not c.enabled
     pkg, source = asyncio.run(build_package(c, SPAN, CTX, CTX + " " + SPAN))
     assert source == "offline" and pkg["artifacts"]["plan"] and pkg["sources"]["core"] == "offline"
+
+
+def test_scene_node_palette_is_bounded_and_legacy_nodes_work():
+    from neuropace.llm.schemas import SceneNode
+
+    legacy = SceneNode(id="n1", label="Clock")
+    assert legacy.shape == "card"
+    assert legacy.tone == "butter"
+    for shape in ("card", "pill", "ellipse", "diamond"):
+        assert SceneNode(id="n1", label="Clock", shape=shape, tone="mint").shape == shape
+    with pytest.raises(ValidationError):
+        SceneNode(id="n1", label="Clock", shape="<svg>")
+    with pytest.raises(ValidationError):
+        SceneNode(id="n1", label="Clock", tone="url(https://example.com)")
+    schema = strict_schema(SceneNode)
+    assert {"shape", "tone"} <= set(schema["required"])
+    assert "default" not in schema["properties"]["shape"]

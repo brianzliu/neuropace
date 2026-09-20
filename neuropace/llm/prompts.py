@@ -54,7 +54,8 @@ TEMPLATE_INSTRUCTIONS: dict[str, str] = {
     ),
     "diagram": (
         "Draw the missed idea as a concept graph. Fields: title; nodes (3 to 7, ids n1, n2, ..., labels of at most 4 "
-        "words using the lecturer's terms); edges (directed, from_id, to_id, a label of 1 to 3 words saying the "
+        "words using the lecturer's terms, shape = card/pill/ellipse/diamond, tone = butter/peach/mint/lilac; "
+        "use diamond only for a decision and consistent tones for related concepts); edges (directed, from_id, to_id, a label of 1 to 3 words saying the "
         "relation); steps (2 to 6, walking the idea in order: highlight = the node ids lit at that step, caption = at "
         "most 20 words). " + GROUNDING
     ),

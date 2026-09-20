@@ -165,7 +165,10 @@ def artifact(kind: str, span_text: str, context_text: str, corpus_text: str, see
             caveat="(offline) the extractive stand-in cannot map ideas onto everyday situations",
         )
     if kind == "diagram":
-        nodes = [SceneNode(id=f"n{i + 1}", label=t) for i, t in enumerate(terms[:4])]
+        nodes = [
+            SceneNode(id=f"n{i + 1}", label=t, shape="card", tone=("butter", "peach", "mint", "lilac")[i])
+            for i, t in enumerate(terms[:4])
+        ]
         if len(nodes) < 2:
             nodes.append(SceneNode(id="n2", label="the point"))
         edges = [
