@@ -206,7 +206,7 @@ def set_demo_mode(body: DemoModeIn, request: Request):
 
     demo = request.app.state.demo
     demo.set_enabled(body.enabled)
-    request.app.state.db = demo.database() if body.enabled else request.app.state.real_db
+    request.app.state.db = demo.database(request.app.state.llm) if body.enabled else request.app.state.real_db
     request.app.state.reviews.clear()
     request.app.state.llm = LLMClient(_s(request), _db(request))
     return {"enabled": demo.enabled, "synthetic": True}
