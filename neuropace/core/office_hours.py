@@ -153,8 +153,13 @@ class OfficeHoursEngine:
                 source = "llm"
                 yield {"type": "reply", "text": reply_text}
             elif event["type"] == "op":
-                applied_ids.extend(self._apply_ops([event["op"]]))
-                yield {"type": "board", "board": list(self.board.values())}
+                op = event["op"]
+                applied_ids.extend(self._apply_ops([op]))
+                yield {
+                    "type": "board",
+                    "board": list(self.board.values()),
+                    "caption": op.caption if isinstance(op, AddElement) else None,
+                }
         if not reply_text:
             msg = self._append_message(
                 "agent",
@@ -181,7 +186,7 @@ class OfficeHoursEngine:
                 content = _validate_content(op.kind, op.content_json)
                 if content is None:
                     continue
-                payload = {"kind": op.kind, "envelope": op.envelope.model_dump(), "content": content}
+                payload = {"kind": op.kind, "envelope": op.envelope.model_dump(), "content": content, "caption": op.caption}
                 self._ord += 1
                 self.db.oh_add_board_op(self.session_id, self._ord, "add", op.element_id, payload)
                 self.board[op.element_id] = {"id": op.element_id, **payload}

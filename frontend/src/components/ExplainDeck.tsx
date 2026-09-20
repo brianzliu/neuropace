@@ -110,7 +110,17 @@ export default function ExplainDeck({ active = true, onFocusState }: {
         setTally(r.tally);
         setDrift(null);
         if (r.outcome === "hit") setHits((h) => h + 1);
-        guideRef.current?.reportOutcome(r.outcome);
+        guideRef.current?.reportOutcome(
+          r.outcome,
+          r.outcome === "miss" && card.question
+            ? {
+                question: card.question.question,
+                chosenText: card.question.options[choice] ?? "",
+                correctText: card.question.options[r.correct_index] ?? "",
+                explanation: r.explanation,
+              }
+            : undefined,
+        );
         setPhase("feedback");
         window.setTimeout(() => applyNext(r.next, r.done), r.outcome === "hit" ? 1300 : 2200);
       } catch (e) {

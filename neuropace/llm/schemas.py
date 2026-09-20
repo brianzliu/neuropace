@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 from ..config import FORMS
 
@@ -572,12 +572,21 @@ class AddElement(Strict):
     op: Literal["add"]
     element_id: str
     kind: str
+    # Spoken-register narration for the moment this element lands on the board (docs/PRODUCT.md §5a) —
+    # "Here's glycolysis splitting glucose into pyruvate", not a caption describing the shape itself.
+    # Shown as a subtitle while the element draws in; never left implicit in reply_text alone.
+    caption: str
     envelope: BoardEnvelope
     # a JSON-encoded BOARD_CONTENT_KINDS[kind] object: strict structured-output schemas can't express "the shape
     # of this field depends on a sibling field", so it travels as a string and is re-validated in Python
     # immediately after the outer object parses (see office_hours.py) — the same "loose outside, strict inside"
     # shape Plan.visual already uses above.
     content_json: str
+
+    @field_validator("caption")
+    @classmethod
+    def _trim_caption(cls, v: str) -> str:
+        return " ".join(v.split())[:200]
 
 
 class UpdateElement(Strict):

@@ -12,7 +12,7 @@ const SKETCH = { stroke: "currentColor", strokeWidth: 2, roughness: 1.7 };
  * is the only freedom the model has beyond content — every element is one of the same validated templates
  * used elsewhere (§4) or one of three small annotation primitives (shape, arrow, label), rendered sketchy
  * (roughjs) so it reads as marker-on-a-board rather than app UI. */
-export default function Board({ elements, onExpand }: { elements: BoardElement[]; onExpand: (id: string) => void }) {
+export default function Board({ elements, onExpand, caption }: { elements: BoardElement[]; onExpand: (id: string) => void; caption?: string | null }) {
   const [zoom, setZoom] = useState(0.55);
   const boxes = elements.filter((e) => e.kind !== "arrow");
   const arrows = elements.filter((e) => e.kind === "arrow");
@@ -59,6 +59,11 @@ export default function Board({ elements, onExpand }: { elements: BoardElement[]
           ))}
         </div>
       </div>
+      {caption ? (
+        <div className="oh-caption-bar" role="status">
+          <span key={caption} className="oh-caption-text">{caption}</span>
+        </div>
+      ) : null}
     </div>
   );
 }

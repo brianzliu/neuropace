@@ -20,12 +20,15 @@ export default function OfficeHours({ sessionId, original, openingPrompt, paused
   const [err, setErr] = useState<string | null>(null);
   const [pendingUserText, setPendingUserText] = useState<string | null>(null);
   const [pendingReplyText, setPendingReplyText] = useState<string | null>(null);
+  const [caption, setCaption] = useState<string | null>(null);
   const kickedOff = useRef(false);
 
   const load = async () => {
     try {
       const s = await api.officeHoursSnapshot(sessionId);
       setSnap(s);
+      const lastCaption = [...s.board].reverse().find((el) => el.caption)?.caption;
+      if (lastCaption) setCaption(lastCaption);
     } catch (e) {
       setErr(errorText(e));
     }
@@ -43,8 +46,10 @@ export default function OfficeHours({ sessionId, original, openingPrompt, paused
         if (event.type === "reply") {
           replyText = event.text;
           setPendingReplyText(event.text);
+          setCaption(event.text);
         } else if (event.type === "board") {
           setSnap((s) => (s ? { ...s, board: event.board } : s));
+          if (event.caption) setCaption(event.caption);
         }
       });
     } finally {
@@ -63,7 +68,11 @@ export default function OfficeHours({ sessionId, original, openingPrompt, paused
         setErr(errorText(e));
         return null;
       });
-      if (s) setSnap(s);
+      if (s) {
+        setSnap(s);
+        const lastCaption = [...s.board].reverse().find((el) => el.caption)?.caption;
+        if (lastCaption) setCaption(lastCaption);
+      }
       // A fresh session opened from Review (original set): kick off the same job Private tutoring used
       // to do — walk through what was missed — instead of a blank board waiting on the student to type.
       if (s && s.messages.length === 0 && original && !kickedOff.current) {
@@ -103,7 +112,7 @@ export default function OfficeHours({ sessionId, original, openingPrompt, paused
         </button>
       </div>
       <div className="oh-layout">
-        <Board elements={snap.board} onExpand={expand} />
+        <Board elements={snap.board} onExpand={expand} caption={caption} />
         <OfficeHoursChat
           sessionId={sessionId}
           messages={snap.messages}

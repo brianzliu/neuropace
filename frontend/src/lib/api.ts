@@ -3,14 +3,14 @@ import type {
   Profile,
   Devices,
   GapArtifacts,
-  BoardElement, Doctor, EventsResponse, LectureFull, Learner, LossMap, ManimContent, NotesResponse, OHMessage, OHSnapshot, QuizGet, QuizResult, RegenerateResponse, ReviewAnswer,
+  BoardElement, Doctor, EventsResponse, LectureFull, Learner, LossMap, ManimContent, NotesResponse, OHMessage, OHSnapshot, QuizExplanation, QuizGet, QuizPrompt, QuizResult, RegenerateResponse, ReviewAnswer,
   ReviewNext, ReviewStart, SessionPublic, TallySummary, GapPublic, ScholarResponse, JargonResponse,
 } from "./types";
 
 /** One increment of an Office Hours turn as it streams in — see office_hours_turn_stream (backend). */
 export type OHStreamEvent =
   | { type: "reply"; text: string }
-  | { type: "board"; board: BoardElement[] }
+  | { type: "board"; board: BoardElement[]; caption?: string | null }
   | { type: "done"; message: OHMessage }
   | { type: "error"; detail: string };
 
@@ -128,6 +128,8 @@ export const api = {
   reviewAdvance: (id: string, card_id: string, focus_ratio?: number | null) =>
     post<ReviewNext>(`/api/sessions/${id}/review/advance`, { card_id, focus_ratio: focus_ratio ?? null }),
   quiz: (id: string) => get<QuizGet>(`/api/sessions/${id}/quiz`),
+  quizPrompt: (id: string, itemId: string) => get<QuizPrompt>(`/api/sessions/${id}/quiz/prompt?item_id=${encodeURIComponent(itemId)}`),
+  quizExplanation: (id: string, itemId: string, choice: number) => postSlow<QuizExplanation>(`/api/sessions/${id}/quiz/explanation`, { item_id: itemId, choice }, MODEL_TIMEOUT_MS),
   submitQuiz: (id: string, phase: "before" | "after", answers: Record<string, number>) => post<QuizResult>(`/api/sessions/${id}/quiz`, { phase, answers }),
   /** The lecture's one whiteboard conversation: found or created once, never one per click. */
   officeHoursOpen: (id: string) => post<SessionPublic>(`/api/sessions/${id}/office_hours/open`),

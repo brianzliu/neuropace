@@ -31,7 +31,7 @@ def test_strict_schema_office_hours_turn_is_strict_and_flat_strings():
     assert sch["additionalProperties"] is False
     add = sch["$defs"]["AddElement"]
     assert add["additionalProperties"] is False
-    assert set(add["required"]) == {"op", "element_id", "kind", "envelope", "content_json"}
+    assert set(add["required"]) == {"op", "element_id", "kind", "caption", "envelope", "content_json"}
     assert (
         add["properties"]["content_json"]["type"] == "string"
     )  # loose shape travels as a string, not a dict
@@ -118,6 +118,7 @@ TURN_JSON = json.dumps(
                 "op": "add",
                 "element_id": "el1",
                 "kind": "label",
+                "caption": "Three spheres narrow it down to two points.",
                 "envelope": {"x": 100, "y": 100, "w": 200, "h": 80, "z": 0},
                 "content_json": json.dumps({"text": "3 spheres -> 2 points"}),
             }

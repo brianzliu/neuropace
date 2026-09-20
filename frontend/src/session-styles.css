@@ -496,6 +496,18 @@ h1, h2, h3 { margin: 0; letter-spacing: -0.01em; }
 .axis { display: flex; justify-content: space-between; font-size: var(--fs-footnote); color: var(--label-2); margin-top: 8px; font-weight: 700; }
 .transport { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 14px; }
 .quiz-item .q { font-size: var(--fs-body); font-weight: 800; margin-bottom: 10px; }
+.quiz-head { align-items: flex-start; }
+.quiz-prompt { max-width: 62ch; margin: 8px 0 0; color: var(--label-2); font-size: var(--fs-body); line-height: 1.5; }
+.quiz-item .quiz-options { gap: 0; margin-inline: -20px; margin-bottom: -18px; }
+.quiz-choice { border-top: 2px solid var(--line); }
+.quiz-choice.selected { background: color-mix(in srgb, var(--brand) 12%, var(--surface)); }
+.quiz-choice.correct { background: color-mix(in srgb, var(--green) 18%, var(--surface)); }
+.quiz-choice.wrong { background: color-mix(in srgb, var(--red) 14%, var(--surface)); }
+.quiz-choice .group-row { width: 100%; border: 0; background: transparent; box-sizing: border-box; }
+.quiz-choice .group-row:hover { background: color-mix(in srgb, var(--label) 4%, transparent); }
+.quiz-explanation { margin: 0; padding: 0 20px 16px 58px; font-size: var(--fs-subhead); line-height: 1.55; }
+.quiz-explanation-error { margin: 0 20px 14px 58px; padding: 0; border: 0; background: transparent; color: var(--red); font: inherit; font-size: var(--fs-footnote); text-align: left; cursor: pointer; }
+.quiz-result { margin: 0; color: var(--label-2); font-size: var(--fs-subhead); font-weight: 700; }
 .tally-row { display: grid; grid-template-columns: 120px 1fr 90px; gap: 12px; align-items: center; }
 .session-list { display: flex; flex-direction: column; }
 .session-item { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px; padding: 10px 0; border-top: 2px solid var(--line); }
@@ -680,6 +692,7 @@ a.linklike { font-size: var(--fs-subhead); }
 
 /* the whiteboard itself: a bezel around a blank marker surface, not a UI panel */
 .oh-board {
+  position: relative;
   display: flex; flex-direction: column; overflow: hidden; min-height: 420px;
   background: #f4f1e8; border-radius: 18px; padding: 14px 14px 22px;
   box-shadow: 0 1px 0 #fff inset, 0 18px 40px -20px rgba(30, 25, 10, 0.35);
@@ -687,6 +700,22 @@ a.linklike { font-size: var(--fs-subhead); }
 }
 .oh-board-toolbar { padding: 0 4px 10px; gap: 8px; color: #7a7458; }
 .oh-board-viewport { flex: 1; overflow: auto; position: relative; border-radius: 8px; background: #fffdf6; box-shadow: inset 0 0 0 10px #fffdf6, inset 0 0 30px rgba(0,0,0,0.05); }
+/* Closed-caption bar, video-style: narrates each element as it's drawn, timed to board_ops order
+   (see AddElement.caption). Deliberately outside the sketch surface's own styling (system font,
+   not the marker font) so it reads as a UI caption overlay, not part of the drawing itself. */
+.oh-caption-bar {
+  position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%);
+  max-width: min(86%, 620px); z-index: 40; pointer-events: none;
+  display: flex; justify-content: center;
+}
+.oh-caption-text {
+  display: inline-block; background: color-mix(in srgb, black 72%, transparent);
+  color: #fff; font-family: var(--font); font-size: var(--fs-subhead); font-weight: 600;
+  line-height: 1.45; padding: 8px 18px; border-radius: 10px;
+  animation: oh-caption-in 0.25s var(--ease);
+}
+@keyframes oh-caption-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .oh-caption-text { animation: none; } }
 .oh-board-canvas {
   position: relative; transform-origin: 0 0; color: #2b2a24; font-family: "Kalam", var(--font);
   background-image: radial-gradient(circle, #e9e4d2 1.5px, transparent 1.5px);

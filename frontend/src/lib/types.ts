@@ -476,6 +476,8 @@ export interface BoardElement {
   kind: BoardElementKind;
   envelope: BoardEnvelope;
   content: ReteachContent | ShapeContent | ArrowContent | LabelContent | ManimContent;
+  /** Spoken-register narration shown as a caption while this element draws in (add ops only). */
+  caption?: string | null;
 }
 
 export interface OHMessage {
@@ -661,6 +663,15 @@ export interface QuizAnswerRow {
 export interface QuizGet {
   items: QuizItem[];
   answers: QuizAnswerRow[];
+}
+export interface QuizPrompt {
+  text: string;
+  source: string;
+}
+export interface QuizExplanation {
+  text: string;
+  correct: boolean;
+  source: string;
 }
 export interface QuizResult {
   phase: string;

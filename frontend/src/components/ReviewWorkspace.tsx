@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, errorText } from "../lib/api";
-import { GuideContext, useGuidedStep, type GuideStepContext, type ReviewMode } from "../lib/guide";
+import { GuideContext, useGuidedStep, type GuideStepContext, type MissDetail, type ReviewMode } from "../lib/guide";
 import type { FocusMsg, HeadsetStatus } from "../lib/types";
 import ExplainDeck from "./ExplainDeck";
 import OfficeHours from "../views/OfficeHours";
@@ -25,6 +25,7 @@ export default function ReviewWorkspace() {
   const alive = useRef(true);
   const officeRef = useRef<string | null>(null);
   const driftHandled = useRef(false);
+  const lastMissRef = useRef<MissDetail | null>(null);
   useEffect(() => {
     alive.current = true;
     return () => { alive.current = false; };
@@ -39,7 +40,14 @@ export default function ReviewWorkspace() {
       const office = await api.officeHoursOpen(sessionId);
       if (!alive.current) return;
       officeRef.current = office.id;
-      setPrompt(target ? `Help me understand this saved lecture moment. Explain one idea using the board, then ask one short question. Lecture excerpt: ${target.span_text}` : "Explain one main idea from this lecture on the board, then ask one short question.");
+      const miss = lastMissRef.current;
+      setPrompt(
+        miss
+          ? `I just got this question wrong: "${miss.question}" — I answered "${miss.chosenText}" but the correct answer was "${miss.correctText}" (${miss.explanation}). Explain why on the board, one idea at a time, then check my understanding with one short question.`
+          : target
+            ? `Help me understand this saved lecture moment. Explain one idea using the board, then ask one short question. Lecture excerpt: ${target.span_text}`
+            : "Explain one main idea from this lecture on the board, then ask one short question.",
+      );
       setOfficeId(office.id);
     } catch (e) { if (alive.current) setError(errorText(e)); }
     finally { creating.current = false; if (alive.current) setLoading(false); }
@@ -68,9 +76,10 @@ export default function ReviewWorkspace() {
   useEffect(() => {
     if (learnerId) void recommend("practice");
   }, [learnerId, recommend]);
-  const reportOutcome = useCallback<GuideStepContext["reportOutcome"]>((outcome) => {
+  const reportOutcome = useCallback<GuideStepContext["reportOutcome"]>((outcome, missDetail) => {
     guideRef.current?.reportOutcome(outcome);
     if (outcome === "miss" || outcome === "drop") {
+      lastMissRef.current = outcome === "miss" ? missDetail ?? null : null;
       setReason(outcome === "miss" ? "That answer needs another look." : "Let's try a different explanation.");
       void recommend("practice", true);
     } else if (outcome === "hit") setReason("That answer was right. Keep the explanation nearby if you need it.");
