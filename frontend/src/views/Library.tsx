@@ -1,20 +1,13 @@
 import { activeLearnerId } from "../lib/activeLearner";
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { Link, Navigate, useLocation, useNavigate, useOutlet, useParams, useSearchParams } from "react-router-dom";
+import { Navigate, useLocation, useNavigate, useOutlet, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
 import type { SessionPublic } from "../lib/types";
-import { BackLink } from "../components/BackLink";
-import SessionSwitcher, { sessionTitle } from "../components/SessionSwitcher";
+import { sessionTitle } from "../components/SessionSwitcher";
+import SessionNavigation, { sessionHref, type SessionTab } from "../components/SessionNavigation";
 
-export type LibraryTab = "notes" | "review" | "replay" | "quiz";
-
-const TABS: { id: LibraryTab; label: string }[] = [
-  { id: "notes", label: "Notes" },
-  { id: "review", label: "Review" },
-  { id: "replay", label: "Replay" },
-  { id: "quiz", label: "Quiz" },
-];
+export type LibraryTab = SessionTab;
 
 interface LibraryContextValue {
   sessionId: string;
@@ -29,12 +22,12 @@ export function useLibrary() {
 }
 
 function isTab(value: string | null | undefined): value is LibraryTab {
-  return value === "notes" || value === "review" || value === "replay" || value === "quiz";
+  return value === "notes" || value === "review" || value === "replay" || value === "quiz" || value === "artifacts";
 }
 
 export function libraryHref(sessionId: string, tab: LibraryTab, inLibrary = true) {
   if (!inLibrary) return `/${tab}/${sessionId}`;
-  return `/library/${sessionId}/${tab}`;
+  return sessionHref(sessionId, tab);
 }
 
 function tabFromLocation(pathname: string, paramTab: string | undefined, queryTab: string | null): LibraryTab {
@@ -98,51 +91,26 @@ export function LibraryFrame({ sessionId, tab, children }: { sessionId: string; 
   }, [sessionId]);
 
   const title = session ? sessionTitle(session, titles) : sessionId ? "Session" : "Library";
-  const showQuiz = !session || !!session.lecture_id;
 
   return (
     <LibraryContext.Provider value={{ sessionId, tab, inLibrary }}>
       <div className={"library" + (tab === "replay" ? " library-replay" : "")}>
-        <div className="library-head" style={{ display: "flex", flexWrap: "wrap", gap: ".6rem", alignItems: "center", justifyContent: "space-between", marginBottom: ".6rem" }}>
-          <div className="row" style={{ gap: ".6rem" }}>
-            <BackLink to="/lectures" label="Back to Lectures" />
-            <h1 className="library-title" style={{ margin: 0, fontSize: "1.35rem" }}>
-              {title}
-            </h1>
-            <span className="muted small mono">{sessionId}</span>
-          </div>
-          <div className="row" style={{ gap: ".6rem" }}>
-            {sessions && sessions.length ? (
-              <SessionSwitcher
-                sessions={sessions}
-                titles={titles}
-                currentId={sessionId}
-                currentTitle={title}
-                onSelect={(id) => nav(libraryHref(id, tab, inLibrary))}
-              />
-            ) : null}
-          </div>
-        </div>
-        <nav className="library-tabs" aria-label="Session sections">
-          {TABS.map((t) => {
-            if (t.id === "quiz" && !showQuiz) return null;
-            const active = t.id === tab;
-            return (
-              <Link
-                key={t.id}
-                to={libraryHref(sessionId, t.id, inLibrary)}
-                className={"library-tab" + (active ? " active" : "")}
-                aria-current={active ? "page" : undefined}
-              >
-                {t.label}
-              </Link>
-            );
-          })}
-        </nav>
+        <SessionNavigation sessionId={sessionId} tab={tab} title={title}
+          sessions={sessions} titles={titles}
+          onSelect={(id) => nav(sessionHref(id, tab))} />
         <div className="library-body">{metaError ? <div className="panel error">{metaError}</div> : children}</div>
       </div>
     </LibraryContext.Provider>
   );
+}
+
+/** Adds the same shell to legacy/team routes; sample renderers have no lecture to navigate. */
+export function SessionRouteFrame({ tab, children, useOriginal = false }: { tab: LibraryTab; children: ReactNode; useOriginal?: boolean }) {
+  const { sessionId = "" } = useParams();
+  const [search] = useSearchParams();
+  const lectureSessionId = useOriginal ? search.get("original") : sessionId;
+  if (!lectureSessionId || lectureSessionId === "sample") return <>{children}</>;
+  return <LibraryFrame sessionId={lectureSessionId} tab={tab}>{children}</LibraryFrame>;
 }
 
 export default function Library() {

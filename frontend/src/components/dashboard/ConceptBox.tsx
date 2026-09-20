@@ -35,8 +35,8 @@ export default function ConceptBox({ concept, index, organized, dateLabel }: Con
         <div>
           <h3>{concept.title}</h3>
           {concept.description ? <p className="concept-box-description">{concept.description}</p> : null}
-          {suggested ? <p className="concept-box-note is-suggested">Suggested order — {concept.reason}</p> : null}
-          {needsExtraTime && !suggested ? <p className="concept-box-note is-warm-note">Could use a little extra time — try a different explanation.</p> : null}
+          {suggested ? <p className="concept-box-note is-suggested">Suggested next: {concept.reason}</p> : null}
+          {needsExtraTime && !suggested ? <p className="concept-box-note is-warm-note">Could use a little extra time. Try a different explanation.</p> : null}
         </div>
       </div>
       <div className="concept-box-footer">

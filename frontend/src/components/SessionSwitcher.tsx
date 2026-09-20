@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { SessionPublic } from "../lib/types";
 
 export function sessionTitle(session: SessionPublic, titles: Record<string, string>) {
@@ -17,6 +17,9 @@ interface SessionSwitcherProps {
   currentId: string;
   currentTitle: string;
   onSelect: (id: string) => void;
+  /** Render the trigger as the page's own heading (large, no box chrome) instead of a
+   *  separate boxed control, so switching sessions happens right on the title. */
+  asHeading?: boolean;
 }
 
 /**
@@ -25,7 +28,8 @@ interface SessionSwitcherProps {
  * this builds a listbox on <details> (keyboard toggle for free) with outside-click,
  * Escape, and arrow-key handling.
  */
-export default function SessionSwitcher({ sessions, titles, currentId, currentTitle, onSelect }: SessionSwitcherProps) {
+export default function SessionSwitcher({ sessions, titles, currentId, currentTitle, onSelect, asHeading }: SessionSwitcherProps) {
+  const menuId = useId();
   const root = useRef<HTMLDetailsElement>(null);
   const [open, setOpen] = useState(false);
   const current = sessions.find((s) => s.id === currentId);
@@ -46,6 +50,7 @@ export default function SessionSwitcher({ sessions, titles, currentId, currentTi
 
   const choose = (id: string) => {
     close();
+    root.current?.querySelector<HTMLElement>("summary")?.focus();
     if (id !== currentId) onSelect(id);
   };
 
@@ -56,30 +61,34 @@ export default function SessionSwitcher({ sessions, titles, currentId, currentTi
       root.current?.querySelector<HTMLElement>("summary")?.focus();
       return;
     }
-    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) return;
     const options = Array.from(root.current?.querySelectorAll<HTMLButtonElement>(".switcher-option") ?? []);
     if (!options.length) return;
     e.preventDefault();
+    if (root.current) root.current.open = true;
+    setOpen(true);
     const at = options.indexOf(document.activeElement as HTMLButtonElement);
-    const next = e.key === "ArrowDown" ? Math.min(at + 1, options.length - 1) : Math.max(at - 1, 0);
-    options[next === -1 ? 0 : next]?.focus();
+    const next = e.key === "Home" ? 0 : e.key === "End" ? options.length - 1
+      : e.key === "ArrowDown" ? (at + 1) % options.length
+      : at <= 0 ? options.length - 1 : at - 1;
+    options[next]?.focus();
   };
 
   return (
     <details
-      className="session-switcher"
+      className={"session-switcher" + (asHeading ? " session-switcher-heading" : "")}
       ref={root}
       onToggle={(e) => setOpen(e.currentTarget.open)}
       onKeyDown={onKeyDown}
     >
-      <summary aria-haspopup="listbox">
+      <summary aria-haspopup="listbox" aria-expanded={open} aria-controls={menuId}>
         <span className="switcher-text">
           <b>{current ? sessionTitle(current, titles) : currentTitle}</b>
           {current ? <small>{sessionMeta(current)}</small> : null}
         </span>
         <span className="switcher-caret" aria-hidden="true">⌄</span>
       </summary>
-      <div className="switcher-menu" role="listbox" aria-label="Choose a session">
+      <div id={menuId} className="switcher-menu" role="listbox" aria-label="Choose a session">
         {sessions.map((s) => {
           const selected = s.id === currentId;
           return (

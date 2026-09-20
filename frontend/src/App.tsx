@@ -16,7 +16,7 @@ import ReviewEntry from "./views/ReviewEntry";
 import Team from "./views/Team";
 import Replay from "./views/Replay";
 import Quiz from "./views/Quiz";
-import Library from "./views/Library";
+import Library, { SessionRouteFrame } from "./views/Library";
 import Insights from "./views/Insights";
 import LossMap from "./views/LossMap";
 import Artifacts from "./views/Artifacts";
@@ -35,7 +35,7 @@ export default function App() {
   return <div className={"app" + (compact ? " app-compact" : "")}>
     <SideBlobs />
     <header className="topbar">
-      <Link to="/" className="brand"><span className="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><g transform="rotate(-18 12 12)"><rect x="9.3" y="2.2" width="5.4" height="2.8" rx="1.2" fill="var(--accent-2)" /><rect x="9.3" y="5" width="5.4" height="1.7" fill="var(--surface-edge)" /><rect x="9.3" y="6.7" width="5.4" height="8.3" fill="var(--accent)" /><polygon points="9.3,15 14.7,15 12,19.2" fill="var(--object)" /><polygon points="11.1,17.3 12.9,17.3 12,19.2" fill="var(--text)" /></g></svg><img src="/brain-logo.png" alt="" onError={(e) => { e.currentTarget.remove(); }} /></span>NeuroPace</Link>
+      <Link to="/" className="brand"><span className="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><g transform="rotate(-18 12 12)"><rect x="9.3" y="2.2" width="5.4" height="2.8" rx="1.2" fill="var(--accent-2)" /><rect x="9.3" y="5" width="5.4" height="1.7" fill="var(--surface-edge)" /><rect x="9.3" y="6.7" width="5.4" height="8.3" fill="var(--accent)" /><polygon points="9.3,15 14.7,15 12,19.2" fill="var(--object)" /><polygon points="11.1,17.3 12.9,17.3 12,19.2" fill="var(--text)" /></g></svg></span>NeuroPace</Link>
       {compact ? <Link to="/">Dashboard</Link> : <TopTabs />}
     </header>
     <main className="main">
@@ -46,9 +46,9 @@ export default function App() {
         <Route path="/session/advanced" element={<AdvancedSetup />} />
         <Route path="/live/:sessionId" element={<Live />} />
         <Route path="/done/:sessionId" element={<Done />} />
-        <Route path="/lecture/:sessionId" element={<Lecture />} />
-        <Route path="/restudy/:sessionId" element={<Restudy />} />
-        <Route path="/office-hours/:sessionId" element={<OfficeHours />} />
+        <Route path="/lecture/:sessionId" element={<SessionRouteFrame tab="notes"><Lecture /></SessionRouteFrame>} />
+        <Route path="/restudy/:sessionId" element={<SessionRouteFrame tab="review"><Restudy /></SessionRouteFrame>} />
+        <Route path="/office-hours/:sessionId" element={<SessionRouteFrame tab="review" useOriginal><OfficeHours /></SessionRouteFrame>} />
         <Route path="/lectures" element={<Lectures />} />
         <Route path="/library" element={<Library />} />
         <Route path="/library/:sessionId" element={<Library />}>
@@ -56,6 +56,7 @@ export default function App() {
           <Route path="review" element={<ReviewEntry />} />
           <Route path="replay" element={<Replay />} />
           <Route path="quiz" element={<Quiz />} />
+          <Route path="artifacts" element={<Artifacts />} />
         </Route>
         <Route path="/notes/:sessionId" element={<LegacySession tab="notes" />} />
         <Route path="/review/:sessionId" element={<LegacySession tab="review" />} />
@@ -66,10 +67,10 @@ export default function App() {
         <Route path="/tally/:learnerId" element={<Insights />} />
         <Route path="/lossmap/:lectureId" element={<Insights />} />
         <Route path="/team" element={<Team />} />
-        <Route path="/team/replay/:sessionId" element={<Replay />} />
+        <Route path="/team/replay/:sessionId" element={<SessionRouteFrame tab="replay"><Replay /></SessionRouteFrame>} />
         <Route path="/team/lossmap/:lectureId" element={<LossMap />} />
-        <Route path="/team/quiz/:sessionId" element={<Quiz />} />
-        <Route path="/team/artifacts/:sessionId" element={<Artifacts />} />
+        <Route path="/team/quiz/:sessionId" element={<SessionRouteFrame tab="quiz"><Quiz /></SessionRouteFrame>} />
+        <Route path="/team/artifacts/:sessionId" element={<SessionRouteFrame tab="artifacts"><Artifacts /></SessionRouteFrame>} />
         <Route path="*" element={<div className="panel">Page not found. <Link to="/">Dashboard</Link></div>} />
       </Routes></LocalConnection>
     </main>

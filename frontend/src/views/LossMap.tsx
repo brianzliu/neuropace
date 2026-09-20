@@ -4,112 +4,114 @@ import { api } from "../lib/api";
 import type { LectureFull, LossMap } from "../lib/types";
 import { mmss, range } from "../lib/format";
 
-/** Aggregate, anonymous lecture loss map. Shared by the Insights shell and the
- *  legacy /lossmap/:lectureId deep link. Never takes a learner id: no per-learner
- *  traces on this card, ever. */
+function difficultyLabel(percent: number) {
+  if (percent >= 67) return "high difficulty";
+  if (percent >= 34) return "medium difficulty";
+  return "low difficulty";
+}
+
+/** An anonymous aggregate view of where learners needed more help in a lecture. */
 export function LossMapCard({ lm, lecture }: { lm: LossMap; lecture: LectureFull }) {
-  const [reveal, setReveal] = useState(false);
-  const planted = new Set((lecture.segments ?? []).filter((s) => s.planted_bad).map((s) => s.id));
   const bins = lm.bins ?? [];
-  const maxLoss = Math.max(0.5, ...bins.map((b) => b.loss ?? 0));
-  const minLoss = Math.min(0, ...bins.map((b) => b.loss ?? 0));
+  const maxLoss = Math.max(0.5, ...bins.map(bin => bin.loss ?? 0));
+  const minLoss = Math.min(0, ...bins.map(bin => bin.loss ?? 0));
   const span = maxLoss - minLoss || 1;
   const peak = lm.peak;
-  const maxScore = Math.max(0, ...(lm.segments ?? []).map((s) => s.score ?? 0)) || 1;
+  const maxScore = Math.max(0, ...(lm.segments ?? []).map(segment => segment.score ?? 0)) || 1;
+
+  if (!lm.ready) {
+    return (
+      <div className="panel waiting-card">
+        <h2>More sessions needed</h2>
+        <p className="muted small">This chart appears after the lecture has been recorded twice.</p>
+      </div>
+    );
+  }
+
   return (
     <>
-      {!lm.ready ? (
-        <div className="panel waiting-card">
-          <h2>Waiting for company</h2>
-          <p className="muted small">Pooled insights appear once 2 or more learners finish this lecture ({lm.n} so far).</p>
+      <section className="panel difficulty-card" aria-labelledby="difficulty-chart-title">
+        <div className="loss-head">
+          <h2 id="difficulty-chart-title">Difficulty across the lecture</h2>
+          {peak ? <span className="peak-time">Hardest stretch: {range(peak.t_start, peak.t_end)}</span> : null}
         </div>
-      ) : (
-        <>
-          <div className="panel">
-            <div className="loss-head">
-              <h2>
-                Pooled loss per {lm.bin_seconds} s{peak ? <span className="toughest"> (toughest 40 s: {range(peak.t_start, peak.t_end)})</span> : null}
-              </h2>
-              <span className="n-chip" title={`${lm.n} learners pooled`}>n = {lm.n}</span>
-            </div>
-            <div className="lossbars">
-              {bins.map((b) => {
-                const inPeak = !!peak && b.t >= peak.t_start && b.t < peak.t_end;
-                const h = b.loss === null ? 0 : ((b.loss - minLoss) / span) * 100;
-                return <div key={b.t} className={"bar" + (inPeak ? " peak" : "") + (b.loss === null ? " empty" : "")} style={{ height: `${Math.max(2, h)}%` }} data-tip={`${mmss(b.t)}  loss ${b.loss ?? "n/a"}  n=${b.n}`} />;
-              })}
-            </div>
-            <div className="row small muted" style={{ justifyContent: "space-between" }}>
-              <span>{mmss(0)}</span>
-              <span>{mmss(lecture.duration ?? 0)}</span>
-            </div>
+        <div className="difficulty-chart">
+          <div className="difficulty-scale" aria-hidden="true"><span>More difficult</span><span>Easier</span></div>
+          <div className="lossbars">
+            {bins.map(bin => {
+              const inPeak = !!peak && bin.t >= peak.t_start && bin.t < peak.t_end;
+              const height = bin.loss === null ? 0 : ((bin.loss - minLoss) / span) * 100;
+              const percent = Math.max(2, Math.round(height));
+              return (
+                <div
+                  key={bin.t}
+                  className={`bar${inPeak ? " peak" : ""}${bin.loss === null ? " empty" : ""}`}
+                  style={{ height: `${percent}%` }}
+                  data-tip={`${mmss(bin.t)}: ${bin.loss === null ? "no signal" : difficultyLabel(percent)}`}
+                  aria-label={`${mmss(bin.t)}, ${bin.loss === null ? "no signal" : difficultyLabel(percent)}`}
+                />
+              );
+            })}
           </div>
-          <div className="panel">
-            <div className="row" style={{ justifyContent: "space-between" }}>
-              <h2 style={{ margin: 0 }}>Segments</h2>
-              {planted.size ? (
-                <button className="ghost" onClick={() => setReveal((r) => !r)}>
-                  {reveal ? "hide planted segment" : "reveal planted segment"}
-                </button>
-              ) : null}
-            </div>
-            <ol className="seglist">
-              {(lm.segments ?? [])
-                .slice()
-                .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99))
-                .map((s) => (
-                  <li key={s.id} className={(reveal && planted.has(s.id) ? "planted" : "") + (s.rank === 1 ? " top" : "")}>
-                    <span className="seg-rank" aria-hidden="true">{s.rank ?? "–"}</span>
+        </div>
+        <div className="row small muted chart-times"><span>{mmss(0)}</span><span>{mmss(lecture.duration ?? 0)}</span></div>
+      </section>
+      {(lm.segments?.length ?? 0) > 0 ? (
+        <section className="panel">
+          <h2 className="section-list-title">Lecture sections</h2>
+          <ol className="seglist">
+            {(lm.segments ?? [])
+              .slice()
+              .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99))
+              .map(segment => {
+                const percent = Math.round(((segment.score ?? 0) / maxScore) * 100);
+                return (
+                  <li key={segment.id} className={segment.rank === 1 ? "top" : ""}>
                     <div className="seg-body">
-                      <span className="seg-title">
-                        {s.title}
-                        {reveal && planted.has(s.id) ? <span className="badge bad" style={{ marginLeft: 8 }}>planted bad segment</span> : null}
-                      </span>
-                      <span className="seg-meta">{range(s.t_start, s.t_end)} · loss {s.score ?? "n/a"}</span>
+                      <span className="seg-title">{segment.title}</span>
+                      <span className="seg-meta">{range(segment.t_start, segment.t_end)}</span>
                     </div>
-                    <span className="seg-score" aria-hidden="true">
-                      <i style={{ width: `${Math.round(((s.score ?? 0) / maxScore) * 100)}%` }} />
-                    </span>
-                    <span className="visually-hidden">
-                      Rank {s.rank ?? "unranked"}: {s.title}, {range(s.t_start, s.t_end)}, loss score {s.score ?? "n/a"}
+                    <span className="seg-score" role="img" aria-label={`${difficultyLabel(percent)} compared with other sections`}>
+                      <i style={{ width: `${percent}%` }} />
                     </span>
                   </li>
-                ))}
-            </ol>
-          </div>
-        </>
-      )}
+                );
+              })}
+          </ol>
+        </section>
+      ) : null}
     </>
   );
 }
 
 export default function LossMapView() {
   const { lectureId = "" } = useParams();
-  const [lm, setLm] = useState<LossMap | null>(null);
+  const [lossMap, setLossMap] = useState<LossMap | null>(null);
   const [lecture, setLecture] = useState<LectureFull | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  const [refresh, setRefresh] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
-    setErr(null);
+    let active = true;
     Promise.all([api.lossmap(lectureId), api.lecture(lectureId)])
-      .then(([m, l]) => {
-        setLm(m);
-        setLecture(l);
+      .then(([nextMap, nextLecture]) => {
+        if (active) {
+          setLossMap(nextMap);
+          setLecture(nextLecture);
+        }
       })
-      .catch((e) => setErr(String(e)));
-  }, [lectureId, refresh]);
-  if (err) return <div className="panel error">{err}</div>;
-  if (!lm || !lecture) return <div className="panel muted">loading…</div>;
+      .catch(cause => { if (active) setError(String(cause)); });
+    return () => { active = false; };
+  }, [lectureId]);
+
+  if (error) return <div className="panel error">{error}</div>;
+  if (!lossMap || !lecture) return <div className="panel muted">Loading lecture patterns…</div>;
   return (
     <div className="col insights">
       <div className="row" style={{ justifyContent: "space-between" }}>
-        <h1 style={{ margin: 0 }}>Lecture loss map: {lecture.title}</h1>
-        <div className="row">
-          <button className="ghost" onClick={() => setRefresh((r) => r + 1)}>refresh</button>
-          <Link to="/">home</Link>
-        </div>
+        <h1 style={{ margin: 0 }}>{lecture.title}</h1>
+        <Link to="/insights">All insights</Link>
       </div>
-      <LossMapCard lm={lm} lecture={lecture} />
+      <LossMapCard lm={lossMap} lecture={lecture} />
     </div>
   );
 }

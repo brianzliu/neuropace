@@ -111,14 +111,14 @@ export default function Lecture() {
           </button>
           {failed.length ? (
             <button className="linklike" onClick={() => void regenerate()} disabled={regenerating}>
-              {regenerating ? "Writing…" : "Some notes aren't written yet — try again"}
+              {regenerating ? "Writing…" : "Some notes aren't written yet. Try again"}
             </button>
           ) : null}
         </div>
       ) : null}
       {!running && library && failed.length ? (
         <button className="linklike" onClick={() => void regenerate()} disabled={regenerating}>
-          {regenerating ? "Writing…" : "Some notes aren't written yet — try again"}
+          {regenerating ? "Writing…" : "Some notes aren't written yet. Try again"}
         </button>
       ) : null}
 

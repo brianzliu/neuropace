@@ -732,3 +732,24 @@ a.linklike { font-size: var(--fs-subhead); }
 .oh-chat-input .btn { flex: 0 0 auto; }
 .oh-chat-toolbar .is-recording, .oh-chat-input .is-recording { border-color: var(--orange); color: var(--orange); }
 @media (prefers-reduced-motion: reduce) { .concept-whiteboard .diagram * { transition: none !important; } }
+
+/* One lecture navigation layout across notes, review, quiz, replay, and explanations. */
+.session-navigation { margin-bottom: 20px; }
+.session-navigation-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 16px; }
+.session-navigation-heading .library-title { margin: 0; font-size: 1.35rem; overflow-wrap: anywhere; }
+.session-navigation .library-tabs { padding-bottom: 8px; }
+.session-navigation .library-tab { white-space: nowrap; min-height: 44px; }
+.session-navigation .library-tab:focus-visible { outline: 2px solid var(--text, #443e31); outline-offset: 2px; }
+/* The switcher doubling as the page heading: same size/weight as a plain h1,
+   chrome only shows up on hover/focus/open so it doesn't read as a form control. */
+.session-switcher-heading { min-width: 0; flex: 1 1 220px; }
+.session-switcher-heading > summary { height: auto; padding: 4px 8px; margin: -4px -8px; border: 2px solid transparent; background: transparent; border-radius: var(--r); }
+.session-switcher-heading > summary:hover { background: var(--surface-2); }
+.session-switcher-heading[open] > summary { background: var(--surface-2); border-color: var(--line); }
+.session-switcher-heading .switcher-text b { font-family: var(--display); font-weight: 400; font-size: 1.35rem; overflow-wrap: anywhere; white-space: normal; max-width: none; }
+.session-switcher-heading .switcher-text small { font-family: var(--font); }
+@media (max-width: 600px) {
+  .session-navigation-heading { gap: 12px; }
+  .session-navigation .session-switcher { width: 100%; max-width: 100%; }
+  .session-navigation .switcher-menu { width: 100%; min-width: 0; }
+}

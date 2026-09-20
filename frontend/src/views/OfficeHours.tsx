@@ -1,3 +1,4 @@
+import { useLibrary } from "./Library";
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api, errorText } from "../lib/api";
@@ -14,6 +15,7 @@ export default function OfficeHours() {
   const { sessionId = "" } = useParams();
   const [search] = useSearchParams();
   const original = search.get("original");
+  const library = useLibrary();
   const [snap, setSnap] = useState<OHSnapshot | null>(null);
   const [generating, setGenerating] = useState(false);
   const [scrubOrd, setScrubOrd] = useState<number | null>(null); // null = live (now)
@@ -73,7 +75,7 @@ export default function OfficeHours() {
   return (
     <div className="office-hours">
       <header className="oh-header row between">
-        <SessionBack />
+        {!library && <SessionBack />}
         <div className="row">
           {original ? (
             <Link className="btn btn-sm" to={`/restudy/${original}?mode=manual`} title="Switch to a quiz-first self-test, no agent conversation">

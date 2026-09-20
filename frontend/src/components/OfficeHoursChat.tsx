@@ -262,7 +262,7 @@ export default function OfficeHoursChat({
       {err ? <div className="callout danger label-3">{err}</div> : null}
       {ptt.error ? <div className="label-3">{ptt.error}</div> : null}
       {agent.error ? <div className="label-3">{agent.error}</div> : null}
-      {disabled ? <div className="label-3">Looking back — return to now to keep talking.</div> : null}
+      {disabled ? <div className="label-3">Looking back. Return to now to keep talking.</div> : null}
       <div className="oh-chat-toolbar row">
         <button
           type="button"
@@ -299,7 +299,7 @@ export default function OfficeHoursChat({
               stopSpeaking();
               agent.resume();
             }}
-            title="Stop the agent talking (not true barge-in — you can't yet talk over it, just stop it)"
+            title="Stop the tutor speaking. You cannot talk over it yet."
           >
             Stop
           </button>

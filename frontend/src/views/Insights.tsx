@@ -1,201 +1,152 @@
-import { useEffect, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
 import { api, errorText } from "../lib/api";
-import { FORM_LABEL, FORMS, type Learner, type LectureFull, type LossMap, type Profile } from "../lib/types";
+import { FORMS, type LectureFull, type LossMap, type Profile } from "../lib/types";
+import LectureSwitcher from "../components/LectureSwitcher";
 import { LossMapCard } from "./LossMap";
-import { TallyCard } from "./Tally";
-import { readLocalSetting, writeLocalSetting } from "../lib/storage";
+import { EXPLANATION_LABEL, TallyCard } from "./Tally";
+import { readLocalSetting } from "../lib/storage";
 
-/** Insights shell: the learner's own review preferences (Tally) plus the
- *  anonymized, aggregate lecture overview (LossMap). No per-learner traces
- *  on the LossMap card, ever. Route params (Agent A's shell) and query
- *  params both work, so /tally/:learnerId and /lossmap/:lectureId can be
- *  re-homed here without losing the deep link. */
 export default function Insights({ learnerId: learnerProp, lectureId: lectureProp }: { learnerId?: string; lectureId?: string } = {}) {
   const params = useParams<{ learnerId?: string; lectureId?: string }>();
   const [search] = useSearchParams();
   const pinnedLearner = learnerProp ?? params.learnerId ?? search.get("learner") ?? "";
   const pinnedLecture = lectureProp ?? params.lectureId ?? search.get("lecture") ?? "";
-
-  const [learners, setLearners] = useState<Learner[]>([]);
-  const [selectedLearner, setSelectedLearner] = useState(() => pinnedLearner || readLocalSetting("learner") || "");
+  const [learnerId, setLearnerId] = useState(pinnedLearner || readLocalSetting("learner") || "");
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [tallyErr, setTallyErr] = useState<string | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
-
   const [lectures, setLectures] = useState<LectureFull[]>([]);
   const [selectedLecture, setSelectedLecture] = useState(pinnedLecture);
-  const [lm, setLm] = useState<LossMap | null>(null);
+  const [lossMap, setLossMap] = useState<LossMap | null>(null);
   const [lecture, setLecture] = useState<LectureFull | null>(null);
-  const [lmErr, setLmErr] = useState<string | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [refresh, setRefresh] = useState(0);
+  const [lectureError, setLectureError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.learners()
-      .then(({ learners: list }) => {
-        setLearners(list);
-        setSelectedLearner((current) => {
-          const preferred = pinnedLearner || current;
-          return list.some((l) => l.id === preferred) ? preferred : list[0]?.id ?? "";
-        });
-      })
-      .catch((e) => setLoadError(String(e)));
+    let active = true;
+    const requested = pinnedLearner || readLocalSetting("learner") || "me";
+    api.learner(requested)
+      .catch(() => api.learner("me"))
+      .then(learner => { if (active) setLearnerId(learner.id); })
+      .catch(error => { if (active) setProfileError(errorText(error)); });
+    return () => { active = false; };
   }, [pinnedLearner]);
 
-  useEffect(() => {
-    api.lectures()
-      .then(({ lectures: list }) => {
-        setLectures(list);
-        setSelectedLecture((current) => {
-          const preferred = pinnedLecture || current;
-          return list.some((l) => l.id === preferred) ? preferred : list[0]?.id ?? "";
-        });
-      })
-      .catch((e) => setLoadError(String(e)));
-  }, [pinnedLecture]);
-
-  const learnerId = pinnedLearner || selectedLearner;
-  useEffect(() => {
-    setProfile(null);
-    setTallyErr(null);
-    setConfirmReset(false);
+  const loadProfile = useCallback(async () => {
     if (!learnerId) return;
-    let alive = true;
-    api.profile(learnerId)
-      .then((p) => { if (alive) setProfile(p); })
-      .catch((e) => { if (alive) setTallyErr(String(e)); });
-    return () => { alive = false; };
+    try {
+      const next = await api.profile(learnerId);
+      setProfile(next);
+      setProfileError(null);
+    } catch (error) {
+      setProfileError(errorText(error));
+    }
   }, [learnerId]);
 
-  const resetPreferences = () => {
-    api.resetProfile(learnerId).then(() => {
-      setConfirmReset(false);
-      return api.profile(learnerId).then(setProfile);
-    }).catch((e) => setTallyErr(errorText(e)));
-  };
+  useEffect(() => { void loadProfile(); }, [loadProfile]);
+
+  useEffect(() => {
+    let active = true;
+    api.lectures()
+      .then(({ lectures: list }) => {
+        if (!active) return;
+        setLectures(list);
+        setSelectedLecture(current => {
+          const preferred = pinnedLecture || current;
+          return list.some(item => item.id === preferred) ? preferred : list[0]?.id ?? "";
+        });
+      })
+      .catch(error => { if (active) setLectureError(errorText(error)); });
+    return () => { active = false; };
+  }, [pinnedLecture]);
 
   const lectureId = pinnedLecture || selectedLecture;
-  useEffect(() => {
-    setLm(null);
-    setLecture(null);
-    setLmErr(null);
+  const loadLecture = useCallback(async () => {
     if (!lectureId) return;
-    let alive = true;
-    Promise.all([api.lossmap(lectureId), api.lecture(lectureId)])
-      .then(([m, l]) => { if (alive) { setLm(m); setLecture(l); } })
-      .catch((e) => { if (alive) setLmErr(String(e)); });
-    return () => { alive = false; };
-  }, [lectureId, refresh]);
+    try {
+      const [nextMap, nextLecture] = await Promise.all([api.lossmap(lectureId), api.lecture(lectureId)]);
+      setLossMap(nextMap);
+      setLecture(nextLecture);
+      setLectureError(null);
+    } catch (error) {
+      setLectureError(errorText(error));
+    }
+  }, [lectureId]);
 
-  const pickLearner = (id: string) => {
-    setSelectedLearner(id);
-    if (!pinnedLearner) {
-      writeLocalSetting("learner", id);
+  useEffect(() => {
+    setLossMap(null);
+    setLecture(null);
+    void loadLecture();
+    const refresh = () => { if (document.visibilityState === "visible") void loadLecture(); };
+    window.addEventListener("focus", refresh);
+    const timer = window.setInterval(refresh, 30_000);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      window.clearInterval(timer);
+    };
+  }, [loadLecture]);
+
+  const resetPreferences = async () => {
+    try {
+      await api.resetProfile(learnerId);
+      setConfirmReset(false);
+      await loadProfile();
+    } catch (error) {
+      setProfileError(errorText(error));
     }
   };
 
   return (
-    <div className="dashboard">
-      <div className="dashboard-toolbar">
-        <div>
-
-          <h1>What lands for you.</h1>
-        </div>
-      </div>
-      {loadError ? <div className="panel error" role="alert">{loadError}</div> : null}
+    <div className="dashboard insights-page">
+      <div className="dashboard-toolbar"><h1>Your learning patterns</h1></div>
       <div className="home insights">
-        <section className="col" aria-labelledby="review-preferences-heading">
-          <div className="dashboard-section-heading">
-            <h2 id="review-preferences-heading">My review preferences</h2>
-            {!pinnedLearner && learners.length ? (
-              <label className="row" style={{ gap: ".5rem" }}>
-                <span className="small muted">profile</span>
-                <select value={selectedLearner} onChange={(e) => pickLearner(e.target.value)}>
-                  {learners.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-                </select>
-              </label>
-            ) : null}
-          </div>
-          {tallyErr ? <div className="panel error" role="alert">{tallyErr}</div> : null}
-          {!learnerId ? (
-            <div className="panel muted">Create a profile on the <Link to="/">dashboard</Link> to start your tally.</div>
-          ) : !profile ? (
-            <div className="panel muted">loading…</div>
-          ) : (
+        <section className="col" aria-labelledby="learning-heading">
+          <div className="dashboard-section-heading"><h2 id="learning-heading">Your progress</h2></div>
+          {profileError ? <div className="panel error" role="alert">{profileError}</div> : null}
+          {!profile ? <div className="panel muted">Loading your progress…</div> : (
             <>
               <div className="stats">
-                <div className="stat orange">
-                  <div className="v">{profile.stats.streak_days}</div>
-                  <div className="k">day streak</div>
-                </div>
-                <div className="stat">
-                  <div className="v">{profile.stats.lectures}</div>
-                  <div className="k">lectures</div>
-                </div>
-                <div className="stat green">
-                  <div className="v">{profile.stats.moments_restudied}</div>
-                  <div className="k">moments landed</div>
-                </div>
+                <div className="stat orange"><div className="v">{profile.stats.streak_days}</div><div className="k">day streak</div></div>
+                <div className="stat"><div className="v">{profile.stats.lectures}</div><div className="k">lectures recorded</div></div>
+                <div className="stat green"><div className="v">{profile.stats.moments_restudied}</div><div className="k">concepts reviewed</div></div>
               </div>
               <TallyCard tally={profile.tally} />
-              <div className="panel" aria-label="How much each explanation held your attention">
-                <h2 style={{ marginTop: 0 }}>Held your attention</h2>
-                <p className="small muted" style={{ marginTop: 0 }}>Measured with the headset while you read a re-teach card. A drift switches the explanation on the spot.</p>
-                {FORMS.map((f) => {
-                  const meanFocus = profile.tally.forms[f].focus?.mean_focus;
-                  const focusPct = meanFocus != null ? Math.round(meanFocus * 100) : null;
+              <section className="panel focus-results" aria-labelledby="focus-results-title">
+                <h2 id="focus-results-title">What held your focus</h2>
+                {FORMS.map(form => {
+                  const mean = profile.tally.forms[form].focus?.mean_focus;
+                  const percent = mean == null ? null : Math.round(mean * 100);
                   return (
-                    <div className="rescue-row" key={f}>
-                      <div className="rescue-head"><span>{FORM_LABEL[f]}</span></div>
-                      <div className="rescue-track" role="img" aria-label={`${FORM_LABEL[f]}: ${focusPct ?? "no"} percent attention held`}>
-                        <div className="rescue-fill" style={{ width: `${focusPct ?? 0}%` }} />
+                    <div className="rescue-row" key={form}>
+                      <div className="rescue-head"><span>{EXPLANATION_LABEL[form]}</span><span className="result-value">{percent == null ? "No data" : `${percent}%`}</span></div>
+                      <div className="rescue-track" role="img" aria-label={`${EXPLANATION_LABEL[form]} held focus ${percent == null ? "with no headset data" : `${percent} percent of the time`}`}>
+                        <div className="rescue-fill focus-fill" style={{ width: `${percent ?? 0}%` }} />
                       </div>
-                      <span className="small muted">{focusPct != null ? `${focusPct}%` : "no headset data yet"}</span>
                     </div>
                   );
                 })}
-              </div>
-              <div className="row between" style={{ alignItems: "center" }}>
-                <span className="small muted">{profile.calibrated ? "Focus calibration saved from your last lecture." : "Focus calibration is learned during your next lecture."}</span>
-                {!confirmReset ? (
-                  <button className="linklike" onClick={() => setConfirmReset(true)}>Reset preferences</button>
-                ) : (
-                  <span className="row" style={{ gap: ".5rem", alignItems: "center" }}>
-                    <span className="small muted">Reset this learner's preferences and calibration. Lectures stay.</span>
-                    <button className="btn btn-sm btn-danger" onClick={resetPreferences}>Start fresh</button>
-                    <button className="btn btn-sm btn-plain" onClick={() => setConfirmReset(false)}>Keep</button>
-                  </span>
+              </section>
+              <div className="preference-actions">
+                {!confirmReset ? <button className="linklike" onClick={() => setConfirmReset(true)}>Reset learning patterns</button> : (
+                  <div className="reset-confirmation">
+                    <span>Clear your explanation and headset preferences?</span>
+                    <button className="btn btn-sm btn-danger" onClick={() => void resetPreferences()}>Clear</button>
+                    <button className="btn btn-sm btn-plain" onClick={() => setConfirmReset(false)}>Cancel</button>
+                  </div>
                 )}
               </div>
             </>
           )}
         </section>
-        <section className="col" aria-labelledby="lecture-overview-heading">
-          <div className="dashboard-section-heading">
-            <h2 id="lecture-overview-heading">Lecture overview</h2>
-            <div className="row" style={{ gap: ".5rem" }}>
-              {!pinnedLecture && lectures.length ? (
-                <label className="row" style={{ gap: ".5rem" }}>
-                  <span className="small muted">lecture</span>
-                  <select value={selectedLecture} onChange={(e) => setSelectedLecture(e.target.value)}>
-                    {lectures.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}
-                  </select>
-                </label>
-              ) : null}
-              {lectureId ? (
-                <button className="ghost" onClick={() => setRefresh((r) => r + 1)}>refresh</button>
-              ) : null}
-            </div>
+        <section className="col" aria-labelledby="lecture-patterns-heading">
+          <div className="dashboard-section-heading lecture-patterns-heading">
+            <h2 id="lecture-patterns-heading">Where the lecture got difficult</h2>
+            {!pinnedLecture && lectures.length ? <LectureSwitcher lectures={lectures} currentId={selectedLecture} onSelect={setSelectedLecture} /> : null}
           </div>
-          {lmErr ? <div className="panel error" role="alert">{lmErr}</div> : null}
-          {!lectureId ? (
-            <div className="panel muted">No lecture selected yet.</div>
-          ) : !lm || !lecture ? (
-            <div className="panel muted">loading…</div>
-          ) : (
-            <LossMapCard lm={lm} lecture={lecture} />
-          )}
+          {lectureError ? <div className="panel error" role="alert">{lectureError}</div> : null}
+          {!lectureId ? <div className="panel muted">Record a lecture to see its difficult sections.</div>
+            : !lossMap || !lecture ? <div className="panel muted">Loading lecture patterns…</div>
+            : <LossMapCard lm={lossMap} lecture={lecture} />}
         </section>
       </div>
     </div>

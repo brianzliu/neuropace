@@ -9,6 +9,7 @@ import { narrationForCard, useTutor } from "../lib/tutor";
 import Dissolve from "../components/Dissolve";
 import ArtifactView from "../components/ArtifactView";
 import BrainWaves from "../components/BrainWaves";
+import { EXPLANATION_LABEL } from "./Tally";
 
 type Phase = "idle" | "answering" | "feedback" | "dissolving" | "reteach" | "done" | "blocked";
 
@@ -291,7 +292,7 @@ export default function Restudy() {
                 <div className="stats">
                   <div className="stat green">
                     <div className="v">{progress.gaps_closed}</div>
-                    <div className="k">moments landed</div>
+                    <div className="k">concepts reviewed</div>
                   </div>
                   <div className="stat">
                     <div className="v">{hits}</div>
@@ -416,8 +417,8 @@ export function FamilyList({ tally }: { tally: TallySummary }) {
           <div key={f} className={"family" + (tally.pick === f ? " pick" : "")}>
             <span className="f-icon">{FORM_ICON[f]}</span>
             <span>
-              <div className="f-name">{FORM_LABEL[f]}</div>
-              <div className="f-sub">{st.attempts ? `${st.rescues} of ${st.attempts} rescues` : "not tried yet"}{st.focus?.mean_focus != null ? ` · held ${Math.round(st.focus.mean_focus * 100)}%` : ""}</div>
+              <div className="f-name">{EXPLANATION_LABEL[f]}</div>
+              <div className="f-sub">{st.attempts ? `${st.rescues} of ${st.attempts} review answers correct` : "Not tried yet"}{st.focus?.mean_focus != null ? `. Focus held ${Math.round(st.focus.mean_focus * 100)}%` : ""}</div>
             </span>
             <span className="f-num">{tally.pick === f ? "next" : ""}</span>
           </div>
@@ -430,11 +431,11 @@ export function FamilyList({ tally }: { tally: TallySummary }) {
 function WhatWorked({ tally }: { tally: TallySummary }) {
   const best = tally.preferred ?? (tally.rank && tally.rank[0]) ?? [...FORMS].sort((a, b) => tally.forms[b].rescues - tally.forms[a].rescues)[0];
   const st = tally.forms[best];
-  if (!st || st.attempts === 0) return <p className="sub">Reflow is still learning which explanations land for you.</p>;
-  const held = st.focus?.mean_focus != null ? ` and held your attention ${Math.round(st.focus.mean_focus * 100)}% of the time` : "";  return (
+  if (!st || st.attempts === 0) return <p className="sub">NeuroPace is still learning which explanations help you most.</p>;
+  const held = st.focus?.mean_focus != null ? ` It held your focus ${Math.round(st.focus.mean_focus * 100)}% of the time.` : "";  return (
     <p className="sub">
-      {FORM_LABEL[best]} rescued you {st.rescues} time{st.rescues === 1 ? "" : "s"}
-      {held}. {tally.preferred ? "That is your preferred way, so you will see it first." : "Reflow keeps trying the others until it is sure."}
+      {EXPLANATION_LABEL[best]} led to {st.rescues} correct review answer{st.rescues === 1 ? "" : "s"} out of {st.attempts}.
+      {held} {tally.preferred ? "You will see this format first." : "NeuroPace will keep testing other formats."}
     </p>
   );
 }
