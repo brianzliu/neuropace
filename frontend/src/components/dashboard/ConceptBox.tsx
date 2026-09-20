@@ -25,17 +25,17 @@ export default function ConceptBox({ concept, index, organized, dateLabel }: Con
   const suggested = organized && !!concept.reason && !FALLBACK_REASONS.has(concept.reason);
   const needsExtraTime = concept.status === "exhausted";
   return (
-    <article className={"concept-box" + (needsExtraTime ? " is-warm" : "")}>
+    <article className={"concept-box" + (needsExtraTime ? " is-warm" : "") + (suggested ? " has-suggestion" : "")}>
       <div className="concept-box-top">
         {organized ? (
-          <span className="concept-box-index" aria-hidden="true" title="Suggested order">{index + 1}</span>
+          <span className="concept-box-index" aria-hidden="true" title={suggested ? concept.reason : "Suggested order"}>{index + 1}</span>
         ) : (
           <span className="concept-box-dot" aria-hidden="true" />
         )}
         <div>
           <h3>{concept.title}</h3>
           {concept.description ? <p className="concept-box-description">{concept.description}</p> : null}
-          {suggested ? <p className="concept-box-note is-suggested">Suggested next: {concept.reason}</p> : null}
+          {suggested ? <p className="concept-box-note is-suggested">{concept.reason}</p> : null}
           {needsExtraTime && !suggested ? <p className="concept-box-note is-warm-note">Could use a little extra time. Try a different explanation.</p> : null}
         </div>
       </div>

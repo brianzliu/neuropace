@@ -226,7 +226,10 @@ select {
 .concept-box h3 { margin: .2rem 0 .25rem; font-size: 1.08rem; font-weight: 500; }
 .concept-box-description { margin: .2rem 0 0; font-size: .86rem; line-height: 1.6; color: var(--text); }
 .concept-box-note { margin: .45rem 0 0; font-size: .74rem; line-height: 1.5; color: var(--muted); }
-.concept-box-note.is-suggested { color: var(--accent); }
+/* The suggestion itself is signalled by the card's left accent bar (.has-suggestion), not by
+   shouting the reason in a labelled sentence — the text stays a quiet, unlabelled footnote. */
+.concept-box.has-suggestion { border-left: 3px solid var(--accent); padding-left: calc(1.25rem - 2px); }
+.concept-box-note.is-suggested { font-size: .72rem; font-style: italic; color: color-mix(in srgb, var(--accent) 55%, var(--muted)); }
 /* Gentle severity: exhausted concepts (every re-teach tried, still open)
    get a deeper honey tint and warm copy. No red anywhere — harshness
    turns people away. The note text carries the meaning, never color alone. */
@@ -262,7 +265,8 @@ body { overflow-x: clip; }
 .dashboard-empty h3 { font-family: var(--display); font-weight: 400; font-size: 1.35rem; margin: .5rem 0; }
 .dashboard-empty p { font-size: .85rem; color: var(--muted); max-width: 340px; margin: .6rem auto 1rem; }
 .session-sidebar { border-left: 1px solid var(--line); padding-left: 1.8rem; }
-.session-history-item { border: 1px solid var(--line); border-radius: 16px; background: var(--bg-2); padding: .7rem .9rem .8rem; box-shadow: 0 2px 8px color-mix(in srgb, var(--surface-edge) 70%, transparent); }
+/* Shaped like a hanging index card with a date tab, not a plain color block. */
+.session-history-item { position: relative; margin-top: 16px; border: 1px solid var(--line); border-radius: 3px 16px 16px 16px; background: var(--bg-2); padding: .9rem .9rem .8rem; box-shadow: 0 2px 8px color-mix(in srgb, var(--surface-edge) 70%, transparent); }
 /* The session list is its own scroll window (Practice card stays pinned
    below it, outside the scroll). Capped to the viewport so long histories
    never push past the bottom of the screen. */
@@ -292,7 +296,7 @@ body { overflow-x: clip; }
 .rescue-tag { transform: rotate(2deg); }
 .concept-box-index { transform: rotate(-3deg); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-.session-date { display: flex; justify-content: space-between; font-size: .7rem; color: var(--muted); }
+.session-date-tab { position: absolute; top: -13px; left: 0; border: 1px solid; border-color: inherit; border-bottom: 0; border-radius: 8px 8px 0 0; background: inherit; padding: 3px 10px 6px; font-size: .68rem; font-weight: 700; color: var(--muted); }
 .session-list { display: grid; gap: .75rem; align-content: start; overflow-y: auto; overscroll-behavior-y: contain; max-height: min(62vh, 620px); margin-bottom: 1.5rem; padding: .25rem .25rem .5rem; }
 .session-history-item h3 { font-size: .97rem; font-weight: 500; margin: .35rem 0 .6rem; }
 .session-summary { font-size: .78rem; line-height: 1.5; color: var(--muted); margin: -.3rem 0 .6rem; }
