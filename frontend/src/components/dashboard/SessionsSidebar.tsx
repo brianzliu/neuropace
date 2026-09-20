@@ -13,19 +13,10 @@ interface SessionsSidebarProps {
  * Dashboard compartment 2: recent sessions sidebar.
  * Deep links stay on their current paths; Agent D's Library shell will
  * re-home them (redirect) without changing what this component renders.
- * Status is always dot + word, never color-alone; dots are static (no
- * pulsing) so reduced-motion is respected by construction.
+ * No status pills (user request): a running session shows an
+ * "Open live session" link instead of the icon row, so state is still
+ * communicated without a tag in the corner.
  */
-
-type SessionStatus = "running" | "ended" | "reviewed" | "created" | string;
-
-function statusMeta(status: SessionStatus): { modifier: string; label: string } {
-  if (status === "running") return { modifier: "is-running", label: "In progress" };
-  if (status === "ended") return { modifier: "is-ended", label: "Ended" };
-  if (status === "reviewed") return { modifier: "is-ended", label: "Reviewed" };
-  if (status === "created") return { modifier: "is-other", label: "Created" };
-  return { modifier: "is-other", label: status };
-}
 
 /** Stroke-consistent action icons (24-grid, round caps, 2px stroke).
  *  Text glyphs varied wildly in weight and optical size; these match. */
@@ -55,7 +46,6 @@ export default function SessionsSidebar({ sessions, concepts, closed }: Sessions
         </p>
       ) : sessions.length ? (
         sessions.map((session) => {
-          const meta = statusMeta(session.status);
           return (
           <article className="session-history-item" key={session.id}>
             <span className="session-date">
@@ -63,10 +53,6 @@ export default function SessionsSidebar({ sessions, concepts, closed }: Sessions
                 month: "short",
                 day: "numeric",
               })}
-              <span className={`pill session-status ${meta.modifier}`}>
-                <i aria-hidden="true" />
-                {meta.label}
-              </span>
             </span>
             <h3>{session.title}</h3>
             <div className="row session-actions">
