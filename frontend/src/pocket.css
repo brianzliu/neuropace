@@ -57,6 +57,23 @@ a { font-weight: 500; }
 .activity-track { height: 80px; width: 100%; max-width: 42px; display: flex; align-items: flex-end; background: var(--bg-3); border-radius: 7px; }
 .activity-bar { width: 100%; background: #efd26c; border-radius: 7px; }
 .activity-count { min-height: 1.4em; font-variant-numeric: tabular-nums; }
+/* Activity view toggle + GitHub-style grid. Intensity is color plus exact
+   counts (title tooltips + img label), never color-alone. Cells are static. */
+.activity-heading { flex-wrap: wrap; row-gap: .5rem; }
+.activity-view-toggle { display: inline-flex; gap: 2px; border: 1px solid var(--line); border-radius: 99px; padding: 2px; background: var(--bg-2); }
+.activity-view-toggle button { border: 0; background: transparent; color: var(--muted); font-size: .75rem; font-weight: 600; padding: .35rem .8rem; border-radius: 99px; min-height: 32px; cursor: pointer; }
+.activity-view-toggle button[aria-pressed="true"] { background: var(--bg-3); color: var(--text); box-shadow: 0 2px 0 var(--surface-edge); }
+.activity-sub { margin: .25rem 0 0; }
+.activity-grid { display: flex; gap: 4px; overflow-x: auto; padding-top: 1rem; }
+.activity-week { display: grid; gap: 4px; align-content: start; }
+.activity-month { font-size: .65rem; color: var(--muted); min-height: 1.2em; }
+.grid-cell { width: 14px; height: 14px; border-radius: 4px; background: var(--bg-3); border: 1px solid var(--line); }
+.grid-cell.l1 { background: color-mix(in srgb, var(--good) 35%, var(--bg-3)); border-color: transparent; }
+.grid-cell.l2 { background: color-mix(in srgb, var(--good) 65%, var(--bg-3)); border-color: transparent; }
+.grid-cell.l3 { background: var(--good); border-color: transparent; }
+.grid-cell.is-outside { opacity: .3; }
+.activity-legend { display: flex; align-items: center; justify-content: flex-end; gap: 4px; padding-top: .6rem; font-size: .7rem; color: var(--muted); }
+.grid-cell.legend-swatch { width: 12px; height: 12px; }
 .concept-source { display: inline-block; color: var(--muted); font-size: .77rem; margin-top: .3rem; }
 .review-overview { min-height: 0; padding: 1.2rem 1.5rem; }
 .review-overview .idea-sculpture { width: 105px; height: 120px; transform: scale(.8); transform-origin: right center; }
