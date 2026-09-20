@@ -977,3 +977,183 @@ especially with minors, requires a separately scoped consent and access-control 
 - **"Detects your learning style" framing.** Explicitly retracted in Part II §1 for lack of
   empirical support in the literature — do not bring this framing back even informally in pitch
   language.
+
+---
+
+## Appendix B: technical reference (moved from README, 20 Sep 2026)
+
+README.md is now the consumer-facing front door. Everything below is the operational detail a
+contributor needs — setup, keys, hardware, platform notes, commands — moved here so the README
+stays about what the product does, not how to run it.
+
+### Quick start
+
+```bash
+# backend (Python 3.13 via uv)
+uv sync
+git-crypt unlock ~/Downloads/neuropace.git-crypt.key   # team key decrypts .env + .env.tts (see "API keys")
+uv run neuropace doctor            # keys, services, serial ports, frontend build
+
+# frontend (built once, served by the backend)
+cd frontend && pnpm install && pnpm build && cd ..
+
+# run everything in one process
+uv run neuropace serve             # http://127.0.0.1:8765
+```
+
+Open the URL, pick the demo lecture ("How GPS finds you", scripted, with a planted bad segment 3),
+start a live session with headset `sim` (the totem falls back to the keyboard when no Arduino is
+plugged in), and press Space or `T` to tap. Press `1`/`2` to switch the simulated headset between
+focused and drifting and watch the EEG flag arrive as a chip and a totem pulse.
+
+The dashboard's **Show sample data** switch opens an isolated synthetic workspace with three past
+lectures, review concepts, and activity. Switching it off returns to the learner's original data.
+Its database (`data/neuropace-demo.db`) and switch state (`data/demo-mode.json`) are local runtime
+files covered by `.gitignore`.
+
+Frontend development with hot reload: `cd frontend && pnpm dev` (proxies `/api`, `/ws`, `/media`
+to the backend on 8765).
+
+### API keys
+
+`.env` (Deepgram, OpenRouter, OpenAI, Gemini) and `.env.tts` (Deepgram TTS voice) are
+committed, but encrypted with [git-crypt](https://github.com/AGWA/git-crypt): the repo is
+public and both files are unreadable without the team key. Approved collaborators receive
+`neuropace.git-crypt.key` by direct message from Joaquin. Never commit, upload or post that
+file anywhere.
+
+```bash
+brew install git-crypt        # Windows: scoop install git-crypt (or use WSL); Linux: apt install git-crypt
+git pull
+git-crypt unlock ~/Downloads/neuropace.git-crypt.key
+uv run neuropace doctor       # confirms the keys are picked up
+```
+
+After `unlock`, both files are plaintext on disk and stay encrypted in every commit, so
+editing `.env` and pushing is how the team adds or rotates a key. Real environment variables
+win over `.env`, so keep personal overrides (`NEUROPACE_BASELINE_SECONDS=30`, serial ports)
+in your shell rather than in the shared file. `git-crypt status` lists what is encrypted.
+
+Without the key, replace the encrypted files with your own credentials:
+`cp .env.example .env && : > .env.tts`. Everything still runs without keys (simulated
+transcript and offline recaps).
+
+#### Entering a Deepgram key in the app
+
+Open **Start session → Lecture transcription**, paste your Deepgram API key, and
+choose **Save key**. It applies to new sessions immediately. The key is held only
+in the local backend process and must be entered again after restarting it. Saving
+does not validate the key with Deepgram; authentication happens when transcription
+connects. For configuration that survives restarts, set `DEEPGRAM_API_KEY` in `.env`,
+which is git-crypt encrypted in the repo (see "API keys" above).
+
+#### Choosing OpenAI or OpenRouter
+
+Open **Start session → Explanation model**. Choose OpenAI or OpenRouter, enter a
+model name and that provider's API key, then save. Both keys can remain available
+in the running local server, so switching back does not require pasting the key
+again. The change applies to new sessions. For setup that survives restarts, use
+`OPENAI_API_KEY` and `OPENAI_MODEL`, or `OPENROUTER_API_KEY` and
+`OPENROUTER_MODEL`, then set `NEUROPACE_LLM_PROVIDER` to `openai` or `openrouter`.
+
+### Hosted interface
+
+The frontend is deployed at https://neurospace-hackmit.vercel.app. On the same laptop as your
+browser and hardware, run `uv run neuropace serve` and paste the printed pairing code into the
+hosted connection screen. Allow local network access when prompted. Restart an older backend
+to load the hosted-interface changes. The local URL remains available as a fallback.
+
+The frontend deploys from `frontend/` with `vercel --prod`; only frontend files are uploaded.
+`NEUROPACE_UI_ORIGINS` configures exact allowed origins on the backend. Add preview URLs explicitly
+when testing them. `VITE_BACKEND_URL` can override the default `http://127.0.0.1:8765` at build
+time. Never put API keys or pairing codes in Vite environment variables. For hosted pairing,
+use `neuropace serve` without `--reload` so the terminal prints the current pairing code.
+
+The hosted site requires the local service. It does not provide a cloud backend or a remote
+connection to someone else's laptop. EEG processing and session storage stay local; configured
+transcription and explanation providers still receive the inputs needed for their requests.
+
+### Hardware
+
+- **Headset:** pair the MindWave Mobile 2 over Bluetooth Classic. It appears as `/dev/cu.MindWaveMobile-SerialPort` (or similar; COM3 on Windows) and is auto-detected; the team's `mindwave/` pipeline reads it (see the EEG bridge section). Force a port with `NEUROPACE_HEADSET_PORT`, or `NEUROPACE_HEADSET_PORT=sim` to simulate.
+- **Totem (current target):** the UNO Q 4 GB relay in `firmware/uno_q_relay/` is the target path: the headset and a momentary switch connect to the Q, which relays both to the laptop over BLE. It is **experimental and uncompiled**; the concrete hardware blockers are listed in `firmware/uno_q_relay/README.md`. The physical button is **not built yet** — a momentary switch under a larger 3D-printed press surface is planned. Direct + simulated routes below stay labelled fallbacks.
+- **Totem:** optional. Without an Arduino the totem falls back to the keyboard: Space or T in the browser, the on-screen "Catch me up" pad, or Space/T in the terminal running `neuropace serve`. Key taps are real learner actions (flag source `key`), not simulations; plugging the Arduino in mid-session switches to it automatically. To use the pad, flash `firmware/totem/totem.ino` to an UNO R4 WiFi (or Minima) with `arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi firmware/totem && arduino-cli upload -p /dev/cu.usbmodemXXXX --fqbn arduino:renesas_uno:unor4wifi firmware/totem`. Jumper D2 to a foil pad. The board is auto-detected on `usbmodem*`; `NEUROPACE_TOTEM_PORT=keyboard` forces the keyboard fallback. If capacitive touch misbehaves, set `USE_CAPTOUCH 0` in the sketch and wire a pushbutton between D2 and GND.
+
+- **Hour-1 gate:** with the headset on a real forehead the live view must show blink ticks on the trace. If it does not, the raw stream is not real; fix pairing before anything else.
+
+### EEG bridge (`mindwave/`)
+
+The headset front end is the team's standalone `mindwave/` pipeline, built and validated on the real MindWave Mobile 2: ThinkGear reader with reconnect, 4 s Welch windows, blink detection in its own 0.5 to 8 Hz band, three-anchor calibration (eyes closed, easy, hard), session recording and bit-exact replay. Read [`EEG_PIPELINE.md`](../EEG_PIPELINE.md) and [`mindwave/README.md`](../mindwave/README.md) before touching it.
+
+NeuroPace consumes it in-process: the pipeline turns raw into one `FeatureFrame` per second, and NeuroPace's focus engine applies the spec's own-baseline z-score, 15 s window and drop detector on the frame's `engagement` index (log10 beta minus log10(alpha plus theta), the same E = beta/(alpha+theta) on a log scale). Session start options:
+
+| `headset` | What runs |
+|---|---|
+| `auto` | a paired MindWave if a port is found (`mindwave.MindWaveSource`), otherwise NeuroPace's simulator |
+| `sim` | NeuroPace's synthetic EEG (`focused` / `drifting` / `poor`), the demo keys 1/2/3 |
+| `fake` | the pipeline's own `FakeSource` (keys map focused to easy, drifting to drowsy, poor to off) |
+| `replay:<dir>` | the pipeline's `ReplaySource` on a recorded `sessions/<stamp>` directory |
+| `serial:<port>` | NeuroPace's minimal raw ThinkGear reader, for debugging only |
+| a device path | the pipeline on that serial port (what `auto` resolves to when a headset is found) |
+
+**Brain waves on screen are the device's bytes.** The pipeline decimates the 512 Hz raw stream to 64 Hz and NeuroPace broadcasts it as `raw` chunks; the live and restudy screens draw those and nothing else. The label under the trace is judged from arrival time: *live from your headset* only while chunks keep coming, *waiting for the headset* within two seconds of a dropout, *practice signal* for every non-real kind. A session that started on the simulator because the headset was off keeps looking every five seconds and switches to the real device when it appears. One headset, one recording: a second lecture on the same port is refused (409) until the first ends.
+
+**Testing without the hardware, honestly:** `uv run neuropace virtual-headset --control /tmp/vh.ctl` puts a MindWave on a pseudo-terminal (macOS and Linux). It writes real ThinkGear packets (one 0x80 raw packet per sample at 512 Hz, a 1 Hz status packet with poor_signal, eSense and the eight EEG power bands) from the pipeline's `FakeSource`, so the serial reader, the parser, the pipeline and every screen above see a headset of kind `real`. Start the server with `REFLOW_HEADSET_PORT=<the printed path>`; then `echo "state drowsy" > /tmp/vh.ctl` makes the wearer drift, `state off` lifts the electrode, `pause 6` drops the link for six seconds. Windows has no pty: use `headset=fake` there (same signal, in-process).
+Real sessions are recorded by the pipeline under `data/eeg/<stamp>/`. The pipeline's calibration can be driven from the live view (eyes closed, easy, hard, done) and its go/no-go from `EEG_PIPELINE.md` §7 applies unchanged. The standalone tools still work: `uv run python run_pipeline.py --fake` (use `--ws-port 8766` while NeuroPace is serving on 8765) and `uv run --group monitor python monitor.py --fake`.
+
+Two copies of the evaluation toolkit exist on purpose: the root `neuropace_eval.py` is the pipeline team's pre-registered version (yoked random-timing control, `power` command); `neuropace/eval/neuropace_eval.py` is the NEUROPACE-3 version that `neuropace study-analyze` uses.
+
+### Platforms
+
+| | macOS | Windows |
+|---|---|---|
+| Toolchain | uv, pnpm, arduino-cli via Homebrew | uv, pnpm, arduino-cli installers; `copy .env.example .env` instead of `cp` |
+| Headset port | `/dev/cu.MindWaveMobile-SerialPo` after pairing in System Settings; found by name | two "Standard Serial over Bluetooth link (COMn)" ports per paired device with no name; auto-detect probes each for ThinkGear packets (headset must be on), or set `NEUROPACE_HEADSET_PORT=COM3` (the outgoing port) |
+| Totem port | `/dev/cu.usbmodem…`, found by name | "USB Serial Device (COMn)", found by Arduino's USB vendor id 0x2341 |
+| `run_pipeline.py` keys | termios (any terminal) | msvcrt (cmd, PowerShell) |
+| `monitor.py` | matplotlib macosx backend: `uv run --group monitor python monitor.py --fake` | matplotlib TkAgg; same command |
+| Status | this build was developed and verified here (tests, smoke, browser) | code reviewed for Windows paths, COM naming, console encoding and event loop; not yet executed on a Windows machine |
+
+`uv run neuropace doctor` prints the platform and every serial port with its hardware id, which is the first thing to check when a device is not picked up.
+
+### Commands
+
+| Command | Purpose |
+|---|---|
+| `uv run neuropace serve` | API + built frontend on one port |
+| `uv run neuropace doctor` | keys, Deepgram, selected OpenAI/OpenRouter model, ports, build |
+| `uv run neuropace ingest-lecture --title T --file lecture.m4a --meta study/meta.json` | transcribe a recorded lecture with Deepgram and register segments/quiz |
+| `uv run neuropace ingest-script script.json` | register a scripted lecture (words or plain text) |
+| `uv run neuropace replay SESSION_ID --speed 4` | print a session's event log at speed |
+| `uv run neuropace study-analyze --lecture LEC_ID` | the four study numbers with intervals |
+| `uv run neuropace sim selftest|bandit|lossmap` | the spec's simulations |
+| `uv run neuropace kaggle-check EEG_data.csv` | hour-0 feature check on the Wang et al. confusion data |
+| `uv run pytest -q` | the test suite (no network, no hardware, about 15 s) |
+| `uv run python scripts/smoke_e2e.py` | end-to-end against a running server, prints tap-to-catch-up latency |
+
+### Layout
+
+```
+neuropace/        Python package: signal engine, totem bridge, Deepgram, OpenAI, session runtime, review, tally, loss map, API, CLI
+mindwave/      the team's standalone MindWave pipeline (headset -> calibrated FeatureFrame per second); run_pipeline.py, monitor.py, example_consumer.py use it directly
+frontend/      Vite + React app (live, notes, review, tally, loss map, replay, quiz)
+firmware/      uno_q_relay/ (UNO Q 4 GB BLE relay prototype, current target, uncompiled) + totem/ (UNO R4 direct-USB fallback sketch)
+study/         lecture script with the planted flaw, quiz, protocol
+tests/         pytest suite
+data/          runtime data (sqlite, session logs, lectures); the demo lecture script is committed
+docs/          PRD, TDD, demo runbook
+```
+
+### Sponsor challenges — implementation
+
+- **Deepgram:** live streaming transcription (`neuropace/transcribe/deepgram_live.py`) and prerecorded transcription for recorded lectures. Both are in the product path.
+- **OpenAI/OpenRouter:** rolling recaps, gap notes, check questions, re-teach forms and diagram scene graphs as strict JSON-schema structured outputs (`neuropace/llm/`).
+- **Long Lake:** pitch framing only. No prompt box. NeuroPace notices for you.
+
+### Honesty rules baked in
+
+- A simulated headset or scripted transcript is labelled on screen, and forced flags carry `source: "forced"`. Keyboard taps are real taps.
+- No placeholder text: without a key for the selected OpenAI or OpenRouter provider, a session cannot start; during an outage the catch-up is the verbatim transcript (`source: "transcript"`) and failed notes are reported (`package_source: "failed"`) with a retry. The extractive `offline` generator only runs in automated tests (`NEUROPACE_ALLOW_OFFLINE_LLM=1`).
+- The tally says "not enough data yet" until 12 scored cards.
+- The loss map refuses to render with fewer than 2 learners.
+- Every study number is reported with its interval, including nulls.
