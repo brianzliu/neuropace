@@ -16,7 +16,7 @@ export default function PracticeCard({ concepts, closed }: PracticeCardProps) {
     return (
       <div className="practice-card" aria-label="Practice">
         <h3>Practice</h3>
-        <p role="status">Gathering your review…</p>
+        <p role="status">Loading…</p>
       </div>
     );
   }
@@ -27,7 +27,7 @@ export default function PracticeCard({ concepts, closed }: PracticeCardProps) {
         <h3>
           {concepts.length} concept{concepts.length === 1 ? "" : "s"} ready
         </h3>
-        <p>Start with “{first.title}” — small steps stick best.</p>
+        <p>Start with “{first.title}”.</p>
         <Link className="practice-go" to={`/library/${first.session_id}/review`}>
           Practice now
         </Link>
@@ -37,13 +37,8 @@ export default function PracticeCard({ concepts, closed }: PracticeCardProps) {
   return (
     <div className="practice-card" aria-label="Practice">
       <h3>{closed ? "All caught up." : "Nothing saved yet."}</h3>
-      <p>
-        {closed
-          ? "Your next lecture can add to the pile whenever you're ready."
-          : "Moments you save during a session show up here."}
-      </p>
-      <Link className="practice-go" to="/library">
-        Open library
+      <Link className="practice-go" to="/lectures">
+        Open lectures
       </Link>
     </div>
   );

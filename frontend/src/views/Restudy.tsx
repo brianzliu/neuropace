@@ -2,7 +2,7 @@ import { libraryHref, useLibrary } from "./Library";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api, errorText } from "../lib/api";
-import { ARTIFACT_LABEL, FORM_ICON, FORM_LABEL, FORMS, type Card, type Progress, type TallySummary } from "../lib/types";
+import { FORM_ICON, FORM_LABEL, FORMS, type Card, type Progress, type TallySummary } from "../lib/types";
 import { flash } from "../lib/flash";
 import { useFocusSession } from "../lib/focusSession";
 import { narrationForCard, useTutor } from "../lib/tutor";
@@ -260,9 +260,11 @@ export default function Restudy() {
         <span className="streak" title="three in a row finishes the lesson">
           {progress.streak}/{progress.stop_streak} in a row
         </span>
-        <span className="mode-tag" title={mode === "tutor" ? "Each moment is explained first, then checked" : "The check first; an explanation only if you miss"}>
-          {mode === "tutor" ? "Private tutoring" : "Review on my own"}
-        </span>
+        {mode === "manual" ? (
+          <Link className="btn btn-sm" to={library ? libraryHref(sessionId, "review") : `/library/${sessionId}/review`} title="Switch to an agent-guided conversation with a shared board">
+            AI-assisted
+          </Link>
+        ) : null}
         {tutor.supported ? (
           <button
             className={"btn btn-sm tutor-toggle" + (tutor.enabled ? " is-on" : "")}
@@ -302,7 +304,7 @@ export default function Restudy() {
                 </div>
                 <WhatWorked tally={tally} />
                 <FamilyList tally={tally} />
-                <Link className="btn btn-primary btn-lg" to={library ? "/library" : "/lectures"}>
+                <Link className="btn btn-primary btn-lg" to="/lectures">
                   Done
                 </Link>
               </div>
@@ -345,14 +347,12 @@ export default function Restudy() {
                   <span className="artifact-kind">
                     <span className="family-icon">{FORM_ICON[card.reteach.form]}</span>
                     {FORM_LABEL[card.reteach.form]}
-                    {ARTIFACT_LABEL[card.reteach.artifact] !== FORM_LABEL[card.reteach.form] ? ` · ${ARTIFACT_LABEL[card.reteach.artifact]}` : ""}
                   </span>
-                  {card.reteach.key_term ? <span className="badge accent">{card.reteach.key_term}</span> : null}
                 </div>
                 {card.reteach.why ? <p className={"why-line" + (spoken === 0 ? " spoken" : "")}>{card.reteach.why}</p> : null}
                 {card.reteach.context ? (
                   <p className={"context-line" + (spoken === 1 ? " spoken" : "")}>
-                    <span className="lbl">Where you were</span> {card.reteach.context}
+                    {card.reteach.context}
                   </p>
                 ) : null}
                 {tutor.error && <div className="callout" role="status">

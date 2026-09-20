@@ -15,6 +15,9 @@ from ..ids import new_id
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS curricula(
   learner_id TEXT PRIMARY KEY, content_json TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS classes(
+  id TEXT PRIMARY KEY, learner_id TEXT NOT NULL, title TEXT NOT NULL,
+  content_json TEXT NOT NULL, is_active INTEGER NOT NULL DEFAULT 0, created_at REAL NOT NULL);
 CREATE TABLE IF NOT EXISTS learners(
   id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at REAL NOT NULL,
   baseline_mu REAL, baseline_sigma REAL, baseline_at REAL, baseline_source TEXT);
@@ -48,6 +51,14 @@ CREATE TABLE IF NOT EXISTS quiz_answers(
   session_id TEXT NOT NULL, item_id TEXT NOT NULL, phase TEXT NOT NULL, choice INTEGER, correct INTEGER,
   PRIMARY KEY(session_id, item_id, phase));
 CREATE TABLE IF NOT EXISTS llm_cache(key TEXT PRIMARY KEY, task TEXT, model TEXT, output_json TEXT, created_at REAL);
+CREATE TABLE IF NOT EXISTS oh_messages(
+  id TEXT PRIMARY KEY, session_id TEXT NOT NULL, ord INTEGER NOT NULL, role TEXT NOT NULL,
+  text TEXT NOT NULL, related_element_ids_json TEXT, source TEXT, created_at REAL NOT NULL);
+CREATE INDEX IF NOT EXISTS ix_oh_messages ON oh_messages(session_id, ord);
+CREATE TABLE IF NOT EXISTS oh_board_ops(
+  id TEXT PRIMARY KEY, session_id TEXT NOT NULL, ord INTEGER NOT NULL, op TEXT NOT NULL,
+  element_id TEXT NOT NULL, payload_json TEXT, created_at REAL NOT NULL);
+CREATE INDEX IF NOT EXISTS ix_oh_board_ops ON oh_board_ops(session_id, ord);
 """
 
 
@@ -129,15 +140,124 @@ class DB:
             self.conn.executemany(sql, rows)
 
     def get_curriculum(self, learner_id: str) -> dict:
-        row = self._one("SELECT content_json FROM curricula WHERE learner_id=?", (learner_id,))
-        return _uj(row["content_json"]) if row else {"title": "My curriculum", "topics": []}
+        active = self.active_class(learner_id)
+        return {"title": active["title"], "topics": active["topics"]}
 
     def set_curriculum(self, learner_id: str, content: dict) -> None:
+        active = self.active_class(learner_id)
+        self.set_class_content(active["id"], content)
+
+    # ---- classes (multiple syllabi per learner) ----
+    def list_classes(self, learner_id: str) -> list[dict]:
+        self._ensure_classes(learner_id)
+        return [
+            {
+                "id": r["id"],
+                "title": r["title"],
+                "topic_count": len(_uj(r["content_json"], {"topics": []}).get("topics", [])),
+                "is_active": bool(r["is_active"]),
+            }
+            for r in self._q(
+                "SELECT * FROM classes WHERE learner_id=? ORDER BY created_at", (learner_id,)
+            )
+        ]
+
+    def create_class(self, learner_id: str, title: str) -> dict:
+        clean = title.strip() or "New class"
+        cid = new_id("cls")
+        first = not self._one("SELECT id FROM classes WHERE learner_id=?", (learner_id,))
         self._x(
-            "INSERT INTO curricula(learner_id,content_json) VALUES(?,?) "
-            "ON CONFLICT(learner_id) DO UPDATE SET content_json=excluded.content_json",
-            (learner_id, _j(content)),
+            "INSERT INTO classes(id,learner_id,title,content_json,is_active,created_at)"
+            " VALUES(?,?,?,?,?,?)",
+            (cid, learner_id, clean[:200], _j({"title": clean[:200], "topics": []}), 1 if first else 0, time.time()),
         )
+        return self.get_class(cid)  # type: ignore[return-value]
+
+    def get_class(self, class_id: str) -> dict | None:
+        row = self._one("SELECT * FROM classes WHERE id=?", (class_id,))
+        if not row:
+            return None
+        content = _uj(row["content_json"], {"topics": []})
+        return {
+            "id": row["id"],
+            "learner_id": row["learner_id"],
+            "title": row["title"],
+            "topics": content.get("topics", []),
+            "is_active": bool(row["is_active"]),
+        }
+
+    def set_class_content(self, class_id: str, content: dict) -> dict | None:
+        row = self._one("SELECT * FROM classes WHERE id=?", (class_id,))
+        if not row:
+            return None
+        title = str(content.get("title", row["title"]))[:200] or row["title"]
+        topics = content.get("topics", [])
+        self._x(
+            "UPDATE classes SET title=?, content_json=? WHERE id=?",
+            (title, _j({"title": title, "topics": topics}), class_id),
+        )
+        return self.get_class(class_id)
+
+    def activate_class(self, learner_id: str, class_id: str) -> dict | None:
+        row = self._one(
+            "SELECT id FROM classes WHERE id=? AND learner_id=?", (class_id, learner_id)
+        )
+        if not row:
+            return None
+        self._x("UPDATE classes SET is_active=0 WHERE learner_id=?", (learner_id,))
+        self._x("UPDATE classes SET is_active=1 WHERE id=?", (class_id,))
+        return self.get_class(class_id)
+
+    def delete_class(self, learner_id: str, class_id: str) -> list[dict] | None:
+        row = self._one(
+            "SELECT id, is_active FROM classes WHERE id=? AND learner_id=?", (class_id, learner_id)
+        )
+        if not row:
+            return None
+        self._x("DELETE FROM classes WHERE id=?", (class_id,))
+        remaining = self._q("SELECT id FROM classes WHERE learner_id=? ORDER BY created_at", (learner_id,))
+        if not remaining:
+            self.create_class(learner_id, "My curriculum")
+        elif row["is_active"]:
+            self._x("UPDATE classes SET is_active=1 WHERE id=?", (remaining[0]["id"],))
+        return self.list_classes(learner_id)
+
+    def active_class(self, learner_id: str) -> dict:
+        self._ensure_classes(learner_id)
+        row = self._one(
+            "SELECT * FROM classes WHERE learner_id=? AND is_active=1", (learner_id,)
+        ) or self._one(
+            "SELECT * FROM classes WHERE learner_id=? ORDER BY created_at", (learner_id,)
+        )
+        content = _uj(row["content_json"], {"topics": []})
+        return {
+            "id": row["id"],
+            "learner_id": row["learner_id"],
+            "title": row["title"],
+            "topics": content.get("topics", []),
+            "is_active": True,
+        }
+
+    def _ensure_classes(self, learner_id: str) -> None:
+        if self._one("SELECT id FROM classes WHERE learner_id=?", (learner_id,)):
+            return
+        legacy = self._one("SELECT content_json FROM curricula WHERE learner_id=?", (learner_id,))
+        if legacy:
+            content = _uj(legacy["content_json"], {"title": "My curriculum", "topics": []})
+            self._x(
+                "INSERT INTO classes(id,learner_id,title,content_json,is_active,created_at)"
+                " VALUES(?,?,?,?,?,?)",
+                (
+                    new_id("cls"),
+                    learner_id,
+                    str(content.get("title", "My curriculum"))[:200],
+                    _j({"title": content.get("title", "My curriculum"), "topics": content.get("topics", [])}),
+                    1,
+                    time.time(),
+                ),
+            )
+        else:
+            self.create_class(learner_id, "My curriculum")
 
     # ---- learners ----
     def create_learner(self, name: str) -> dict:
@@ -585,3 +705,83 @@ class DB:
             "INSERT OR REPLACE INTO llm_cache(key,task,model,output_json,created_at) VALUES(?,?,?,?,?)",
             (key, task, model, _j(output), time.time()),
         )
+
+    # ---- office hours (chat + board, event-sourced: ord is one counter shared by both tables per session) ----
+    def oh_add_message(
+        self,
+        sid: str,
+        ord: int,
+        role: str,
+        text: str,
+        related_element_ids: list[str] | None = None,
+        source: str | None = None,
+    ) -> dict:
+        mid = new_id("ohm")
+        created_at = time.time()
+        self._x(
+            "INSERT INTO oh_messages(id,session_id,ord,role,text,related_element_ids_json,source,created_at)"
+            " VALUES(?,?,?,?,?,?,?,?)",
+            (mid, sid, ord, role, text, _j(related_element_ids), source, created_at),
+        )
+        return {
+            "id": mid,
+            "session_id": sid,
+            "ord": ord,
+            "role": role,
+            "text": text,
+            "related_element_ids": related_element_ids,
+            "source": source,
+            "created_at": created_at,
+        }
+
+    def oh_get_messages(self, sid: str, upto_ord: int | None = None) -> list[dict]:
+        sql = "SELECT * FROM oh_messages WHERE session_id=?"
+        params: list[Any] = [sid]
+        if upto_ord is not None:
+            sql += " AND ord<=?"
+            params.append(upto_ord)
+        sql += " ORDER BY ord"
+        out = []
+        for r in self._q(sql, tuple(params)):
+            d = dict(r)
+            d["related_element_ids"] = _uj(d.pop("related_element_ids_json"))
+            out.append(d)
+        return out
+
+    def oh_add_board_op(self, sid: str, ord: int, op: str, element_id: str, payload: dict | None) -> dict:
+        oid = new_id("ohop")
+        created_at = time.time()
+        self._x(
+            "INSERT INTO oh_board_ops(id,session_id,ord,op,element_id,payload_json,created_at) VALUES(?,?,?,?,?,?,?)",
+            (oid, sid, ord, op, element_id, _j(payload), created_at),
+        )
+        return {
+            "id": oid,
+            "session_id": sid,
+            "ord": ord,
+            "op": op,
+            "element_id": element_id,
+            "payload": payload,
+            "created_at": created_at,
+        }
+
+    def oh_get_board_ops(self, sid: str, upto_ord: int | None = None) -> list[dict]:
+        sql = "SELECT * FROM oh_board_ops WHERE session_id=?"
+        params: list[Any] = [sid]
+        if upto_ord is not None:
+            sql += " AND ord<=?"
+            params.append(upto_ord)
+        sql += " ORDER BY ord"
+        out = []
+        for r in self._q(sql, tuple(params)):
+            d = dict(r)
+            d["payload"] = _uj(d.pop("payload_json"))
+            out.append(d)
+        return out
+
+    def oh_next_ord(self, sid: str) -> int:
+        """MAX(ord)+1 across both tables for this session: the restart-safe next write position."""
+        a = self._one("SELECT MAX(ord) AS m FROM oh_messages WHERE session_id=?", (sid,))
+        b = self._one("SELECT MAX(ord) AS m FROM oh_board_ops WHERE session_id=?", (sid,))
+        hi = max(a["m"] if a and a["m"] is not None else -1, b["m"] if b and b["m"] is not None else -1)
+        return hi + 1

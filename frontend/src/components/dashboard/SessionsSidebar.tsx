@@ -1,6 +1,6 @@
-import { Link } from "react-router-dom";
 import type { Concept, Dashboard } from "../../lib/dashboardTypes";
 import PracticeCard from "./PracticeCard";
+import SessionActionIcons from "./SessionActionIcons";
 
 interface SessionsSidebarProps {
   sessions: Dashboard["sessions"] | undefined;
@@ -12,26 +12,10 @@ interface SessionsSidebarProps {
  * Dashboard compartment 2: recent sessions sidebar.
  * Deep links stay on their current paths; Agent D's Library shell will
  * re-home them (redirect) without changing what this component renders.
- * Status is always dot + word, never color-alone; dots are static (no
- * pulsing) so reduced-motion is respected by construction.
+ * No status pills (user request): a running session shows an
+ * "Open live session" link instead of the icon row, so state is still
+ * communicated without a tag in the corner.
  */
-
-type SessionStatus = "running" | "ended" | "reviewed" | "created" | string;
-
-function statusMeta(status: SessionStatus): { modifier: string; label: string } {
-  if (status === "running") return { modifier: "is-running", label: "In progress" };
-  if (status === "ended") return { modifier: "is-ended", label: "Ended" };
-  if (status === "reviewed") return { modifier: "is-ended", label: "Reviewed" };
-  if (status === "created") return { modifier: "is-other", label: "Created" };
-  return { modifier: "is-other", label: status };
-}
-
-const ACTIONS = [
-  { to: (id: string) => `/notes/${id}`, glyph: "✎", name: "Notes" },
-  { to: (id: string) => `/review/${id}`, glyph: "✓", name: "Review" },
-  { to: (id: string) => `/quiz/${id}`, glyph: "?", name: "Quiz" },
-  { to: (id: string) => `/replay/${id}`, glyph: "↶", name: "Replay" },
-] as const;
 export default function SessionsSidebar({ sessions, concepts, closed }: SessionsSidebarProps) {
   return (
     <aside className="session-sidebar" aria-label="Sessions">
@@ -40,50 +24,48 @@ export default function SessionsSidebar({ sessions, concepts, closed }: Sessions
       </div>
       {sessions === undefined ? (
         <p className="small muted" role="status">
-          Loading your saved moments…
+          Loading…
         </p>
       ) : sessions.length ? (
-        sessions.map((session) => {
-          const meta = statusMeta(session.status);
+        <div className="session-list">
+          {sessions.map((session) => {
+          // Color speaks: status lives on the card as a class (tinted wash),
+          // with the word kept screen-reader-only so color is never the sole
+          // carrier for assistive tech.
+          const statusClass = session.status === "running" ? "is-running"
+            : session.status === "reviewed" ? "is-reviewed"
+            : session.status === "ended" ? "is-ended" : "is-other";
+          const statusLabel = session.status === "running" ? "In progress"
+            : session.status === "reviewed" ? "Reviewed"
+            : session.status === "ended" ? "Ended"
+            : session.status === "created" ? "Created" : session.status;
           return (
-          <article className="session-history-item" key={session.id}>
+          <article className={`session-history-item ${statusClass}`} key={session.id}>
             <span className="session-date">
               {new Date(session.started_at * 1000).toLocaleDateString(undefined, {
                 month: "short",
                 day: "numeric",
               })}
-              <span className={`pill session-status ${meta.modifier}`}>
-                <i aria-hidden="true" />
-                {meta.label}
-              </span>
+              <span className="visually-hidden">, {statusLabel}</span>
             </span>
             <h3>{session.title}</h3>
-            <div className="row session-actions">
-              {session.status === "running" ? (
+            {session.summary ? <p className="session-summary">{session.summary}</p> : null}
+            {session.status === "running" ? (
+              <div className="row session-actions">
                 <a className="live-open" href={`/live/${session.id}`} target="neuropace-studio">
                   <span aria-hidden="true">▶</span> Open live session
                 </a>
-              ) : (
-                ACTIONS.map(action => (
-                  <Link
-                    key={action.name}
-                    className="icon-button"
-                    to={action.to(session.id)}
-                    aria-label={`${action.name} for ${session.title}`}
-                    title={`${action.name} for ${session.title}`}
-                  >
-                    <span aria-hidden="true">{action.glyph}</span>
-                  </Link>
-                ))
-              )}
-            </div>
+              </div>
+            ) : (
+              <SessionActionIcons sessionId={session.id} title={session.title} />
+            )}
           </article>
           );
-        })
+          })}
+        </div>
       ) : (
         <div className="session-placeholder">
           <span aria-hidden="true">↶</span>
-          <p>Your first lecture starts a new thread.</p>
         </div>
       )}
       <PracticeCard concepts={concepts} closed={closed} />

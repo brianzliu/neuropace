@@ -226,7 +226,7 @@ export interface SessionRow {
   id: string;
   learner_id: string;
   lecture_id: string | null;
-  mode: "live" | "recorded" | "review";
+  mode: "live" | "recorded" | "review" | "office_hours";
   catchup_policy: "always" | "randomized";
   headset_kind: string | null;
   totem_kind: string | null;
@@ -238,6 +238,9 @@ export interface SessionRow {
   baseline: { mu: number | null; sigma: number | null; stored: boolean; ready?: boolean } | null;
   seed: number | null;
   auto_pause: boolean;
+  /** Dashboard one-liner (LLM prose or a rules count fallback). Absent on older payloads. */
+  summary?: string;
+  summary_source?: string;
 }
 
 export interface SessionPublic extends SessionRow {
@@ -460,6 +463,44 @@ export type ReteachContent =
   | StepsContent
   | ExampleContent
   | null;
+
+// ---------------------------------------------------------------- office hours (docs/PRODUCT.md §5a)
+/** The board's three small annotation primitives, plus "manim" (optional, math content only), alongside
+ * the ten content families above. */
+export type BoardElementKind = ArtifactKind | "shape" | "arrow" | "label" | "manim";
+export interface ShapeContent { shape: "rect" | "ellipse"; label: string }
+export interface ArrowContent { from_id: string; to_id: string; label: string }
+export interface LabelContent { text: string }
+/** A Manim Community script (server-rendered, optional, docs/PRODUCT.md §5a): fetched lazily by ManimView,
+ * 503s gracefully to just the caption when the server has no manim install. */
+export interface ManimContent { title: string; caption: string; scene_name: string; script: string }
+
+/** Position/size on the shared board (bounded canvas, roughly 4000x3000). */
+export interface BoardEnvelope { x: number; y: number; w: number; h: number; z: number }
+
+export interface BoardElement {
+  id: string;
+  kind: BoardElementKind;
+  envelope: BoardEnvelope;
+  content: ReteachContent | ShapeContent | ArrowContent | LabelContent | ManimContent;
+}
+
+export interface OHMessage {
+  id: string;
+  session_id: string;
+  ord: number;
+  role: "user" | "agent";
+  text: string;
+  related_element_ids: string[] | null;
+  source: "llm" | "cache" | "offline" | "failed" | null;
+  created_at: number;
+}
+
+export interface OHSnapshot {
+  messages: OHMessage[];
+  board: BoardElement[];
+  ord: number;
+}
 
 /** GET /api/sessions/{id}/artifacts: every artifact of every moment, for the team's preview. */
 export interface GapArtifacts extends GapPublic {

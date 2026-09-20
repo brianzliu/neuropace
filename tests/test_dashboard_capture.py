@@ -8,7 +8,13 @@ from fastapi.testclient import TestClient
 
 from neuropace.clock import ManualClock
 from neuropace.core.board import BoardCapture
-from neuropace.core.dashboard import DashboardSummary, ReviewSuggestion, dashboard_data, organize_dashboard
+from neuropace.core.dashboard import (
+    DashboardSummary,
+    ReviewSuggestion,
+    TopicAssessment,
+    dashboard_data,
+    organize_dashboard,
+)
 from neuropace.totem.uno_q import UnoQRelay
 
 
@@ -99,6 +105,80 @@ async def test_organizer_rejects_foreign_and_duplicate_ids_and_preserves_remaini
     data = await organize_dashboard(llm, dashboard_data(db, learner["id"]))
     assert [c["id"] for c in data["concepts"]] == ["a", "b"]
     assert data["concepts"][0]["session_id"] == session["id"]
+
+
+def test_understanding_stages_follow_review_evidence(db):
+    learner = db.create_learner("Synthetic stages")
+    session = make_session(db, learner["id"])
+    db.replace_gaps(session["id"], [gap("a"), gap("b", "closed"), gap("c", "exhausted")])
+    db.set_quiz_answers(
+        session["id"],
+        "before",
+        [{"item_id": "q1", "choice": 0, "correct": False}, {"item_id": "q2", "choice": 1, "correct": True}],
+    )
+    db.set_quiz_answers(
+        session["id"],
+        "after",
+        [{"item_id": "q1", "choice": 0, "correct": True}, {"item_id": "q2", "choice": 1, "correct": True}],
+    )
+    db.set_curriculum(
+        learner["id"],
+        {
+            "title": "Synthetic course",
+            "topics": [{"title": "Timing", "completed": True}, {"title": "Orbital mechanics", "completed": False}],
+        },
+    )
+    data = dashboard_data(db, learner["id"])
+    rows = {r["topic"]: r for r in data["understanding"]["topics"]}
+    timing = rows["Timing"]
+    # An exhausted moment means the topic needs another look, whatever else resolved.
+    assert timing["stage"] == "review"
+    assert timing["evidence"] == {"resolved": 1, "open": 1, "exhausted": 1, "total": 3}
+    assert set(timing["gap_ids"]) == {"a", "b", "c"}
+    assert timing["reason"]
+    assert rows["Orbital mechanics"]["stage"] == "no_evidence"
+    assert data["understanding"]["source"] == "rules"
+    # The self-reported checkbox does not influence the estimate.
+    assert data["curriculum"]["topics"][0]["completed"] is True
+    assert data["understanding"]["quizzes"] == [
+        {"lecture": "How GPS finds you", "before": {"correct": 1, "total": 2}, "after": {"correct": 2, "total": 2}}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_organizer_applies_grounded_topic_stages_and_drops_foreign_ones(db):
+    learner = db.create_learner("Synthetic stages")
+    session = make_session(db, learner["id"])
+    db.replace_gaps(session["id"], [gap("a"), gap("b", "closed")])
+    db.set_curriculum(
+        learner["id"],
+        {"title": "Synthetic course", "topics": [{"title": "Timing", "completed": False}, {"title": "Orbits", "completed": False}]},
+    )
+    llm = SimpleNamespace(
+        _structured=AsyncMock(
+            return_value=(
+                DashboardSummary(
+                    summary="Review timing.",
+                    priorities=[ReviewSuggestion(gap_id="a", reason="Start here")],
+                    topics=[
+                        TopicAssessment(topic="Timing", stage="advanced", reason="Both moments resolved.", gap_ids=["b"]),
+                        TopicAssessment(topic="Ghost", stage="review", reason="Invented topic.", gap_ids=[]),
+                        TopicAssessment(topic="Orbits", stage="beginner", reason="Foreign id.", gap_ids=["foreign"]),
+                    ],
+                ),
+                "llm",
+            )
+        )
+    )
+    data = await organize_dashboard(llm, dashboard_data(db, learner["id"]))
+    rows = {r["topic"]: r for r in data["understanding"]["topics"]}
+    assert rows["Timing"]["stage"] == "advanced"
+    assert rows["Timing"]["reason"] == "Both moments resolved."
+    assert data["understanding"]["source"] == "llm"
+    assert "Ghost" not in rows
+    # A topic citing an id that was never supplied for it keeps the rules estimate.
+    assert rows["Orbits"]["stage"] == "no_evidence"
+    assert rows["Orbits"]["reason"] == "No saved moments mention this topic yet."
 
 
 @pytest.mark.asyncio

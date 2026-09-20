@@ -1,28 +1,68 @@
 import { useState } from "react";
 import { backendFetch } from "../../lib/backend";
-import type { Curriculum } from "../../lib/dashboardTypes";
+import type { ClassSummary, Curriculum, Understanding, UnderstandingStage, UnderstandingTopic } from "../../lib/dashboardTypes";
 
 interface CurriculumSectionProps {
   curriculum: Curriculum | undefined;
+  understanding: Understanding | undefined;
+  organizing: boolean;
   learnerId: string;
   onSave: (curriculum: Curriculum) => Promise<void>;
+  classes: ClassSummary[];
+  activeClassId: string;
+  onSelectClass: (id: string) => Promise<void>;
+  onCreateClass: (title: string) => Promise<string>;
+  onDeleteClass: (id: string) => Promise<void>;
 }
 
+const NO_EVIDENCE_REASON = "No saved moments mention this topic yet.";
+const STAGE_ORDER: UnderstandingStage[] = ["review", "beginner", "intermediate", "advanced", "no_evidence"];
+
+function EvidenceDots({ evidence }: { evidence: UnderstandingTopic["evidence"] }) {
+  const dots: string[] = [
+    ...Array(evidence.resolved).fill("resolved"),
+    ...Array(evidence.open).fill("open"),
+    ...Array(evidence.exhausted).fill("exhausted"),
+  ];
+  if (!dots.length) return null;
+  return (
+    <span
+      className="evidence-dots"
+      role="img"
+      aria-label={`${evidence.resolved} resolved, ${evidence.open} open, ${evidence.exhausted} exhausted`}
+    >
+      {dots.map((kind, i) => (
+        <i key={i} className={"is-" + kind} aria-hidden="true" />
+      ))}
+    </span>
+  );
+}
+const STAGE_LABEL: Record<UnderstandingStage, string> = {
+  review: "To review",
+  beginner: "Beginner",
+  intermediate: "Intermediate",
+  advanced: "Advanced",
+  no_evidence: "No evidence yet",
+};
+
 /**
- * Dashboard compartment 3: curriculum progress + syllabus editor.
- * Checkboxes are self-reported coverage only — review results are tracked
- * separately and the LLM never writes completion. Parse errors surface via
- * role="status". Server caps (2 MB / 30 pages / 30k chars / 100 topics) stay
- * enforced backend-side; this form just previews before saving.
+ * Dashboard compartment 3: curriculum stages estimated from the learner's own
+ * saved moments and review outcomes, plus the syllabus editor. Stages are
+ * coaching estimates labelled with their source ("Model reading" vs "Rules
+ * estimate"); they never set completion, review outcomes, or grades. The
+ * stored checkbox field is legacy only and is no longer shown or toggled.
  */
-export default function CurriculumSection({ curriculum, learnerId, onSave }: CurriculumSectionProps) {
+export default function CurriculumSection({ curriculum, understanding, learnerId, onSave, classes, activeClassId, onSelectClass, onCreateClass, onDeleteClass }: CurriculumSectionProps) {
   const topics = curriculum?.topics ?? [];
-  const completed = topics.filter((t) => t.completed).length;
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [syllabus, setSyllabus] = useState("");
   const [syllabusMessage, setSyllabusMessage] = useState("");
   const [course, setCourse] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [createBusy, setCreateBusy] = useState(false);
+  const [createError, setCreateError] = useState("");
 
   const startEditing = () => {
     setCourse(curriculum?.title ?? "My curriculum");
@@ -50,7 +90,7 @@ export default function CurriculumSection({ curriculum, learnerId, onSave }: Cur
       setSyllabusMessage(
         result.source === "lines"
           ? "Imported as text lines. Edit these into topics before saving."
-          : "Topics extracted. Check and edit them before saving.",
+          : "Topics extracted. Review and edit them before saving.",
       );
     } catch (e) {
       setSyllabusMessage(String(e));
@@ -59,16 +99,23 @@ export default function CurriculumSection({ curriculum, learnerId, onSave }: Cur
     }
   };
 
-  const toggleTopic = async (index: number) => {
-    if (!curriculum || busy) return;
-    setBusy(true);
+  const create = async () => {
+    const title = newTitle.trim();
+    if (!title || createBusy) return;
+    setCreateBusy(true);
+    setCreateError("");
     try {
-      await onSave({
-        ...curriculum,
-        topics: topics.map((t, i) => (i === index ? { ...t, completed: !t.completed } : t)),
-      });
+      await onCreateClass(title);
+      setCreating(false);
+      setNewTitle("");
+      setCourse(title);
+      setSyllabus("");
+      setSyllabusMessage("");
+      setEditing(true);
+    } catch (e) {
+      setCreateError(String(e));
     } finally {
-      setBusy(false);
+      setCreateBusy(false);
     }
   };
 
@@ -88,6 +135,23 @@ export default function CurriculumSection({ curriculum, learnerId, onSave }: Cur
     }
   };
 
+  const rows = topics.map(
+    (topic) =>
+      understanding?.topics.find((row) => row.topic === topic.title) ?? {
+        topic: topic.title,
+        stage: "no_evidence" as UnderstandingStage,
+        reason: NO_EVIDENCE_REASON,
+        gap_ids: [],
+        evidence: { resolved: 0, open: 0, exhausted: 0, total: 0 },
+      },
+  );
+  const counts = Object.fromEntries(
+    STAGE_ORDER.map((stage) => [stage, rows.filter((row) => row.stage === stage).length]),
+  ) as Record<UnderstandingStage, number>;
+  const barLabel = STAGE_ORDER.filter((stage) => counts[stage] > 0)
+    .map((stage) => `${counts[stage]} ${STAGE_LABEL[stage].toLowerCase()}`)
+    .join(", ");
+
   return (
     <section className="curriculum-section" aria-label="Curriculum">
       <div className="dashboard-section-heading">
@@ -98,6 +162,46 @@ export default function CurriculumSection({ curriculum, learnerId, onSave }: Cur
           {topics.length ? "Edit syllabus" : "Add syllabus"}
         </button>
       </div>
+      {classes.length > 0 && (
+        <div className="class-tabs" role="group" aria-label="Classes">
+          {classes.map(c => (
+            <button
+              key={c.id}
+              type="button"
+              className="class-tab"
+              aria-pressed={c.id === activeClassId}
+              onClick={() => { if (c.id !== activeClassId) void onSelectClass(c.id); }}
+            >
+              {c.title}
+              <span>{c.topic_count}</span>
+            </button>
+          ))}
+          {creating ? (
+            <span className="class-create">
+              <input
+                aria-label="New class name"
+                placeholder="Class name"
+                maxLength={200}
+                value={newTitle}
+                disabled={createBusy}
+                onChange={e => setNewTitle(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); void create(); } }}
+              />
+              <button type="button" disabled={createBusy || !newTitle.trim()} onClick={() => void create()}>
+                {createBusy ? "Adding…" : "Add"}
+              </button>
+              <button type="button" onClick={() => { setCreating(false); setNewTitle(""); setCreateError(""); }}>
+                Cancel
+              </button>
+            </span>
+          ) : (
+            <button type="button" className="class-tab is-new" onClick={() => { setCreating(true); setNewTitle(""); setCreateError(""); }}>
+              + New
+            </button>
+          )}
+        </div>
+      )}
+      {createError && <p className="small muted" role="alert">{createError}</p>}
       {editing ? (
         <form
           className="syllabus-form"
@@ -151,8 +255,8 @@ export default function CurriculumSection({ curriculum, learnerId, onSave }: Cur
             </p>
           )}
           <p className="small muted">
-            Check off topics you’ve covered. This tracks your own progress, not tested mastery. Up
-            to 100 topics.
+            Topics are labels for grouping. Your stage is estimated from saved moments and review
+            results — editing this list never sets it. Up to 100 topics.
           </p>
           <div className="row">
             <button className="primary" disabled={busy}>
@@ -160,6 +264,17 @@ export default function CurriculumSection({ curriculum, learnerId, onSave }: Cur
             </button>
             <button type="button" onClick={() => setEditing(false)}>
               Cancel
+            </button>
+            <button
+              type="button"
+              className="ghost danger"
+              disabled={busy}
+              onClick={() => {
+                if (window.confirm(`Delete "${curriculum?.title ?? "this class"}" and its topics? Your sessions stay.`))
+                  void onDeleteClass(activeClassId).then(() => setEditing(false)).catch(() => {});
+              }}
+            >
+              Delete class
             </button>
           </div>
         </form>
@@ -169,30 +284,45 @@ export default function CurriculumSection({ curriculum, learnerId, onSave }: Cur
         </p>
       ) : topics.length ? (
         <>
-          <div className="curriculum-progress">
-            <progress value={completed} max={topics.length} />
-            <span>
-              {completed} of {topics.length} covered
-            </span>
-          </div>
-          <p className="coverage-note"><span>Your own checkmarks</span><span>Review results tracked separately</span></p>
-          <div className="topic-list">
-            {topics.map((topic, index) => (
-              <label key={index}>
-                <input
-                  type="checkbox"
-                  checked={topic.completed}
-                  disabled={busy}
-                  onChange={() => void toggleTopic(index)}
-                />
-                <span>{topic.title}</span>
-              </label>
+          <div className="stage-bar" role="img" aria-label={barLabel}>
+            {STAGE_ORDER.filter((stage) => counts[stage] > 0).map((stage) => (
+              <i key={stage} className={"stage-seg is-" + stage} style={{ flexGrow: counts[stage] }} />
             ))}
           </div>
+          <ul className="stage-legend">
+            {STAGE_ORDER.map((stage) => (
+              <li key={stage} className={"is-" + stage}>
+                <i aria-hidden="true" />
+                {STAGE_LABEL[stage]} <b>{counts[stage]}</b>
+              </li>
+            ))}
+          </ul>
+          {STAGE_ORDER.map((stage) => {
+            const group = rows.filter((row) => row.stage === stage);
+            if (!group.length) return null;
+            return (
+              <section className={"stage-group is-" + stage} key={stage}>
+                <h3 className={"stage-heading is-" + stage}>
+                  <i aria-hidden="true" />
+                  {STAGE_LABEL[stage]}
+                  <span>{group.length}</span>
+                </h3>
+                <ul className="stage-topics">
+                  {group.map((row) => (
+                    <li key={row.topic} className="stage-topic">
+                      <b>{row.topic}</b>
+                      <EvidenceDots evidence={row.evidence} />
+                      {row.reason !== NO_EVIDENCE_REASON && <p>{row.reason}</p>}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            );
+          })}
         </>
       ) : (
         <p className="muted">
-          Add your syllabus topics to see the course at a glance and track what you’ve covered.
+          Add your syllabus topics to see how each one looks after review.
         </p>
       )}
     </section>

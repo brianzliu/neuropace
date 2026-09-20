@@ -1,4 +1,4 @@
-import { libraryHref, useLibrary } from "./Library";
+import { useLibrary } from "./Library";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, errorText } from "../lib/api";
@@ -8,7 +8,9 @@ import { Badge } from "../components/Badges";
 import TranscriptPane from "../components/TranscriptPane";
 import type { Flag } from "../lib/types";
 
-/** One lecture: the way into restudy first, then the moments as a list (docs/PRODUCT.md §6). */
+/** One lecture: the transcript and the moments you missed. Starting a review happens from the Review tab
+ * (ReviewEntry, which goes straight to Office Hours) when this page is inside the library shell; standalone
+ * (no shell, e.g. right after a lecture ends) it offers that same entry point itself. */
 export default function Lecture() {
   const { sessionId = "" } = useParams();
   const library = useLibrary();
@@ -18,6 +20,7 @@ export default function Lecture() {
   const [err, setErr] = useState<string | null>(null);
   const [ending, setEnding] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [startingOfficeHours, setStartingOfficeHours] = useState(false);
 
   const load = () =>
     api
@@ -43,6 +46,22 @@ export default function Lecture() {
       setRegenerating(false);
     }
   };
+  const startOfficeHours = async () => {
+    if (!data) return;
+    setStartingOfficeHours(true);
+    try {
+      const sess = await api.createSession({
+        mode: "office_hours",
+        lecture_id: data.session.lecture_id ?? undefined,
+        learner_id: data.session.learner_id,
+      });
+      nav(`/office-hours/${sess.id}?original=${sessionId}`);
+    } catch (e) {
+      setErr(errorText(e));
+    } finally {
+      setStartingOfficeHours(false);
+    }
+  };
   const endNow = async () => {
     setEnding(true);
     try {
@@ -59,17 +78,14 @@ export default function Lecture() {
   if (!data) return <div className="page narrow"><div className="loading">Loading…</div></div>;
   const running = data.session.status === "running";
   const failed = data.gaps.filter((g) => g.package_source === "failed");
-  const closed = data.gaps.filter((g) => g.status === "closed").length;
   const total = data.gaps.length;
   return (
     <div className="page narrow">
-      <header className="hero">
-        <div className="eyebrow">{new Date(data.session.started_at * 1000).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</div>
-        <h1 className="t-large">{title}</h1>
-        <p className="sub">
-          {running ? "This lecture is still going." : total === 0 ? "No moments saved for review." : closed === total ? `All ${total} moments landed. Restudy again any time.` : `${total - closed} of ${total} moment${total === 1 ? "" : "s"} still to restudy.`}
-        </p>
-      </header>
+      {!library ? (
+        <header className="hero">
+          <h1 className="t-large">{title}</h1>
+        </header>
+      ) : null}
 
       {running ? (
         <div className="start">
@@ -80,20 +96,24 @@ export default function Lecture() {
             {ending ? "Writing your notes…" : "Or end it now and write my notes"}
           </button>
         </div>
-      ) : total > 0 ? (
+      ) : null}
+
+      {!running && !library ? (
         <div className="start">
-          <button className="btn btn-primary btn-lg btn-block" onClick={() => nav((library ? libraryHref(sessionId, "review") : `/restudy/${sessionId}`) + "?mode=tutor")} disabled={failed.length > 0}>
-            {closed === total ? "Private tutoring, again" : "Private tutoring"}          </button>
-          <button className="btn btn-blue btn-block" onClick={() => nav((library ? libraryHref(sessionId, "review") : `/restudy/${sessionId}`) + "?mode=manual")} disabled={failed.length > 0}>
-            Review on my own
+          <button className="btn btn-primary btn-lg btn-block" onClick={() => void startOfficeHours()} disabled={startingOfficeHours || failed.length > 0}>
+            {startingOfficeHours ? "Opening…" : "Review"}
           </button>
-          <div className="start-note">{failed.length ? "Some notes aren't written yet." : "Tutoring explains each moment your way (and can read it aloud), then asks. On your own, the question comes first and an explanation only if you miss."}</div>
           {failed.length ? (
             <button className="linklike" onClick={() => void regenerate()} disabled={regenerating}>
-              {regenerating ? "Writing…" : "Try writing them again"}
+              {regenerating ? "Writing…" : "Some notes aren't written yet — try again"}
             </button>
           ) : null}
         </div>
+      ) : null}
+      {!running && library && failed.length ? (
+        <button className="linklike" onClick={() => void regenerate()} disabled={regenerating}>
+          {regenerating ? "Writing…" : "Some notes aren't written yet — try again"}
+        </button>
       ) : null}
 
       {data.words.length ? (

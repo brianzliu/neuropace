@@ -96,6 +96,7 @@ def create_app(
     app.state.runtimes = {}
     app.state.session_start_lock = asyncio.Lock()
     app.state.reviews = {}
+    app.state.office_hours = {}
     app.state.loop = None
 
     def _each_running(fn):

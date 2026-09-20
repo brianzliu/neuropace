@@ -14,7 +14,7 @@ export default function DeskObject() {
             <div className="device-leds" aria-hidden="true"><i /><i /><i /></div>
             <button className="physical-button" aria-pressed={pressed} aria-describedby="button-practice" onClick={() => setPressed(!pressed)}>
               <span className="button-symbol" aria-hidden="true">{pressed ? "✓" : "+"}</span>
-              <span>{pressed ? "Try again" : "I’m stuck"}</span>
+              <span>{pressed ? "Try again" : "Catch me up"}</span>
             </button>
             <span className="device-caption" aria-hidden="true">a place to pick up again</span>
           </div>

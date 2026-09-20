@@ -26,7 +26,7 @@
 
 `uv run reflow virtual-headset --control /tmp/vh.ctl` puts a MindWave on a pseudo-terminal and prints its path. Start the server with `REFLOW_HEADSET_PORT=<path> uv run reflow serve`: Reflow sees a real headset (no practice badge, "live from your headset"). Then, from another terminal: `echo "state drowsy" > /tmp/vh.ctl` (a drift within about ten seconds, the chip appears), `echo "state easy" > /tmp/vh.ctl` (recovered), `echo "state off" > /tmp/vh.ctl` (electrode off: "Adjust the headset"), `echo "pause 6" > /tmp/vh.ctl` (a dropout: "Headset lost", then back). Everything above the serial port is the code that runs on the real device; only the bytes are synthetic.
 
-Restudy has two ways in: *Private tutoring* (explained first, the tutor voice reads it and the picture advances with the voice, then the check) and *Review on my own* (the check first, an explanation only on a miss, no voice). `/team/artifacts/sample` shows all ten explanation templates with built-in data; `/team/artifacts/<session>` shows what the model filled for a real session.
+Review goes straight into Office Hours (docs/PRODUCT.md §5a): an open conversation that opens by walking through what was missed, with a corner toggle to *Review on my own* (the scripted check-first, explain-on-a-miss drill, no voice) instead. `/team/artifacts/sample` shows all ten explanation templates with built-in data; `/team/artifacts/<session>` shows what the model filled for a real session.
 
 ## If something breaks
 

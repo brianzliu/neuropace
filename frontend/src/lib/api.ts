@@ -3,7 +3,7 @@ import type {
   Profile,
   Devices,
   GapArtifacts,
-  Doctor, EventsResponse, LectureFull, Learner, LossMap, NotesResponse, QuizGet, QuizResult, RegenerateResponse, ReviewAnswer,
+  Doctor, EventsResponse, LectureFull, Learner, LossMap, ManimContent, NotesResponse, OHMessage, OHSnapshot, QuizGet, QuizResult, RegenerateResponse, ReviewAnswer,
   ReviewNext, ReviewStart, SessionPublic, TallySummary, GapPublic,
 } from "./types";
 
@@ -20,8 +20,13 @@ export function errorText(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
+/** Fetch timeout so a dead connection surfaces as an error instead of
+ *  hanging every section on "Loading…" forever. Callers may pass their
+ *  own signal to override. */
+const FETCH_TIMEOUT_MS = 15000;
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await backendFetch(path, { headers: { "Content-Type": "application/json" }, ...init });
+  const res = await backendFetch(path, { headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS), ...init });
   if (!res.ok) {
     let detail = res.statusText;
     try {
@@ -42,7 +47,7 @@ export interface SessionCreate {
   learner_id?: string | null; // omitted: this device's single learner
   learner_name?: string | null; // study participant, optional
   lecture_id?: string | null;
-  mode: "live" | "recorded" | "review";
+  mode: "live" | "recorded" | "review" | "office_hours";
   catchup_policy?: "always" | "randomized";
   baseline_seconds?: number;
   use_stored_baseline?: boolean;
@@ -56,8 +61,12 @@ export interface SessionCreate {
 export const api = {
   demoMode: () => get<{ enabled: boolean; synthetic: true }>("/api/settings/demo"),
   setDemoMode: (enabled: boolean) => request<{ enabled: boolean; synthetic: true }>("/api/settings/demo", { method: "PUT", body: JSON.stringify({ enabled }) }),
-  dashboard: (id: string, organize = false) => get<import("./dashboardTypes").Dashboard>(`/api/learners/${id}/dashboard?organize=${organize}`),
+  dashboard: (id: string, organize = false, classId?: string) => get<import("./dashboardTypes").Dashboard>(`/api/learners/${id}/dashboard?organize=${organize}${classId ? `&class_id=${classId}` : ""}`),
   saveCurriculum: (id: string, body: import("./dashboardTypes").Curriculum) => request<import("./dashboardTypes").Curriculum>(`/api/learners/${id}/curriculum`, { method: "PUT", body: JSON.stringify(body) }),
+  classes: (id: string) => get<{ classes: import("./dashboardTypes").ClassSummary[] }>(`/api/learners/${id}/classes`),
+  createClass: (id: string, title: string) => post<import("./dashboardTypes").ClassDetail>(`/api/learners/${id}/classes`, { title }),
+  activateClass: (id: string, classId: string) => post<import("./dashboardTypes").ClassDetail>(`/api/learners/${id}/classes/${classId}/activate`),
+  deleteClass: (id: string, classId: string) => request<{ classes: import("./dashboardTypes").ClassSummary[] }>(`/api/learners/${id}/classes/${classId}`, { method: "DELETE" }),
   deepgramKeyStatus: () => get<{ configured: boolean }>("/api/settings/deepgram"),
   setDeepgramKey: (api_key: string) => request<{ configured: boolean }>("/api/settings/deepgram", { method: "PUT", body: JSON.stringify({ api_key }) }),
   modelSettings: () => get<{ provider: "openai" | "openrouter" | "gemini"; model: string; models: Record<"openai" | "openrouter" | "gemini", string>; configured: Record<"openai" | "openrouter" | "gemini", boolean> }>("/api/settings/model"),
@@ -101,4 +110,39 @@ export const api = {
     post<ReviewNext>(`/api/sessions/${id}/review/advance`, { card_id, focus_ratio: focus_ratio ?? null }),
   quiz: (id: string) => get<QuizGet>(`/api/sessions/${id}/quiz`),
   submitQuiz: (id: string, phase: "before" | "after", answers: Record<string, number>) => post<QuizResult>(`/api/sessions/${id}/quiz`, { phase, answers }),
+  officeHoursSnapshot: (id: string, uptoOrd?: number) =>
+    get<OHSnapshot>(`/api/sessions/${id}/office_hours${uptoOrd != null ? `?upto_ord=${uptoOrd}` : ""}`),
+  officeHoursSend: (id: string, text: string) => post<OHMessage>(`/api/sessions/${id}/office_hours/message`, { text }),
+  officeHoursExpand: (id: string, elementId: string) =>
+    post<OHMessage>(`/api/sessions/${id}/office_hours/expand`, { element_id: elementId }),
+  officeHoursVoice: async (id: string, blob: Blob): Promise<{ text: string; reply: OHMessage }> => {
+    const body = new FormData();
+    body.append("file", blob, "clip.webm");
+    const res = await backendFetch(`/api/sessions/${id}/office_hours/voice`, { method: "POST", body });
+    if (!res.ok) {
+      let detail = res.statusText;
+      try {
+        const j = await res.json();
+        detail = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail ?? j);
+      } catch {
+        // keep statusText
+      }
+      throw new ApiError(res.status, detail);
+    }
+    return (await res.json()) as { text: string; reply: OHMessage };
+  },
+  renderManim: async (content: ManimContent): Promise<Blob> => {
+    const res = await backendFetch("/api/manim/render", { headers: { "Content-Type": "application/json" }, method: "POST", body: JSON.stringify(content) });
+    if (!res.ok) {
+      let detail = res.statusText;
+      try {
+        const j = await res.json();
+        detail = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail ?? j);
+      } catch {
+        // keep statusText
+      }
+      throw new ApiError(res.status, detail);
+    }
+    return res.blob();
+  },
 };

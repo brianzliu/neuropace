@@ -12,10 +12,17 @@ from typing import Any, TypeVar
 from pydantic import BaseModel, ValidationError
 
 from ..config import Settings
+from ..manim_render import manim_available
 from ..store.db import DB
 from . import fallback
-from .prompts import CORE_INSTRUCTIONS, PROMPT_VERSION, RECAP_INSTRUCTIONS, TEMPLATE_INSTRUCTIONS
-from .schemas import TEMPLATES, GapCore, RecapForms, Strict, strict_schema
+from .prompts import (
+    CORE_INSTRUCTIONS,
+    PROMPT_VERSION,
+    RECAP_INSTRUCTIONS,
+    TEMPLATE_INSTRUCTIONS,
+    office_hours_instructions,
+)
+from .schemas import TEMPLATES, GapCore, OfficeHoursTurn, RecapForms, Strict, strict_schema
 
 log = logging.getLogger(__name__)
 T = TypeVar("T", bound=BaseModel)
@@ -128,20 +135,51 @@ class LLMClient:
         )
 
     async def _with_retries(
-        self, task: str, instructions: str, payload: dict, model_cls: type[T], max_tokens: int
+        self,
+        task: str,
+        instructions: str,
+        payload: dict,
+        model_cls: type[T],
+        max_tokens: int,
+        use_cache: bool = True,
+        timeout: float | None = None,
+        max_attempts: int | None = None,
     ) -> tuple[T | None, str]:
         obj: T | None = None
         source = "offline"
-        attempts = 3 if self.enabled else 1
+        timeout = timeout if timeout is not None else self.s.package_timeout_seconds
+        attempts = max_attempts if max_attempts is not None else (3 if self.enabled else 1)
         for attempt in range(attempts):
             if attempt:
                 await asyncio.sleep(2.0 * attempt)
-            obj, source = await self._structured(
-                task, instructions, payload, model_cls, self.s.package_timeout_seconds, max_tokens
-            )
+            obj, source = await self._structured(task, instructions, payload, model_cls, timeout, max_tokens, use_cache)
             if obj is not None or time.monotonic() < self._quota_blocked_until:
                 break
         return obj, source
+
+    async def office_hours_turn(
+        self, history: list[dict], board_summary: list[dict], user_text: str, lecture_transcript: str = ""
+    ) -> tuple[OfficeHoursTurn | None, str]:
+        """One Office Hours turn (docs/PRODUCT.md §5a): a reply plus board ops. Stateless — the engine owns
+        history and re-sends it every call, since nothing in this client threads multi-turn conversation state.
+        Never cached: a turn's correct output depends on history/board that changes between identical messages."""
+        payload = {
+            "lecture_transcript": lecture_transcript,
+            "history": history[-20:],
+            "board": board_summary,
+            "message": user_text,
+        }
+        instructions = office_hours_instructions(manim_available())
+        return await self._with_retries(
+            "office_hours_turn",
+            instructions,
+            payload,
+            OfficeHoursTurn,
+            2200,
+            use_cache=False,
+            timeout=20.0,
+            max_attempts=2 if self.enabled else 1,
+        )
 
     async def board_explanation(self, transcript: str, frames: list[dict]) -> tuple[str, str]:
         fallback_text = (
@@ -217,10 +255,17 @@ class LLMClient:
         return hashlib.sha256(raw.encode()).hexdigest()
 
     async def _structured(
-        self, task: str, instructions: str, payload: dict, model_cls: type[T], timeout: float, max_tokens: int
+        self,
+        task: str,
+        instructions: str,
+        payload: dict,
+        model_cls: type[T],
+        timeout: float,
+        max_tokens: int,
+        use_cache: bool = True,
     ) -> tuple[T | None, str]:
         key = self._key(task, payload)
-        if self.db is not None:
+        if use_cache and self.db is not None:
             cached = self.db.cache_get(key)
             if cached is not None:
                 try:
@@ -259,7 +304,7 @@ class LLMClient:
             return None, "offline"
         if obj is None:
             return None, "offline"
-        if self.db is not None:
+        if use_cache and self.db is not None:
             self.db.cache_put(key, task, self.model, obj.model_dump())
         return obj, "llm"
 

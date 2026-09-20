@@ -5,7 +5,8 @@ import { Link, useLocation } from "react-router-dom";
 // this bar — see App.tsx `showTabs`.
 export default function TopTabs() {
   const { pathname } = useLocation();
-  const isLibraryPath =
+  const isLecturesPath =
+    pathname === "/lectures" ||
     pathname === "/library" ||
     pathname.startsWith("/library/") ||
     pathname.startsWith("/notes/") ||
@@ -16,7 +17,8 @@ export default function TopTabs() {
     pathname === "/insights" ||
     pathname.startsWith("/insights/") ||
     pathname.startsWith("/tally/") ||
-    pathname.startsWith("/lossmap/");
+    pathname.startsWith("/lossmap/") ||
+    pathname === "/you";
   const isDashboard = pathname === "/";
 
   return (
@@ -25,10 +27,10 @@ export default function TopTabs() {
         Dashboard
       </Link>
       <Link
-        to="/library"
-        aria-current={isLibraryPath ? "page" : undefined}
+        to="/lectures"
+        aria-current={isLecturesPath ? "page" : undefined}
       >
-        Library
+        Lectures
       </Link>
       <Link to="/insights" aria-current={isInsightsPath ? "page" : undefined}>
         Insights

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { api } from "../lib/api";
-import type { Learner, LectureFull, LossMap, TallySummary } from "../lib/types";
+import { api, errorText } from "../lib/api";
+import { FORM_LABEL, FORMS, type Learner, type LectureFull, type LossMap, type Profile } from "../lib/types";
 import { LossMapCard } from "./LossMap";
 import { TallyCard } from "./Tally";
 import { readLocalSetting, writeLocalSetting } from "../lib/storage";
@@ -19,8 +19,9 @@ export default function Insights({ learnerId: learnerProp, lectureId: lecturePro
 
   const [learners, setLearners] = useState<Learner[]>([]);
   const [selectedLearner, setSelectedLearner] = useState(() => pinnedLearner || readLocalSetting("learner") || "");
-  const [tally, setTally] = useState<TallySummary | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [tallyErr, setTallyErr] = useState<string | null>(null);
+  const [confirmReset, setConfirmReset] = useState(false);
 
   const [lectures, setLectures] = useState<LectureFull[]>([]);
   const [selectedLecture, setSelectedLecture] = useState(pinnedLecture);
@@ -56,15 +57,23 @@ export default function Insights({ learnerId: learnerProp, lectureId: lecturePro
 
   const learnerId = pinnedLearner || selectedLearner;
   useEffect(() => {
-    setTally(null);
+    setProfile(null);
     setTallyErr(null);
+    setConfirmReset(false);
     if (!learnerId) return;
     let alive = true;
-    api.tally(learnerId)
-      .then((t) => { if (alive) setTally(t); })
+    api.profile(learnerId)
+      .then((p) => { if (alive) setProfile(p); })
       .catch((e) => { if (alive) setTallyErr(String(e)); });
     return () => { alive = false; };
   }, [learnerId]);
+
+  const resetPreferences = () => {
+    api.resetProfile(learnerId).then(() => {
+      setConfirmReset(false);
+      return api.profile(learnerId).then(setProfile);
+    }).catch((e) => setTallyErr(errorText(e)));
+  };
 
   const lectureId = pinnedLecture || selectedLecture;
   useEffect(() => {
@@ -79,7 +88,6 @@ export default function Insights({ learnerId: learnerProp, lectureId: lecturePro
     return () => { alive = false; };
   }, [lectureId, refresh]);
 
-  const learner = learners.find((l) => l.id === learnerId) ?? null;
   const pickLearner = (id: string) => {
     setSelectedLearner(id);
     if (!pinnedLearner) {
@@ -112,15 +120,59 @@ export default function Insights({ learnerId: learnerProp, lectureId: lecturePro
           </div>
           <p className="muted small" style={{ margin: 0 }}>
             We don't believe in learning styles. We test it on you, and show you the data.
-            {learner ? ` · ${learner.name}` : ""}
           </p>
           {tallyErr ? <div className="panel error" role="alert">{tallyErr}</div> : null}
           {!learnerId ? (
             <div className="panel muted">Create a profile on the <Link to="/">dashboard</Link> to start your tally.</div>
-          ) : !tally ? (
+          ) : !profile ? (
             <div className="panel muted">loading…</div>
           ) : (
-            <TallyCard tally={tally} />
+            <>
+              <div className="stats">
+                <div className="stat orange">
+                  <div className="v">{profile.stats.streak_days}</div>
+                  <div className="k">day streak</div>
+                </div>
+                <div className="stat">
+                  <div className="v">{profile.stats.lectures}</div>
+                  <div className="k">lectures</div>
+                </div>
+                <div className="stat green">
+                  <div className="v">{profile.stats.moments_restudied}</div>
+                  <div className="k">moments landed</div>
+                </div>
+              </div>
+              <TallyCard tally={profile.tally} />
+              <div className="panel" aria-label="How much each explanation held your attention">
+                <h2 style={{ marginTop: 0 }}>Held your attention</h2>
+                <p className="small muted" style={{ marginTop: 0 }}>Measured with the headset while you read a re-teach card. A drift switches the explanation on the spot.</p>
+                {FORMS.map((f) => {
+                  const meanFocus = profile.tally.forms[f].focus?.mean_focus;
+                  const focusPct = meanFocus != null ? Math.round(meanFocus * 100) : null;
+                  return (
+                    <div className="rescue-row" key={f}>
+                      <div className="rescue-head"><span>{FORM_LABEL[f]}</span></div>
+                      <div className="rescue-track" role="img" aria-label={`${FORM_LABEL[f]}: ${focusPct ?? "no"} percent attention held`}>
+                        <div className="rescue-fill" style={{ width: `${focusPct ?? 0}%` }} />
+                      </div>
+                      <span className="small muted">{focusPct != null ? `${focusPct}%` : "no headset data yet"}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="row between" style={{ alignItems: "center" }}>
+                <span className="small muted">{profile.calibrated ? "Focus calibration saved from your last lecture." : "Focus calibration is learned during your next lecture."}</span>
+                {!confirmReset ? (
+                  <button className="linklike" onClick={() => setConfirmReset(true)}>Reset preferences</button>
+                ) : (
+                  <span className="row" style={{ gap: ".5rem", alignItems: "center" }}>
+                    <span className="small muted">Reset this learner's preferences and calibration. Lectures stay.</span>
+                    <button className="btn btn-sm btn-danger" onClick={resetPreferences}>Start fresh</button>
+                    <button className="btn btn-sm btn-plain" onClick={() => setConfirmReset(false)}>Keep</button>
+                  </span>
+                )}
+              </div>
+            </>
           )}
         </section>
         <section className="col" aria-labelledby="lecture-overview-heading">
@@ -140,7 +192,6 @@ export default function Insights({ learnerId: learnerProp, lectureId: lecturePro
               ) : null}
             </div>
           </div>
-          <p className="muted small" style={{ margin: 0 }}>Aggregate and anonymous. It grades the lecture, never a student.</p>
           {lmErr ? <div className="panel error" role="alert">{lmErr}</div> : null}
           {!lectureId ? (
             <div className="panel muted">No lecture selected yet.</div>
