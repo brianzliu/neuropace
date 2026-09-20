@@ -238,6 +238,9 @@ export interface SessionRow {
   baseline: { mu: number | null; sigma: number | null; stored: boolean; ready?: boolean } | null;
   seed: number | null;
   auto_pause: boolean;
+  /** Dashboard one-liner (LLM prose or a rules count fallback). Absent on older payloads. */
+  summary?: string;
+  summary_source?: string;
 }
 
 export interface SessionPublic extends SessionRow {

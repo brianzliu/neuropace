@@ -296,7 +296,10 @@ async def learner_dashboard(learner_id: str, request: Request, organize: bool = 
         data = dashboard_data(db, learner_id, class_id)
     except KeyError as err:
         raise HTTPException(404, "unknown class") from err
-    return await organize_dashboard(request.app.state.llm, data) if organize else data
+    if not organize:
+        data.pop("_session_inputs", None)
+        return data
+    return await organize_dashboard(request.app.state.llm, data)
 
 
 class ClassIn(BaseModel):

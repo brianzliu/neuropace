@@ -66,6 +66,7 @@ export default function SessionsSidebar({ sessions, concepts, closed }: Sessions
               <span className="visually-hidden">, {statusLabel}</span>
             </span>
             <h3>{session.title}</h3>
+            {session.summary ? <p className="session-summary">{session.summary}</p> : null}
             <div className="row session-actions">
               {session.status === "running" ? (
                 <a className="live-open" href={`/live/${session.id}`} target="neuropace-studio">
