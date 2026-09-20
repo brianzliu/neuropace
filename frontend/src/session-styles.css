@@ -689,6 +689,7 @@ a.linklike { font-size: var(--fs-subhead); }
 .oh-bubble-user { align-self: flex-end; background: var(--brand); color: #fff; border-bottom-right-radius: 4px; }
 .oh-bubble-agent { align-self: flex-start; background: var(--surface-2); border-bottom-left-radius: 4px; }
 .oh-bubble .badge { margin-top: 6px; }
+.oh-bubble-interim { opacity: 0.55; font-style: italic; }
 .oh-chat-input { padding: 10px; border-top: 2px solid var(--line); gap: 8px; }
 .oh-chat-input input { flex: 1; font: inherit; height: 40px; border-radius: 12px; border: 2px solid var(--line); padding: 0 12px; background: var(--surface); color: var(--label); }
 .oh-chat-input .is-recording { border-color: var(--orange); color: var(--orange); }

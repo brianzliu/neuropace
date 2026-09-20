@@ -62,7 +62,7 @@ The first version of restudy opened every moment with a quiz. That was backwards
 
 **3. Check.** One question, four options, answerable from the span. A hit celebrates and moves on; a miss re-teaches the same moment in the next family and asks again. Three hits in a row end the lesson early; every moment covered ends it otherwise. A moment that misses in all four families is marked "still tricky" and comes back another day.
 
-**Two ways in, same engine.** *Private tutoring* is the flow above: explained first, the reason said, the tutor voice optional, then the check. *Review on my own* keeps the quiz-first drill for a student who wants to test themselves: the check comes first, an explanation only after a miss, and no voice. A cold check scores nothing (nothing was shown before it); every explanation-then-check pair scores its family in both modes, so the profile learns from either.
+**One way in now: Review on my own.** This scripted engine used to have two entry points — *Private tutoring* (explained first, then checked) and *Review on my own* (checked first, explained only on a miss). Private tutoring's entry point is retired in favor of Office Hours (§5a), which now does that job as an open conversation instead of a fixed script; the button and the "explain first" ordering above are no longer reachable from the product, though the code and its family-preference scoring are unchanged for Review on my own, which is still how a student self-tests. The two are one tap apart: a corner toggle switches between Office Hours and Review on my own for the same lecture.
 
 **4. Strengthen (designed, not yet built).** Moments that landed come back as quick checks after one day, three days and a week, from every lecture, as one short lesson on the Listen screen ("3 moments to strengthen"). Explanation only on a miss. This is the spaced part of the loop; it needs a due-date column on gaps and a lesson that spans sessions.
 
@@ -75,7 +75,7 @@ The ranking on You combines them, understanding first: score = 0.6 × posterior 
 
 **Why not A/B two explanations of the same moment side by side.** Showing family A then family B for one moment doubles the time per moment and confounds the second with the first (you already half-know it). Alternating families across moments is the same experiment without the confound, and ten moments per lecture give each family two or three trials per lecture. The only within-moment comparison is the one that matters to the student: a miss, then another way.
 
-**Voice, where it belongs.** During a live lecture NeuroPace stays silent: the student is listening to a lecturer, and the catch-up is one line on screen. In restudy the tutor voice is the natural way to be re-explained something, and it is what makes a template reveal feel taught rather than paged through. Deepgram's text to speech is used first (the team already holds the key; sentence-level highlighting needs no word timestamps). A conversational agent now exists in a deliberately narrow form — push-to-talk, no barge-in, no continuous listening — as its own mode (§5a), not folded into restudy. The fuller version (duplex audio, interrupt-anywhere) is still the next step after this one, not this one.
+**Voice, where it belongs.** During a live lecture NeuroPace stays silent: the student is listening to a lecturer, and the catch-up is one line on screen. In restudy the tutor voice is the natural way to be re-explained something, and it is what makes a template reveal feel taught rather than paged through. Deepgram's text to speech is used first (the team already holds the key; sentence-level highlighting needs no word timestamps). A conversational agent now exists in a deliberately narrow form — continuous listening with no true barge-in, plus push-to-talk as a fallback — as its own mode (§5a), not folded into restudy. The fuller version (duplex audio, interrupt-anywhere mid-sentence) is still the next step after this one, not this one.
 
 ## 5a. Office Hours: an open conversation about a lecture
 
@@ -89,7 +89,7 @@ The student and the agent share one thing: a **board**. As the conversation goes
 
 **A timeline scrubber lets the student drag back through the conversation** and see the board and the chat exactly as they were at that point — read-only time travel, not an edit: dragging back never changes history, and a "return to now" brings the live conversation back.
 
-**Voice is push-to-talk, not a duplex conversation.** Hold a button, ask the question, release; the clip is transcribed (Deepgram), the agent's reply is spoken back (the same text-to-speech Restudy uses). No continuous listening, no interrupting the agent mid-reply — that fuller voice-agent experience is still future work, per §5's closing note.
+**Voice agent, not a duplex conversation.** A toggle turns on continuous listening (the browser's own speech recognition — Chrome/Edge): talk whenever, it sends the moment you pause, the reply is spoken back, and listening pauses while the agent talks so the mic doesn't hear its own reply. There is no true barge-in — you cannot interrupt the agent mid-sentence by talking over it, only stop it and start again — and Firefox/Safari fall back to push-to-talk (hold a button, release to send) or typing. Replies are always spoken through the same text to speech Restudy uses. Full duplex audio with interrupt-anywhere is still future work, per §5's closing note.
 
 ## 6. Screens
 
@@ -97,7 +97,7 @@ The student and the agent share one thing: a **board**. As the conversation goes
 
 **Listening.** The transcript large in the middle. On the right: your brain waves (the live µV trace from the headset, labelled *live from your headset* only while chunks are actually arriving, *practice signal* when simulated, *waiting for the headset* when a paired headset goes quiet) and a focus ring with one sentence. One button, *Catch me up* (Space or the pad). When you drift, a soft prompt: "Want a quick catch-up?". The catch-up is one line at the bottom in your best family. *End lecture* at the corner. While a lecture is being recorded the screen is locked in: any sidebar item or route change asks "Do you want to quit recording?" (keep listening, or stop and go to the summary), and closing the tab gets the browser's own prompt. A headset switched on after the lecture started is picked up within five seconds and replaces the simulated focus. A *Details* toggle keeps the instrumentation for the team.
 
-**Lecture done.** A completion screen: moments missed, the catch-ups you took, then *Private tutoring*, *Review on my own*, or *Later*.
+**Lecture done.** A completion screen: moments missed, the catch-ups you took, then *Review* (straight into Office Hours, which opens by walking through what was missed) or *Later*.
 
 **Lectures.** Every past lecture as a tile with restudy progress. Opening one shows the two ways to restudy, the whole transcript with the missed moments highlighted (folded), and the moments ("What you missed") with the summary of each.
 
